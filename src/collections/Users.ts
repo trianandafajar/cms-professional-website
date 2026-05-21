@@ -4,6 +4,73 @@ export const Users: CollectionConfig = {
   slug: 'users',
   admin: {
     useAsTitle: 'email',
+    hideAPIURL: true,
+  },
+  access: {
+    admin: ({ req }) => {
+      const user = req.user;
+      if (!user) return false;
+
+      if (typeof user.role === 'object' && user.role?.name === 'admin') {
+        return true;
+      }
+      
+      return false;
+    },
+  },
+  hooks: {
+    beforeChange: [
+      async ({ data, req, operation }) => {
+        if (operation === 'create') {
+          const payload = req.payload;
+          
+          const { totalDocs } = await payload.count({
+            collection: 'users',
+          });
+          
+          if (totalDocs === 0) {
+            const { docs: roles } = await payload.find({
+              collection: 'roles',
+              where: {
+                name: { equals: 'admin' },
+              },
+              limit: 1,
+            });
+            
+            let adminRoleId: number | string;
+            if (roles.length > 0) {
+              adminRoleId = roles[0].id;
+            } else {
+              const newRole = await payload.create({
+                collection: 'roles',
+                data: { name: 'admin' },
+              });
+              adminRoleId = newRole.id;
+            }
+            
+            // Set role ke admin
+            data.role = adminRoleId;
+            data.roleName = 'admin';
+          }
+        }
+        
+        if (data.role) {
+          const roleId = typeof data.role === 'object' ? data.role.id : data.role;
+          if (roleId && !data.roleName) {
+            const role = await req.payload.findByID({
+              collection: 'roles',
+              id: roleId,
+              depth: 0,
+            });
+            if (role && typeof role === 'object' && 'name' in role) {
+              data.roleName = role.name;
+            }
+          }
+        }
+        
+        return data;
+      },
+    ],
   },
   auth: true,
   fields: [
@@ -18,6 +85,10 @@ export const Users: CollectionConfig = {
       type: 'relationship',
       relationTo: 'roles',
       required: true,
+      admin: {
+        condition: (data, siblingData, { user }) => Boolean(user?.id),
+        readOnly: true,
+      }
     },
   ],
 }

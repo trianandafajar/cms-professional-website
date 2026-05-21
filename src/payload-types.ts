@@ -128,7 +128,7 @@ export interface UserAuthOperations {
 export interface User {
   id: number;
   name: string;
-  role: number | Role;
+  role?: (number | null) | Role;
   updatedAt: string;
   createdAt: string;
   email: string;
