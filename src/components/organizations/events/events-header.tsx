@@ -74,10 +74,10 @@ export default function EventsHeader() {
         </div>
 
         {/* Create */}
-        <Button className="h-10 rounded-xl bg-blue-500 px-5 hover:bg-blue-600">
+        <Link href="/organizations/events/create"    className=" flex h-10 rounded-md bg-blue-500 px-3 hover:bg-blue-600 text-white items-center gap-2 text-sm font-medium transition">
           <Plus size={18} />
           Create Event
-        </Button>
+        </Link>
       </div>
     </>
   )
