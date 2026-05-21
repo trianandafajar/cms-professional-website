@@ -1,16 +1,16 @@
 import React from 'react'
-import { Poppins } from 'next/font/google'
+import { DM_Sans } from 'next/font/google'
 import './styles.css'
 
-const poppins = Poppins({
+const dmSans = DM_Sans({
   subsets: ['latin'],
-  variable: '--font-poppins',
-  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-dm-sans',
+  weight: ['400', '500', '600', '700'],
 })
 
 export const metadata = {
-  description: 'A blank template using Payload in a Next.js app.',
-  title: 'Payload Blank Template',
+  description: 'Eventbro - Discover and manage events with a cleaner ticketing experience.',
+  title: 'Eventbro',
 }
 
 export default async function RootLayout(props: { children: React.ReactNode }) {
@@ -18,7 +18,7 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
 
   return (
     <html lang="en">
-      <body className={poppins.variable}>
+      <body className={dmSans.variable}>
         <main>{children}</main>
       </body>
     </html>
