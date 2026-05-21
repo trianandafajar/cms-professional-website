@@ -84,11 +84,49 @@ export const Users: CollectionConfig = {
       name: 'role',
       type: 'relationship',
       relationTo: 'roles',
-      required: true,
+      required: false,
       admin: {
         condition: (data, siblingData, { user }) => Boolean(user?.id),
         readOnly: true,
       }
+    },
+    {
+      name: 'roleName',
+      type: 'text',
+      admin: { hidden: true, readOnly: true },
+    },
+     {
+      name: 'isOnboarded',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        position: 'sidebar',
+      },
+    },
+    {
+      name: 'defaultLocation',
+      type: 'relationship',
+      relationTo: 'locations',
+      required: false,
+      admin: {
+        description: 'Preferred location for event recommendations',
+      },
+    },
+    {
+      name: 'preferredCategories',
+      type: 'relationship',
+      relationTo: 'categories',
+      hasMany: true,
+      required: false,
+      admin: {
+        description: 'Categories the user is interested in',
+      },
+    },
+    {
+      name: 'onboardingStep',
+      type: 'number',
+      defaultValue: 1,
+      admin: { hidden: true },
     },
   ],
 }

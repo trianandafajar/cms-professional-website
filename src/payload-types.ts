@@ -71,6 +71,8 @@ export interface Config {
     media: Media;
     permissions: Permission;
     roles: Role;
+    categories: Category;
+    locations: Location;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -82,6 +84,8 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     permissions: PermissionsSelect<false> | PermissionsSelect<true>;
     roles: RolesSelect<false> | RolesSelect<true>;
+    categories: CategoriesSelect<false> | CategoriesSelect<true>;
+    locations: LocationsSelect<false> | LocationsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -129,6 +133,17 @@ export interface User {
   id: number;
   name: string;
   role?: (number | null) | Role;
+  roleName?: string | null;
+  isOnboarded?: boolean | null;
+  /**
+   * Preferred location for event recommendations
+   */
+  defaultLocation?: (number | null) | Location;
+  /**
+   * Categories the user is interested in
+   */
+  preferredCategories?: (number | Category)[] | null;
+  onboardingStep?: number | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -168,6 +183,51 @@ export interface Permission {
   name: string;
   key: string;
   description?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "locations".
+ */
+export interface Location {
+  id: number;
+  name: string;
+  code?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "categories".
+ */
+export interface Category {
+  id: number;
+  name: string;
+  /**
+   * Nama icon (misal: Music, Coffee, etc.)
+   */
+  icon?: string | null;
+  group:
+    | 'school-activities'
+    | 'hobbies'
+    | 'home-lifestyle'
+    | 'fashion'
+    | 'government'
+    | 'family-education'
+    | 'spirituality'
+    | 'charity-causes'
+    | 'travel-outdoor'
+    | 'science-tech'
+    | 'health'
+    | 'sports-fitness'
+    | 'film-media'
+    | 'arts'
+    | 'community'
+    | 'food-drink'
+    | 'business'
+    | 'music';
+  status?: ('active' | 'inactive') | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -229,6 +289,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'roles';
         value: number | Role;
+      } | null)
+    | ({
+        relationTo: 'categories';
+        value: number | Category;
+      } | null)
+    | ({
+        relationTo: 'locations';
+        value: number | Location;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -279,6 +347,11 @@ export interface PayloadMigration {
 export interface UsersSelect<T extends boolean = true> {
   name?: T;
   role?: T;
+  roleName?: T;
+  isOnboarded?: T;
+  defaultLocation?: T;
+  preferredCategories?: T;
+  onboardingStep?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -332,6 +405,28 @@ export interface PermissionsSelect<T extends boolean = true> {
 export interface RolesSelect<T extends boolean = true> {
   name?: T;
   permissions?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "categories_select".
+ */
+export interface CategoriesSelect<T extends boolean = true> {
+  name?: T;
+  icon?: T;
+  group?: T;
+  status?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "locations_select".
+ */
+export interface LocationsSelect<T extends boolean = true> {
+  name?: T;
+  code?: T;
   updatedAt?: T;
   createdAt?: T;
 }
