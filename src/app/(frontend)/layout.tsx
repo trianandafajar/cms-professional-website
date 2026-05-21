@@ -1,6 +1,14 @@
 import React from 'react'
 import './styles.css'
 
+import { Inter } from 'next/font/google'
+import { TooltipProvider } from '@/components/ui/tooltip'
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+})
+
 export const metadata = {
   description: 'A blank template using Payload in a Next.js app.',
   title: 'Payload Blank Template',
@@ -10,9 +18,11 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
   const { children } = props
 
   return (
-    <html lang="en">
-      <body>
-        <main>{children}</main>
+    <html lang="en" className={inter.variable}>
+      <body className={inter.className}>
+        <TooltipProvider>
+          <main>{children}</main>
+        </TooltipProvider>
       </body>
     </html>
   )

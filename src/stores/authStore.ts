@@ -9,13 +9,15 @@ export interface User {
   name?: string;
   role?: any;
   roleName?: string;
+  isOnboarded?: boolean | null;
+  onboardingStep?: number | null;
 }
 
 interface AuthState {
   user: User | null;
   isLoading: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   setUser: (user: User | null) => void;
@@ -33,6 +35,7 @@ export const useAuthStore = create<AuthState>()(
         try {
           const response = await apiClient.post<{ user: User }>('/api/users/login', { email, password });
           set({ user: response.user, isLoading: false });
+          return response.user;
         } catch (err: any) {
           set({ error: err.message || 'Login failed', isLoading: false });
           throw err;

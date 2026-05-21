@@ -25,8 +25,9 @@ export default function SignInPage() {
     setFormError(null);
     clearError();
     try {
-      await login(data.email, data.password);
-      router.push('/onboarding');
+      const user = await login(data.email, data.password);
+      const isOnboardingDone = Boolean(user.isOnboarded) || (user.onboardingStep ?? 0) >= 4;
+      router.push(isOnboardingDone ? '/' : '/onboarding');
     } catch (err: any) {
       setFormError(err.message || 'Login gagal');
     }

@@ -7,6 +7,7 @@ export const Users: CollectionConfig = {
     hideAPIURL: true,
   },
   access: {
+    create: () =>true,
     admin: ({ req }) => {
       const user = req.user;
       if (!user) return false;
@@ -125,7 +126,7 @@ export const Users: CollectionConfig = {
     {
       name: 'onboardingStep',
       type: 'number',
-      defaultValue: 1,
+      defaultValue: 0,
       admin: { hidden: true },
     },
   ],

@@ -127,3 +127,54 @@
     @apply font-sans;
     }
 }
+
+.calendar-modern .rbc-toolbar {
+  display: none;
+}
+
+.calendar-modern .rbc-month-view,
+.calendar-modern .rbc-time-view {
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+.calendar-modern .rbc-header {
+  padding: 14px;
+  background: #f9fafb;
+  font-weight: 600;
+  border-color: #e5e7eb;
+}
+
+.calendar-modern .rbc-date-cell {
+  padding: 8px;
+  font-weight: 500;
+}
+
+.calendar-modern .rbc-today {
+  background: #eff6ff !important;
+}
+
+.calendar-modern .rbc-off-range-bg {
+  background: #fafafa;
+}
+
+.calendar-modern .rbc-day-bg {
+  transition: background 0.2s;
+}
+
+.calendar-modern .rbc-day-bg:hover {
+  background: #f8fbff;
+}
+
+.calendar-modern .rbc-event {
+  background: #2563eb;
+  border-radius: 10px;
+  border: 0;
+  padding: 4px 8px;
+}
+
+.calendar-modern .rbc-show-more {
+  color: #2563eb;
+  font-weight: 600;
+}

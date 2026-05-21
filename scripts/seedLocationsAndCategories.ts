@@ -1,4 +1,6 @@
 // scripts/seedLocationsAndCategories.ts
+import 'dotenv/config'
+
 import { getPayload } from 'payload'
 import config from '../src/payload.config'
 
