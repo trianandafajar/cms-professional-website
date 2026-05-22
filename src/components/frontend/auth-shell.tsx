@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 
@@ -25,8 +26,16 @@ export function AuthShell({ children, title, subtitle }: AuthShellProps) {
         <div aria-hidden className="absolute inset-0 bg-[#12192f]/70" />
 
         <div className="relative z-10 flex h-full flex-col justify-between p-12 text-white">
-          <Link href="/" className="text-[26px] font-extrabold tracking-tight text-[#5151eb]">
-            eventbro
+          <Link href="/" className="inline-flex items-center gap-2.5">
+            <Image
+              src="/icon.png"
+              alt="Eventbro"
+              width={36}
+              height={36}
+              priority
+              className="size-9 rounded-md object-contain"
+            />
+            <span className="text-[26px] font-extrabold tracking-tight text-white">eventbro</span>
           </Link>
 
           <div className="max-w-md">
@@ -68,11 +77,17 @@ export function AuthShell({ children, title, subtitle }: AuthShellProps) {
             <ArrowLeft className="size-4" />
             Back to home
           </Link>
-          <Link
-            href="/"
-            className="text-[26px] font-extrabold tracking-tight text-[#5151eb] lg:hidden"
-          >
-            eventbro
+          <Link href="/" className="inline-flex items-center gap-2 lg:hidden">
+            <Image
+              src="/icon.png"
+              alt="Eventbro"
+              width={28}
+              height={28}
+              className="size-7 rounded-md object-contain"
+            />
+            <span className="text-[22px] font-extrabold tracking-tight text-[#5151eb]">
+              eventbro
+            </span>
           </Link>
         </header>
 

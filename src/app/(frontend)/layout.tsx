@@ -1,5 +1,4 @@
 import React from 'react'
-import { DM_Sans } from 'next/font/google'
 import './styles.css'
 
 import { Inter } from 'next/font/google'
@@ -13,6 +12,11 @@ const inter = Inter({
 export const metadata = {
   description: 'Eventbro - Discover and manage events with a cleaner ticketing experience.',
   title: 'Eventbro',
+  icons: {
+    icon: [{ url: '/icon.png', type: 'image/png' }],
+    shortcut: '/icon.png',
+    apple: '/icon.png',
+  },
 }
 
 export default async function RootLayout(props: { children: React.ReactNode }) {
