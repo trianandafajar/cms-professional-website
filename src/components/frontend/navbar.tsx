@@ -195,7 +195,7 @@ export function FrontendNavbar({ userName }: NavbarProps) {
             size="sm"
             variant="ghost"
           >
-            <Link href="/organizations/events/draft?onboard=1">Create Events</Link>
+            <Link href="/organizations/events/create">Create Events</Link>
           </Button>
           <Button
             asChild
@@ -283,13 +283,13 @@ export function FrontendNavbar({ userName }: NavbarProps) {
               <>
                 <Link
                   className="rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-                  href="/auth/login"
+                  href="/auth/signin"
                 >
                   Log In
                 </Link>
                 <Link
                   className="rounded-md bg-[#5151eb] px-3 py-2 text-center text-sm font-medium text-white"
-                  href="/auth/register"
+                  href="/auth/signup"
                 >
                   Sign Up
                 </Link>
