@@ -204,5 +204,17 @@ export const Users: CollectionConfig = {
         position: 'sidebar',
       },
     },
+    // Liked / bookmarked events
+    {
+      name: 'likedEvents',
+      type: 'relationship',
+      relationTo: 'events',
+      hasMany: true,
+      label: 'Liked Events',
+      admin: {
+        description: 'Events the user has bookmarked/saved',
+        position: 'sidebar',
+      },
+    },
   ],
 }

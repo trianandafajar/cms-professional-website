@@ -2,6 +2,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { apiClient } from '@/lib/apiClient'
+import { useLikesStore } from './likesStore'
 
 export interface User {
   id: string
@@ -38,6 +39,7 @@ export const useAuthStore = create<AuthState>()(
             password,
           })
           set({ user: response.user, isLoading: false })
+          useLikesStore.getState().fetchLikes()
           return response.user
         } catch (err: any) {
           set({ error: err.message || 'Login failed', isLoading: false })
@@ -60,6 +62,8 @@ export const useAuthStore = create<AuthState>()(
             password,
           })
           set({ user: loginResponse.user, isLoading: false })
+          // Fetch user's likes after successful registration/login
+          useLikesStore.getState().fetchLikes()
           return loginResponse.user
         } catch (err: any) {
           set({ error: err.message || 'Registration failed', isLoading: false })
@@ -71,6 +75,8 @@ export const useAuthStore = create<AuthState>()(
         try {
           await apiClient.post('/api/users/logout')
           set({ user: null, isLoading: false })
+          // Clear likes on logout
+          useLikesStore.getState().clear()
         } catch (err: any) {
           set({ error: err.message, isLoading: false })
           throw err

@@ -1,8 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import { LikeButton } from './like-button'
 
 type EventCardProps = {
+  eventId?: number
   title: string
   date: string
   location: string
@@ -24,6 +26,7 @@ function titleToSlug(title: string): string {
 }
 
 export function EventCard({
+  eventId,
   title,
   date,
   location,
@@ -53,6 +56,7 @@ export function EventCard({
           alt={title}
           className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
         />
+        {eventId !== undefined && <LikeButton eventId={eventId} variant="card" />}
       </div>
       <div className="flex flex-1 flex-col p-4">
         <h3 className="line-clamp-2 text-base font-semibold leading-snug text-[#12192f] group-hover:text-[#5151eb]">

@@ -2,155 +2,123 @@
 
 import { useState } from 'react'
 import { EventCard } from './event-card'
+import { formatEventDate, formatEventTime, locationToSlug } from '@/lib/eventQueries'
+import type { Event, Category, Location, Media, User } from '@/payload-types'
 
-type Event = {
-  title: string
-  date: string
-  location: string
-  price: string
-  image: string
-  organizer: string
-  interested: number
-  category: string
-  isFree: boolean
-  isToday: boolean
-  isWeekend: boolean
+// Resolved event shape after depth:1 query
+type ResolvedEvent = Omit<Event, 'coverImage' | 'organizer' | 'location' | 'category'> & {
+  coverImage?: Media | null
+  organizer: User | number
+  location?: Location | null
+  category?: Category | null
 }
 
-const tabs = ['All', 'For you', 'Today', 'This weekend', 'Free', 'Music', 'Food & Drink', 'Business']
+type Props = {
+  /** All upcoming published events (no personalisation filter) */
+  allEvents: ResolvedEvent[]
+  /** Events filtered to the user's preferred categories + location */
+  forYouEvents: ResolvedEvent[]
+  /** Whether the user is logged in (controls "For you" tab visibility) */
+  isLoggedIn: boolean
+}
 
-const allEvents: Event[] = [
-  {
-    title: 'Summer Music Festival 2026',
-    date: 'Sat, Jun 14 • 4:00 PM',
-    location: 'Central Park, New York',
-    price: 'From $49.99',
-    image: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=600&h=380&fit=crop&q=80',
-    organizer: 'NYC Events Co.',
-    interested: 2400,
-    category: 'Music',
-    isFree: false,
-    isToday: false,
-    isWeekend: true,
-  },
-  {
-    title: 'Tech Startup Networking Night',
-    date: 'Thu, Jun 5 • 6:30 PM',
-    location: 'Innovation Hub, San Francisco',
-    price: 'Free',
-    image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&h=380&fit=crop&q=80',
-    organizer: 'SF Tech Community',
-    interested: 890,
-    category: 'Business',
-    isFree: true,
-    isToday: true,
-    isWeekend: false,
-  },
-  {
-    title: 'Contemporary Art Exhibition',
-    date: 'Fri, Jun 6 • 7:00 PM',
-    location: 'Modern Gallery, Chicago',
-    price: 'From $25.00',
-    image: 'https://images.unsplash.com/photo-1536924940846-227afb31e2a5?w=600&h=380&fit=crop&q=80',
-    organizer: 'Chicago Arts Council',
-    interested: 560,
-    category: 'Arts',
-    isFree: false,
-    isToday: false,
-    isWeekend: true,
-  },
-  {
-    title: 'Yoga & Wellness Retreat',
-    date: 'Sat, Jun 21 • 8:00 AM',
-    location: 'Serenity Gardens, Austin',
-    price: 'From $75.00',
-    image: 'https://images.unsplash.com/photo-1545205597-3d9d02c29597?w=600&h=380&fit=crop&q=80',
-    organizer: 'Mindful Living Co.',
-    interested: 1200,
-    category: 'Wellness',
-    isFree: false,
-    isToday: false,
-    isWeekend: true,
-  },
-  {
-    title: 'Stand-Up Comedy Night',
-    date: 'Fri, Jun 13 • 9:00 PM',
-    location: 'Laugh Factory, Los Angeles',
-    price: 'Free',
-    image: 'https://images.unsplash.com/photo-1527224857830-43a7acc85260?w=600&h=380&fit=crop&q=80',
-    organizer: 'LA Comedy Club',
-    interested: 780,
-    category: 'Entertainment',
-    isFree: true,
-    isToday: true,
-    isWeekend: false,
-  },
-  {
-    title: 'Gourmet Food & Wine Tasting',
-    date: 'Sun, Jun 15 • 2:00 PM',
-    location: 'Vineyard Estate, Napa Valley',
-    price: 'From $95.00',
-    image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&h=380&fit=crop&q=80',
-    organizer: 'Napa Wine Society',
-    interested: 430,
-    category: 'Food & Drink',
-    isFree: false,
-    isToday: false,
-    isWeekend: true,
-  },
-  {
-    title: 'Electronic Dance Music Party',
-    date: 'Sat, Jun 28 • 10:00 PM',
-    location: 'Warehouse District, Miami',
-    price: 'From $35.00',
-    image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&h=380&fit=crop&q=80',
-    organizer: 'Miami Nights Events',
-    interested: 3100,
-    category: 'Music',
-    isFree: false,
-    isToday: false,
-    isWeekend: true,
-  },
-  {
-    title: 'Photography Workshop',
-    date: 'Sun, Jun 8 • 10:00 AM',
-    location: 'Downtown Studio, Seattle',
-    price: 'Free',
-    image: 'https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=600&h=380&fit=crop&q=80',
-    organizer: 'Pacific NW Creatives',
-    interested: 320,
-    category: 'Business',
-    isFree: true,
-    isToday: false,
-    isWeekend: true,
-  },
-]
+const BASE_TABS = ['All', 'Today', 'This weekend', 'Free', 'Music', 'Food & Drink', 'Business']
 
-export function EventsSection() {
-  const [activeTab, setActiveTab] = useState('All')
+function getTabLabel(tab: string, isLoggedIn: boolean): string[] {
+  if (isLoggedIn) return ['For you', ...BASE_TABS]
+  return BASE_TABS
+}
 
-  const filteredEvents = allEvents.filter((event) => {
+function getEventImage(event: ResolvedEvent): string {
+  if (event.coverImage && typeof event.coverImage === 'object' && event.coverImage.url) {
+    return event.coverImage.url
+  }
+  return 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=600&h=380&fit=crop&q=80'
+}
+
+function getOrganizerName(event: ResolvedEvent): string {
+  if (typeof event.organizer === 'object' && event.organizer !== null) {
+    return (event.organizer as User).name ?? 'Unknown organiser'
+  }
+  return 'Unknown organiser'
+}
+
+function getLocationName(event: ResolvedEvent): string {
+  const loc =
+    typeof event.location === 'object' && event.location !== null
+      ? (event.location as Location).name
+      : null
+  if (loc && event.venue) return `${event.venue}, ${loc}`
+  if (loc) return loc
+  if (event.venue) return event.venue
+  if (event.isOnline) return 'Online'
+  return 'TBA'
+}
+
+function getCitySlug(event: ResolvedEvent): string {
+  if (typeof event.location === 'object' && event.location !== null) {
+    return locationToSlug((event.location as Location).name)
+  }
+  return 'all'
+}
+
+function isToday(isoDate: string): boolean {
+  const d = new Date(isoDate)
+  const now = new Date()
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  )
+}
+
+function isWeekend(isoDate: string): boolean {
+  const d = new Date(isoDate)
+  const day = d.getDay()
+  return day === 0 || day === 6
+}
+
+export function EventsSection({ allEvents, forYouEvents, isLoggedIn }: Props) {
+  const tabs = getTabLabel('', isLoggedIn)
+  const [activeTab, setActiveTab] = useState(isLoggedIn ? 'For you' : 'All')
+
+  const filteredEvents = (() => {
+    if (activeTab === 'For you') return forYouEvents
+    const pool = allEvents
     switch (activeTab) {
       case 'All':
-        return true
-      case 'For you':
-        return event.interested > 800
+        return pool
       case 'Today':
-        return event.isToday
+        return pool.filter((e) => isToday(e.startDate))
       case 'This weekend':
-        return event.isWeekend
+        return pool.filter((e) => isWeekend(e.startDate))
       case 'Free':
-        return event.isFree
+        return pool.filter((e) => e.isFree)
       case 'Music':
-        return event.category === 'Music'
+        return pool.filter(
+          (e) =>
+            typeof e.category === 'object' &&
+            e.category !== null &&
+            (e.category as Category).name === 'Music',
+        )
       case 'Food & Drink':
-        return event.category === 'Food & Drink'
+        return pool.filter(
+          (e) =>
+            typeof e.category === 'object' &&
+            e.category !== null &&
+            (e.category as Category).name === 'Food & Drink',
+        )
       case 'Business':
-        return event.category === 'Business'
+        return pool.filter(
+          (e) =>
+            typeof e.category === 'object' &&
+            e.category !== null &&
+            (e.category as Category).name === 'Business',
+        )
       default:
-        return true
+        return pool
     }
-  })
+  })()
 
   return (
     <>
@@ -177,20 +145,34 @@ export function EventsSection() {
         {filteredEvents.length > 0 ? (
           filteredEvents.map((event) => (
             <EventCard
-              key={event.title}
+              key={event.id}
+              eventId={event.id}
               title={event.title}
-              date={event.date}
-              location={event.location}
-              price={event.price}
-              image={event.image}
-              organizer={event.organizer}
-              interested={event.interested}
+              date={`${formatEventDate(event.startDate)} • ${formatEventTime(event.startDate)}`}
+              location={getLocationName(event)}
+              price={event.isFree ? 'Free' : (event.price ?? 'See details')}
+              image={getEventImage(event)}
+              organizer={getOrganizerName(event)}
+              interested={event.interestedCount ?? 0}
+              slug={event.slug ?? undefined}
+              citySlug={getCitySlug(event)}
             />
           ))
         ) : (
           <div className="col-span-full py-12 text-center">
-            <p className="text-lg font-medium text-zinc-400">No events found for this filter</p>
-            <p className="mt-1 text-sm text-zinc-400">Try selecting a different category</p>
+            {activeTab === 'For you' ? (
+              <>
+                <p className="text-lg font-medium text-zinc-400">No personalised events yet</p>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Update your interests in your profile to see recommendations
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-lg font-medium text-zinc-400">No events found for this filter</p>
+                <p className="mt-1 text-sm text-zinc-400">Try selecting a different category</p>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -198,12 +180,12 @@ export function EventsSection() {
       {/* See more */}
       {filteredEvents.length > 0 && (
         <div className="mt-10 text-center">
-          <button
-            type="button"
+          <a
+            href="/events"
             className="inline-flex items-center gap-2 rounded-lg border border-[#5151eb] px-6 py-2.5 text-sm font-semibold text-[#5151eb] transition hover:bg-[#5151eb] hover:text-white"
           >
             See more events
-          </button>
+          </a>
         </div>
       )}
     </>

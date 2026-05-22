@@ -1,5 +1,6 @@
 import { EventCardSkeletonGrid } from '@/components/frontend/event-card-skeleton'
 import {
+  NavbarSkeleton,
   HeroSkeleton,
   CategoriesSkeleton,
   DestinationsSkeleton,
@@ -10,16 +11,7 @@ export default function Loading() {
   return (
     <div className="min-h-screen bg-white">
       {/* Navbar skeleton */}
-      <header className="sticky top-0 z-50 border-b border-zinc-100 bg-white">
-        <div className="mx-auto flex w-full max-w-[1400px] items-center gap-4 px-4 py-3 lg:px-8">
-          <div className="h-8 w-28 animate-pulse rounded bg-zinc-200" />
-          <div className="hidden h-11 flex-1 max-w-[560px] animate-pulse rounded-lg bg-zinc-100 lg:block" />
-          <div className="ml-auto flex gap-2">
-            <div className="h-8 w-20 animate-pulse rounded bg-zinc-100" />
-            <div className="h-8 w-20 animate-pulse rounded bg-zinc-100" />
-          </div>
-        </div>
-      </header>
+      <NavbarSkeleton />
 
       <main>
         {/* Hero */}

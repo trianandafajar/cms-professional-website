@@ -17,6 +17,7 @@ import {
   CircleHelp,
   LogOut,
   User as UserIcon,
+  Heart,
 } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 
@@ -81,6 +82,11 @@ const profileMenu = [
     label: 'My Tickets',
     href: '/organizations/orders',
     icon: Ticket,
+  },
+  {
+    label: 'Liked Events',
+    href: '/likes',
+    icon: Heart,
   },
   {
     label: 'Account Settings',
@@ -307,6 +313,19 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
           >
             <Link href="#">Find My Tickets</Link>
           </Button>
+          {isAuthed && (
+            <Button
+              asChild
+              className="text-sm font-medium text-zinc-700 hover:text-[#12192f]"
+              size="sm"
+              variant="ghost"
+            >
+              <Link href="/likes" className="flex items-center gap-1.5">
+                <Heart className="size-4" />
+                Likes
+              </Link>
+            </Button>
+          )}
         </nav>
 
         {/* Auth */}
@@ -438,6 +457,16 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
             >
               Find My Tickets
             </Link>
+            {isAuthed && (
+              <Link
+                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                href="/likes"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Heart className="size-4" />
+                Liked Events
+              </Link>
+            )}
             <hr className="my-2 border-zinc-100" />
             {isAuthed ? (
               <>

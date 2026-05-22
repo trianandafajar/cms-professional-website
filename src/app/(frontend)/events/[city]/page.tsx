@@ -1,6 +1,5 @@
 import { headers as getHeaders } from 'next/headers.js'
 import { getPayload } from 'payload'
-import { notFound } from 'next/navigation'
 import {
   Music,
   Palette,
@@ -12,7 +11,6 @@ import {
   Heart,
   MapPin,
   SlidersHorizontal,
-  ChevronDown,
   Calendar,
   Tag,
 } from 'lucide-react'
@@ -21,6 +19,8 @@ import Link from 'next/link'
 import { FrontendNavbar } from '@/components/frontend/navbar'
 import { CityEventsSection } from '@/components/frontend/city-events-section'
 import { OrganizerSuggestions } from '@/components/frontend/organizer-suggestions'
+import { buildEventWhere } from '@/lib/eventQueries'
+import type { Location } from '@/payload-types'
 import config from '@/payload.config'
 
 type Props = {
@@ -52,7 +52,7 @@ const priceFilters = [
   { label: 'Paid', value: 'paid' },
 ]
 
-// Map slug to display name
+/** Convert a URL slug back to a display name. */
 function slugToDisplayName(slug: string): string {
   return decodeURIComponent(slug)
     .split('-')
@@ -79,10 +79,34 @@ export default async function CityEventsPage({ params, searchParams }: Props) {
   const { user } = await payload.auth({ headers })
 
   const cityName = slugToDisplayName(city)
-
   const activeCategory = (resolvedSearch.category as string) || 'All'
   const activeDate = (resolvedSearch.date as string) || ''
   const activePrice = (resolvedSearch.price as string) || ''
+
+  // Resolve the location document that matches this city slug
+  const { docs: matchedLocations } = await payload.find({
+    collection: 'locations',
+    where: { name: { like: cityName } },
+    depth: 0,
+    limit: 1,
+  })
+  const locationDoc = matchedLocations[0] as Location | undefined
+  const locationId = locationDoc?.id ?? null
+
+  // Fetch events filtered by city + active filters
+  const { docs: events, totalDocs } = await payload.find({
+    collection: 'events',
+    where: buildEventWhere({
+      publishedOnly: true,
+      locationId,
+      categoryName: activeCategory !== 'All' ? activeCategory : null,
+      dateFilter: activeDate || null,
+      priceFilter: activePrice || null,
+    }),
+    depth: 1,
+    limit: 100,
+    sort: '-interestedCount',
+  })
 
   return (
     <div className="min-h-screen bg-white">
@@ -97,7 +121,7 @@ export default async function CityEventsPage({ params, searchParams }: Props) {
         </div>
         <div className="relative mx-auto max-w-[1400px] px-4 lg:px-8">
           <div className="flex items-center gap-2 text-sm text-indigo-300">
-            <Link href="/" className="hover:text-white transition">
+            <Link href="/" className="transition hover:text-white">
               Home
             </Link>
             <span>/</span>
@@ -118,11 +142,15 @@ export default async function CityEventsPage({ params, searchParams }: Props) {
             </div>
             <div className="flex items-center gap-2 text-indigo-200">
               <Calendar className="size-4" />
-              <span className="text-sm font-medium">Upcoming events</span>
+              <span className="text-sm font-medium">
+                {totalDocs} upcoming event{totalDocs !== 1 ? 's' : ''}
+              </span>
             </div>
             <div className="flex items-center gap-2 text-indigo-200">
               <Tag className="size-4" />
-              <span className="text-sm font-medium">All categories</span>
+              <span className="text-sm font-medium">
+                {activeCategory !== 'All' ? activeCategory : 'All categories'}
+              </span>
             </div>
           </div>
         </div>
@@ -297,12 +325,7 @@ export default async function CityEventsPage({ params, searchParams }: Props) {
               </div>
             )}
 
-            <CityEventsSection
-              city={cityName}
-              category={activeCategory}
-              date={activeDate}
-              price={activePrice}
-            />
+            <CityEventsSection events={events as any} city={cityName} totalDocs={totalDocs} />
           </div>
 
           {/* Right sidebar — Organizer suggestions */}

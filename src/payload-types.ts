@@ -73,6 +73,7 @@ export interface Config {
     roles: Role;
     categories: Category;
     locations: Location;
+    events: Event;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -86,6 +87,7 @@ export interface Config {
     roles: RolesSelect<false> | RolesSelect<true>;
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     locations: LocationsSelect<false> | LocationsSelect<true>;
+    events: EventsSelect<false> | EventsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -144,6 +146,22 @@ export interface User {
    */
   preferredCategories?: (number | Category)[] | null;
   onboardingStep?: number | null;
+  /**
+   * Mark this user as an Event Organizer (EO)
+   */
+  isOrganizer?: boolean | null;
+  avatar?: (number | null) | Media;
+  /**
+   * Short description shown on the organizer profile page
+   */
+  bio?: string | null;
+  website?: string | null;
+  instagram?: string | null;
+  followersCount?: number | null;
+  /**
+   * Events the user has bookmarked/saved
+   */
+  likedEvents?: (number | Event)[] | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -206,8 +224,31 @@ export interface Location {
    * Optional emoji shown next to the name (e.g., 🌋, 🏝️)
    */
   emoji?: string | null;
+  /**
+   * Image shown on the Top Destinations card
+   */
+  coverImage?: (number | null) | Media;
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media".
+ */
+export interface Media {
+  id: number;
+  alt: string;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -245,22 +286,68 @@ export interface Category {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media".
+ * via the `definition` "events".
  */
-export interface Media {
+export interface Event {
   id: number;
-  alt: string;
+  title: string;
+  /**
+   * URL-friendly identifier (auto-generated if left blank)
+   */
+  slug?: string | null;
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  coverImage?: (number | null) | Media;
+  /**
+   * Wide banner shown at the top of the event detail page
+   */
+  bannerImage?: (number | null) | Media;
+  /**
+   * Additional photos shown in the event gallery section
+   */
+  galleryImages?:
+    | {
+        image: number | Media;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * The user account that owns this event
+   */
+  organizer: number | User;
+  status: 'draft' | 'published' | 'cancelled' | 'completed';
+  startDate: string;
+  endDate?: string | null;
+  location?: (number | null) | Location;
+  venue?: string | null;
+  address?: string | null;
+  isOnline?: boolean | null;
+  isFree?: boolean | null;
+  price?: string | null;
+  category?: (number | null) | Category;
+  tags?:
+    | {
+        tag?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  interestedCount?: number | null;
+  capacity?: number | null;
   updatedAt: string;
   createdAt: string;
-  url?: string | null;
-  thumbnailURL?: string | null;
-  filename?: string | null;
-  mimeType?: string | null;
-  filesize?: number | null;
-  width?: number | null;
-  height?: number | null;
-  focalX?: number | null;
-  focalY?: number | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -309,6 +396,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'locations';
         value: number | Location;
+      } | null)
+    | ({
+        relationTo: 'events';
+        value: number | Event;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -364,6 +455,13 @@ export interface UsersSelect<T extends boolean = true> {
   defaultLocation?: T;
   preferredCategories?: T;
   onboardingStep?: T;
+  isOrganizer?: T;
+  avatar?: T;
+  bio?: T;
+  website?: T;
+  instagram?: T;
+  followersCount?: T;
+  likedEvents?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -442,6 +540,45 @@ export interface LocationsSelect<T extends boolean = true> {
   region?: T;
   featured?: T;
   emoji?: T;
+  coverImage?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "events_select".
+ */
+export interface EventsSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  description?: T;
+  coverImage?: T;
+  bannerImage?: T;
+  galleryImages?:
+    | T
+    | {
+        image?: T;
+        id?: T;
+      };
+  organizer?: T;
+  status?: T;
+  startDate?: T;
+  endDate?: T;
+  location?: T;
+  venue?: T;
+  address?: T;
+  isOnline?: T;
+  isFree?: T;
+  price?: T;
+  category?: T;
+  tags?:
+    | T
+    | {
+        tag?: T;
+        id?: T;
+      };
+  interestedCount?: T;
+  capacity?: T;
   updatedAt?: T;
   createdAt?: T;
 }

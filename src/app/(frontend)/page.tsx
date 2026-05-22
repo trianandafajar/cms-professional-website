@@ -19,6 +19,8 @@ import { EventsSection } from '@/components/frontend/events-section'
 import { CityPicker } from '@/components/frontend/city-picker'
 import { VideoSection } from '@/components/frontend/video-section'
 import { FeaturedOrganizers } from '@/components/frontend/featured-organizers'
+import { buildEventWhere } from '@/lib/eventQueries'
+import type { Location, Category } from '@/payload-types'
 import config from '@/payload.config'
 import './styles.css'
 
@@ -53,16 +55,70 @@ export default async function HomePage() {
     sort: '-followersCount',
   })
 
+  // Fetch upcoming published events for the homepage listing
+  const { docs: allEvents } = await payload.find({
+    collection: 'events',
+    where: buildEventWhere({ publishedOnly: true }),
+    depth: 1,
+    limit: 16,
+    sort: '-interestedCount',
+  })
+
+  // Fetch personalised "For you" events based on user preferences
+  let forYouEvents: typeof allEvents = []
+  if (user) {
+    const preferredCategoryIds = (user.preferredCategories ?? [])
+      .map((c) => (typeof c === 'object' ? (c as Category).id : c))
+      .filter((id): id is number => typeof id === 'number')
+
+    const locationId =
+      user.defaultLocation != null
+        ? typeof user.defaultLocation === 'object'
+          ? (user.defaultLocation as Location).id
+          : user.defaultLocation
+        : null
+
+    if (preferredCategoryIds.length > 0 || locationId) {
+      const { docs } = await payload.find({
+        collection: 'events',
+        where: buildEventWhere({
+          publishedOnly: true,
+          locationId,
+          preferredCategoryIds,
+        }),
+        depth: 1,
+        limit: 16,
+        sort: '-interestedCount',
+      })
+      forYouEvents = docs
+    }
+  }
+
+  // Determine the user's default city slug for category links
+  const userCitySlug =
+    user?.defaultLocation != null && typeof user.defaultLocation === 'object'
+      ? (user.defaultLocation as Location).name
+          .toLowerCase()
+          .replace(/[^a-z0-9\s-]/g, '')
+          .trim()
+          .replace(/\s+/g, '-')
+      : null
+
   const categories = [
-    { name: 'Music', icon: Music, href: '#' },
-    { name: 'Nightlife', icon: Sparkles, href: '#' },
-    { name: 'Arts', icon: Palette, href: '#' },
-    { name: 'Holidays', icon: PartyPopper, href: '#' },
-    { name: 'Dating', icon: Heart, href: '#' },
-    { name: 'Hobbies', icon: Gamepad2, href: '#' },
-    { name: 'Business', icon: Users, href: '#' },
-    { name: 'Food & Drink', icon: Utensils, href: '#' },
-  ]
+    { name: 'Music', icon: Music },
+    { name: 'Nightlife', icon: Sparkles },
+    { name: 'Arts', icon: Palette },
+    { name: 'Holidays', icon: PartyPopper },
+    { name: 'Dating', icon: Heart },
+    { name: 'Hobbies', icon: Gamepad2 },
+    { name: 'Business', icon: Users },
+    { name: 'Food & Drink', icon: Utensils },
+  ].map((cat) => ({
+    ...cat,
+    href: userCitySlug
+      ? `/events/${userCitySlug}?category=${encodeURIComponent(cat.name)}`
+      : `/events?category=${encodeURIComponent(cat.name)}`,
+  }))
 
   return (
     <div className="min-h-screen bg-white">
@@ -105,7 +161,11 @@ export default async function HomePage() {
               Events in <CityPicker />
             </h2>
             <div className="mt-5">
-              <EventsSection />
+              <EventsSection
+                allEvents={allEvents as any}
+                forYouEvents={forYouEvents as any}
+                isLoggedIn={Boolean(user)}
+              />
             </div>
           </div>
         </section>
