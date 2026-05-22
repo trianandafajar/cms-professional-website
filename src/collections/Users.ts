@@ -6,76 +6,19 @@ export const Users: CollectionConfig = {
     useAsTitle: 'email',
     hideAPIURL: true,
   },
-  access: {
-    create: () =>true,
-    admin: ({ req }) => {
-      const user = req.user;
-      if (!user) return false;
-
-      if (typeof user.role === 'object' && user.role?.name === 'admin') {
-        return true;
-      }
-      
-      return false;
-    },
-  },
-  hooks: {
-    beforeChange: [
-      async ({ data, req, operation }) => {
-        if (operation === 'create') {
-          const payload = req.payload;
-          
-          const { totalDocs } = await payload.count({
-            collection: 'users',
-          });
-          
-          if (totalDocs === 0) {
-            const { docs: roles } = await payload.find({
-              collection: 'roles',
-              where: {
-                name: { equals: 'admin' },
-              },
-              limit: 1,
-            });
-            
-            let adminRoleId: number | string;
-            if (roles.length > 0) {
-              adminRoleId = roles[0].id;
-            } else {
-              const newRole = await payload.create({
-                collection: 'roles',
-                data: { name: 'admin' },
-              });
-              adminRoleId = newRole.id;
-            }
-            
-            // Set role ke admin
-            data.role = adminRoleId;
-            data.roleName = 'admin';
-          }
-        }
-        
-        if (data.role) {
-          const roleId = typeof data.role === 'object' ? data.role.id : data.role;
-          if (roleId && !data.roleName) {
-            const role = await req.payload.findByID({
-              collection: 'roles',
-              id: roleId,
-              depth: 0,
-            });
-            if (role && typeof role === 'object' && 'name' in role) {
-              data.roleName = role.name;
-            }
-          }
-        }
-        
-        return data;
-      },
-    ],
-  },
   auth: true,
   access: {
     create: () => true,
+    admin: ({ req }) => {
+      const user = req.user
+      if (!user) return false
+
+      if (typeof user.role === 'object' && user.role?.name === 'admin') {
+        return true
+      }
+
+      return false
+    },
   },
   hooks: {
     beforeValidate: [
@@ -92,7 +35,7 @@ export const Users: CollectionConfig = {
           collection: 'users',
         })
 
-        const targetRoleName = usersCount.totalDocs === 0 ? 'super-admin' : 'user'
+        const targetRoleName = usersCount.totalDocs === 0 ? 'admin' : 'user'
 
         const targetRole = await req.payload.find({
           collection: 'roles',
@@ -111,6 +54,56 @@ export const Users: CollectionConfig = {
         return data
       },
     ],
+    beforeChange: [
+      async ({ data, req, operation }) => {
+        if (operation === 'create') {
+          const payload = req.payload
+
+          // First-user bootstrap: ensure an admin role exists and the first
+          // user ends up tied to it. Subsequent users get whatever role
+          // beforeValidate assigned them.
+          const { totalDocs } = await payload.count({ collection: 'users' })
+
+          if (totalDocs === 0) {
+            const { docs: roles } = await payload.find({
+              collection: 'roles',
+              where: { name: { equals: 'admin' } },
+              limit: 1,
+            })
+
+            let adminRoleId: number | string
+            if (roles.length > 0) {
+              adminRoleId = roles[0].id
+            } else {
+              const newRole = await payload.create({
+                collection: 'roles',
+                data: { name: 'admin' },
+              })
+              adminRoleId = newRole.id
+            }
+
+            data.role = adminRoleId
+            data.roleName = 'admin'
+          }
+        }
+
+        if (data.role && !data.roleName) {
+          const roleId = typeof data.role === 'object' ? data.role.id : data.role
+          if (roleId) {
+            const role = await req.payload.findByID({
+              collection: 'roles',
+              id: roleId,
+              depth: 0,
+            })
+            if (role && typeof role === 'object' && 'name' in role) {
+              data.roleName = role.name as string
+            }
+          }
+        }
+
+        return data
+      },
+    ],
   },
   fields: [
     {
@@ -118,23 +111,22 @@ export const Users: CollectionConfig = {
       type: 'text',
       required: true,
     },
-
     {
       name: 'role',
       type: 'relationship',
       relationTo: 'roles',
       required: false,
       admin: {
-        condition: (data, siblingData, { user }) => Boolean(user?.id),
+        condition: (_data, _siblingData, { user }) => Boolean(user?.id),
         readOnly: true,
-      }
+      },
     },
     {
       name: 'roleName',
       type: 'text',
       admin: { hidden: true, readOnly: true },
     },
-     {
+    {
       name: 'isOnboarded',
       type: 'checkbox',
       defaultValue: false,

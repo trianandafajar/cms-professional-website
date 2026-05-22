@@ -194,6 +194,9 @@ export interface Location {
   id: number;
   name: string;
   code?: string | null;
+  region?: ('sumatera' | 'jawa' | 'bali-nusra' | 'kalimantan' | 'sulawesi' | 'maluku-papua') | null;
+  featured?: boolean | null;
+  emoji?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -427,6 +430,9 @@ export interface CategoriesSelect<T extends boolean = true> {
 export interface LocationsSelect<T extends boolean = true> {
   name?: T;
   code?: T;
+  region?: T;
+  featured?: T;
+  emoji?: T;
   updatedAt?: T;
   createdAt?: T;
 }

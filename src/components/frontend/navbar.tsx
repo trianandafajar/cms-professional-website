@@ -1,12 +1,38 @@
 'use client'
 
 import Link from 'next/link'
-import { Search, Menu, X, MapPin, ChevronDown, TrendingUp } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import {
+  Search,
+  Menu,
+  X,
+  MapPin,
+  ChevronDown,
+  TrendingUp,
+  LayoutDashboard,
+  CalendarDays,
+  Ticket,
+  Settings,
+  CircleHelp,
+  LogOut,
+  User as UserIcon,
+} from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+
+type NavbarUser = {
+  name?: string | null
+  email?: string | null
+}
 
 type NavbarProps = {
+  user?: NavbarUser | null
+  /**
+   * @deprecated kept for backward compatibility with existing callers.
+   * Prefer passing a full `user` object instead.
+   */
   userName?: string
 }
 
@@ -39,15 +65,60 @@ const trendingSearches = [
   'Workshop',
 ]
 
-export function FrontendNavbar({ userName }: NavbarProps) {
+const profileMenu = [
+  {
+    label: 'Dashboard',
+    href: '/organizations/dashboard',
+    icon: LayoutDashboard,
+  },
+  {
+    label: 'My Events',
+    href: '/organizations/events',
+    icon: CalendarDays,
+  },
+  {
+    label: 'My Tickets',
+    href: '/organizations/orders',
+    icon: Ticket,
+  },
+  {
+    label: 'Account Settings',
+    href: '/organizations/settings',
+    icon: Settings,
+  },
+  {
+    label: 'Help Center',
+    href: '/organizations/help',
+    icon: CircleHelp,
+  },
+]
+
+function getInitials(value?: string | null) {
+  if (!value) return 'U'
+  const parts = value.trim().split(/\s+/)
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase()
+  }
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
+export function FrontendNavbar({ user, userName }: NavbarProps) {
+  const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [locationOpen, setLocationOpen] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedLocation, setSelectedLocation] = useState('All Locations')
   const [locationSearch, setLocationSearch] = useState('')
+  const [loggingOut, setLoggingOut] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const searchRef = useRef<HTMLDivElement>(null)
+  const searchRef = useRef<HTMLFormElement>(null)
+
+  const resolvedUser: NavbarUser | null = user ?? (userName ? { name: userName } : null)
+  const displayName = resolvedUser?.name || resolvedUser?.email || ''
+  const displayEmail = resolvedUser?.email || ''
+  const initials = getInitials(resolvedUser?.name || resolvedUser?.email)
+  const isAuthed = Boolean(resolvedUser)
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -66,6 +137,24 @@ export function FrontendNavbar({ userName }: NavbarProps) {
     loc.toLowerCase().includes(locationSearch.toLowerCase()),
   )
 
+  async function handleLogout() {
+    if (loggingOut) return
+    setLoggingOut(true)
+    try {
+      await fetch('/api/users/logout', {
+        method: 'POST',
+        credentials: 'include',
+      })
+    } catch {
+      // ignore network errors; cookie may still be cleared on server
+    } finally {
+      setLoggingOut(false)
+      setMobileMenuOpen(false)
+      router.refresh()
+      router.push('/')
+    }
+  }
+
   return (
     <header className="sticky top-0 z-50 border-b border-zinc-100 bg-white">
       <div className="mx-auto flex w-full max-w-[1400px] items-center gap-4 px-4 py-3 lg:px-8">
@@ -75,11 +164,7 @@ export function FrontendNavbar({ userName }: NavbarProps) {
         </Link>
 
         {/* Search Bar with Location & Trending */}
-        <form
-          action="#"
-          className="relative hidden flex-1 max-w-[560px] lg:flex"
-          ref={searchRef}
-        >
+        <form action="#" className="relative hidden flex-1 max-w-[560px] lg:flex" ref={searchRef}>
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
             <input
@@ -209,10 +294,70 @@ export function FrontendNavbar({ userName }: NavbarProps) {
 
         {/* Auth */}
         <div className="hidden items-center gap-2 lg:flex">
-          {userName ? (
-            <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-[#5151eb]">
-              {userName}
-            </span>
+          {isAuthed ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 py-1 pl-1 pr-3 text-sm font-medium text-[#5151eb] transition hover:bg-indigo-100"
+                  aria-label="Open profile menu"
+                >
+                  <span className="flex size-8 items-center justify-center rounded-full bg-[#5151eb] text-xs font-semibold text-white">
+                    {initials}
+                  </span>
+                  <span className="max-w-[140px] truncate">{displayName}</span>
+                  <ChevronDown className="size-3.5 text-[#5151eb]" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="end"
+                sideOffset={8}
+                className="w-[300px] overflow-hidden rounded-2xl border border-zinc-200 bg-white p-0 shadow-xl ring-0"
+              >
+                {/* Header */}
+                <div className="border-b border-zinc-100 px-4 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-11 items-center justify-center rounded-full bg-[#5151eb] text-base font-semibold text-white">
+                      {initials}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-zinc-900">
+                        {displayName || 'User'}
+                      </p>
+                      {displayEmail && (
+                        <p className="truncate text-xs text-zinc-500">{displayEmail}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Menu */}
+                <div className="p-1.5">
+                  {profileMenu.map(({ label, href, icon: Icon }) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-indigo-50 hover:text-[#5151eb]"
+                    >
+                      <Icon className="size-4 text-zinc-500" />
+                      {label}
+                    </Link>
+                  ))}
+
+                  <div className="my-1 border-t border-zinc-100" />
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    disabled={loggingOut}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-rose-600 transition hover:bg-rose-50 disabled:opacity-60"
+                  >
+                    <LogOut className="size-4" />
+                    {loggingOut ? 'Logging out…' : 'Log out'}
+                  </button>
+                </div>
+              </PopoverContent>
+            </Popover>
           ) : (
             <>
               <Button
@@ -221,14 +366,14 @@ export function FrontendNavbar({ userName }: NavbarProps) {
                 size="sm"
                 variant="ghost"
               >
-                <Link href="/auth/login">Log In</Link>
+                <Link href="/auth/signin">Log In</Link>
               </Button>
               <Button
                 asChild
                 className="rounded-md bg-[#5151eb] px-4 text-sm font-medium text-white hover:bg-[#3d3dcc]"
                 size="sm"
               >
-                <Link href="/auth/register">Sign Up</Link>
+                <Link href="/auth/signup">Sign Up</Link>
               </Button>
             </>
           )}
@@ -277,14 +422,49 @@ export function FrontendNavbar({ userName }: NavbarProps) {
               Find My Tickets
             </Link>
             <hr className="my-2 border-zinc-100" />
-            {userName ? (
-              <span className="px-3 py-2 text-sm font-medium text-[#5151eb]">{userName}</span>
+            {isAuthed ? (
+              <>
+                <div className="flex items-center gap-3 rounded-lg bg-indigo-50 px-3 py-3">
+                  <div className="flex size-10 items-center justify-center rounded-full bg-[#5151eb] text-sm font-semibold text-white">
+                    {initials}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-[#12192f]">
+                      {displayName || 'User'}
+                    </p>
+                    {displayEmail && (
+                      <p className="truncate text-xs text-zinc-500">{displayEmail}</p>
+                    )}
+                  </div>
+                </div>
+                {profileMenu.map(({ label, href, icon: Icon }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                  >
+                    <Icon className="size-4 text-zinc-500" />
+                    {label}
+                  </Link>
+                ))}
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                  className="mt-1 flex items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-60"
+                >
+                  <LogOut className="size-4" />
+                  {loggingOut ? 'Logging out…' : 'Log out'}
+                </button>
+              </>
             ) : (
               <>
                 <Link
                   className="rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-                  href="/auth/signin"
+                  href="/auth/login"
                 >
+                  <UserIcon className="size-4 text-zinc-500" />
                   Log In
                 </Link>
                 <Link

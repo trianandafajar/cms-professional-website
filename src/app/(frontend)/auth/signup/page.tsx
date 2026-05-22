@@ -2,12 +2,17 @@
 'use client'
 
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { z } from 'zod'
 import { useAuthStore } from '@/stores/authStore'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import Link from 'next/link'
+import { Eye, EyeOff, Mail, Lock, User, AlertCircle } from 'lucide-react'
+
 import { signUpSchema } from '@/schemas/auth'
+import { AuthShell } from '@/components/frontend/auth-shell'
+import { SocialAuthButtons } from '@/components/frontend/social-auth-buttons'
 
 type SignUpInput = z.infer<typeof signUpSchema>
 
@@ -15,14 +20,14 @@ export default function SignUpPage() {
   const { register: registerUser, isLoading, error: storeError, clearError } = useAuthStore()
   const router = useRouter()
   const [formError, setFormError] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<SignUpInput>({
-    resolver: zodResolver(signUpSchema),
-  })
+  } = useForm<SignUpInput>({ resolver: standardSchemaResolver(signUpSchema) })
 
   const onSubmit = async (data: SignUpInput) => {
     setFormError(null)
@@ -31,136 +36,155 @@ export default function SignUpPage() {
       await registerUser(data.name, data.email, data.password)
       router.push('/onboarding')
     } catch (err: any) {
-      setFormError(err.message || 'Registrasi gagal')
+      setFormError(err.message || 'Sign up failed')
     }
   }
 
   const displayError = formError || storeError
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">eventbrite</h1>
-          <h2 className="mt-6 text-xl font-medium text-gray-900">Create your account</h2>
-        </div>
+    <AuthShell
+      title="Create your Eventbro account"
+      subtitle="Start by picking events you like, or host your own."
+    >
+      <SocialAuthButtons mode="signup" />
 
-        <div className="mt-8 bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Full name
-              </label>
-              <div className="mt-1">
-                <input
-                  id="name"
-                  type="text"
-                  {...register('name')}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="John Doe"
-                />
-                {errors.name && <p className="mt-1 text-red-600 text-sm">{errors.name.message}</p>}
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
-              <div className="mt-1">
-                <input
-                  id="email"
-                  type="email"
-                  {...register('email')}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="you@example.com"
-                />
-                {errors.email && (
-                  <p className="mt-1 text-red-600 text-sm">{errors.email.message}</p>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <div className="mt-1">
-                <input
-                  id="password"
-                  type="password"
-                  {...register('password')}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-                {errors.password && (
-                  <p className="mt-1 text-red-600 text-sm">{errors.password.message}</p>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                Confirm password
-              </label>
-              <div className="mt-1">
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  {...register('confirmPassword')}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-                {errors.confirmPassword && (
-                  <p className="mt-1 text-red-600 text-sm">{errors.confirmPassword.message}</p>
-                )}
-              </div>
-            </div>
-
-            {displayError && <div className="text-red-600 text-sm">{displayError}</div>}
-
-            <div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition"
-              >
-                {isLoading ? 'Creating account...' : 'Sign up'}
-              </button>
-            </div>
-          </form>
-
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or sign up with</span>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-3 gap-3">
-              <button className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition">
-                Apple
-              </button>
-              <button className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition">
-                Google
-              </button>
-              <button className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition">
-                Facebook
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-6 text-center text-xs text-gray-500">
-            By clicking Sign up, you agree to our Terms of Service and Privacy Policy.
-          </div>
-          <div className="mt-4 text-center text-sm">
-            <a href="/auth/signin" className="text-blue-600 hover:text-blue-500">
-              Already have an account? Sign in
-            </a>
-          </div>
-        </div>
+      <div className="my-6 flex items-center gap-3">
+        <div className="h-px flex-1 bg-zinc-200" />
+        <span className="text-xs uppercase tracking-wider text-zinc-400">or use email</span>
+        <div className="h-px flex-1 bg-zinc-200" />
       </div>
-    </div>
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div className="space-y-1.5">
+          <label
+            htmlFor="name"
+            className="text-xs font-semibold uppercase tracking-wider text-zinc-600"
+          >
+            Full name
+          </label>
+          <div className="relative">
+            <User className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
+            <input
+              id="name"
+              type="text"
+              autoComplete="name"
+              {...register('name')}
+              placeholder="Your name"
+              className="h-11 w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-3 text-sm text-[#12192f] placeholder:text-zinc-400 outline-none transition focus:border-[#5151eb] focus:ring-2 focus:ring-[#5151eb]/20"
+            />
+          </div>
+          {errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}
+        </div>
+
+        <div className="space-y-1.5">
+          <label
+            htmlFor="email"
+            className="text-xs font-semibold uppercase tracking-wider text-zinc-600"
+          >
+            Email
+          </label>
+          <div className="relative">
+            <Mail className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
+            <input
+              id="email"
+              type="email"
+              autoComplete="email"
+              {...register('email')}
+              placeholder="you@email.com"
+              className="h-11 w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-3 text-sm text-[#12192f] placeholder:text-zinc-400 outline-none transition focus:border-[#5151eb] focus:ring-2 focus:ring-[#5151eb]/20"
+            />
+          </div>
+          {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <label
+              htmlFor="password"
+              className="text-xs font-semibold uppercase tracking-wider text-zinc-600"
+            >
+              Password
+            </label>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                {...register('password')}
+                placeholder="Min. 6 characters"
+                className="h-11 w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-10 text-sm text-[#12192f] placeholder:text-zinc-400 outline-none transition focus:border-[#5151eb] focus:ring-2 focus:ring-[#5151eb]/20"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 transition hover:text-[#12192f]"
+                aria-label="toggle password"
+              >
+                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
+            {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
+          </div>
+
+          <div className="space-y-1.5">
+            <label
+              htmlFor="confirmPassword"
+              className="text-xs font-semibold uppercase tracking-wider text-zinc-600"
+            >
+              Confirm
+            </label>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
+              <input
+                id="confirmPassword"
+                type={showConfirm ? 'text' : 'password'}
+                autoComplete="new-password"
+                {...register('confirmPassword')}
+                placeholder="Re-enter password"
+                className="h-11 w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-10 text-sm text-[#12192f] placeholder:text-zinc-400 outline-none transition focus:border-[#5151eb] focus:ring-2 focus:ring-[#5151eb]/20"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirm((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 transition hover:text-[#12192f]"
+                aria-label="toggle confirm password"
+              >
+                {showConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
+            {errors.confirmPassword && (
+              <p className="text-xs text-red-500">{errors.confirmPassword.message}</p>
+            )}
+          </div>
+        </div>
+
+        {displayError && (
+          <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <AlertCircle className="mt-0.5 size-4 shrink-0" />
+            <span>{displayError}</span>
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="mt-2 flex h-11 w-full items-center justify-center rounded-xl bg-[#5151eb] text-sm font-semibold text-white shadow-sm transition hover:bg-[#3d3dcc] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isLoading ? 'Creating account...' : 'Sign up'}
+        </button>
+      </form>
+
+      <p className="mt-6 text-center text-sm text-zinc-600">
+        Already have an account?{' '}
+        <Link href="/auth/signin" className="font-semibold text-[#5151eb] hover:text-[#3d3dcc]">
+          Sign in
+        </Link>
+      </p>
+      <p className="mt-3 text-center text-[11px] leading-relaxed text-zinc-400">
+        By signing up, you agree to Eventbro&apos;s Terms of Service and Privacy Policy.
+      </p>
+    </AuthShell>
   )
 }

@@ -40,7 +40,7 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <FrontendNavbar userName={user?.name || user?.email} />
+      <FrontendNavbar user={user ? { name: user.name, email: user.email } : null} />
 
       <main>
         {/* Hero Slider */}
