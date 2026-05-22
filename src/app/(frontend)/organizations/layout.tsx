@@ -19,6 +19,7 @@ import Image from 'next/image'
 import NotificationDrawer from '@/components/organizations/layouts/notification'
 import AccountPopover from '@/components/organizations/layouts/account'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Button } from '@/components/ui/button'
 
 export default function OrganizationsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -65,10 +66,10 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
         </div>
 
         <div className="flex items-center gap-4">
-          <button className="flex items-center gap-2 px-4 py-2 border-2 border-blue-500 text-blue-500 rounded-lg hover:bg-blue-100 font-semibold transition-colors">
+          <Button className="flex items-center gap-2 px-4 py-2 border-2 border-blue-500 text-blue-500 rounded-lg hover:bg-blue-100 font-semibold transition-colors hover:text-blue-500" variant="outline" size="sm">
             <PlusCircle size={20} />
             Create
-          </button>
+          </Button>
 
           <NotificationDrawer />
           <AccountPopover />
@@ -78,7 +79,7 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
       <div className="flex flex-1">
         <aside className="sticky top-[73px] flex h-[calc(100vh-73px)] w-16 flex-col items-center gap-4 border-r border-gray-200 bg-white py-6">
           {sidebarItems.map((item, idx) => {
-            const isActive = pathname === item.href
+            const isActive = pathname.startsWith(item.href)
             const Icon = item.icon
 
             return (
@@ -109,7 +110,7 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
         </aside>
 
         {/* Konten utama */}
-        <main className="flex-1 p-8">{children}</main>
+        <main className="flex-1 p-7">{children}</main>
       </div>
     </div>
   )

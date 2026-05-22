@@ -5,14 +5,19 @@
 import { Bell, Megaphone, X } from 'lucide-react'
 
 import { Drawer, DrawerClose, DrawerContent, DrawerTrigger } from '@/components/ui/drawer'
+import { Button } from '@/components/ui/button'
 
 export default function NotificationDrawer() {
   return (
     <Drawer direction="right">
       <DrawerTrigger asChild>
-        <button className="relative rounded-xl p-2 transition-colors hover:bg-gray-100">
+        <Button
+          className="relative rounded-xl p-2 transition-colors hover:bg-gray-100"
+          variant="ghost"
+          size="sm"
+        >
           <Bell size={20} className="text-gray-600" />
-        </button>
+        </Button>
       </DrawerTrigger>
 
       <DrawerContent className="w-full border-l border-gray-200 p-0 sm:max-w-[440px]">

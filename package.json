@@ -20,6 +20,7 @@
     "test:int": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.mts"
   },
   "dependencies": {
+    "@base-ui/react": "^1.5.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -37,6 +38,7 @@
     "@tiptap/starter-kit": "^3.23.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
     "cross-env": "^7.0.3",
     "dotenv": "16.4.7",
     "embla-carousel-react": "^8.6.0",
