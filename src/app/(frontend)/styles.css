@@ -126,37 +126,55 @@
   html {
     @apply font-sans;
     }
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-heading), sans-serif;
-    letter-spacing: -0.01em;
-  }
 }
 
-/* Hide scrollbar for category navigation */
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-.scrollbar-hide::-webkit-scrollbar {
+.calendar-modern .rbc-toolbar {
   display: none;
 }
 
-/* Destinations scroll - always show scrollbar below images */
-.destinations-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: #a1a1aa transparent;
+.calendar-modern .rbc-month-view,
+.calendar-modern .rbc-time-view {
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
 }
-.destinations-scroll::-webkit-scrollbar {
-  height: 6px;
+
+.calendar-modern .rbc-header {
+  padding: 14px;
+  background: #f9fafb;
+  font-weight: 600;
+  border-color: #e5e7eb;
 }
-.destinations-scroll::-webkit-scrollbar-track {
-  background: #f4f4f5;
-  border-radius: 3px;
+
+.calendar-modern .rbc-date-cell {
+  padding: 8px;
+  font-weight: 500;
 }
-.destinations-scroll::-webkit-scrollbar-thumb {
-  background-color: #a1a1aa;
-  border-radius: 3px;
+
+.calendar-modern .rbc-today {
+  background: #eff6ff !important;
 }
-.destinations-scroll::-webkit-scrollbar-thumb:hover {
-  background-color: #71717a;
+
+.calendar-modern .rbc-off-range-bg {
+  background: #fafafa;
+}
+
+.calendar-modern .rbc-day-bg {
+  transition: background 0.2s;
+}
+
+.calendar-modern .rbc-day-bg:hover {
+  background: #f8fbff;
+}
+
+.calendar-modern .rbc-event {
+  background: #2563eb;
+  border-radius: 10px;
+  border: 0;
+  padding: 4px 8px;
+}
+
+.calendar-modern .rbc-show-more {
+  color: #2563eb;
+  font-weight: 600;
 }
