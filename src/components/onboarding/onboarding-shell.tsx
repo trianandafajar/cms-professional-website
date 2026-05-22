@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Check } from 'lucide-react'
@@ -22,8 +23,16 @@ export function OnboardingShell({ children }: { children: React.ReactNode }) {
       {/* Header */}
       <header className="border-b border-zinc-100 bg-white">
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between px-6 py-4">
-          <Link href="/" className="text-2xl font-extrabold tracking-tight text-[#5151eb]">
-            eventbro
+          <Link href="/" className="inline-flex items-center gap-2">
+            <Image
+              src="/icon.png"
+              alt="Eventbro"
+              width={32}
+              height={32}
+              priority
+              className="size-8 rounded-md object-contain"
+            />
+            <span className="text-2xl font-extrabold tracking-tight text-[#5151eb]">eventbro</span>
           </Link>
           <Link
             href="/"

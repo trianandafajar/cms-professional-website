@@ -8,6 +8,9 @@ export const Locations: CollectionConfig = {
     group: 'Event Management',
     defaultColumns: ['name', 'code', 'region', 'featured'],
   },
+  access: {
+    read: () => true,
+  },
   fields: [
     {
       name: 'name',
@@ -53,6 +56,15 @@ export const Locations: CollectionConfig = {
       label: 'Emoji / Flag',
       admin: {
         description: 'Optional emoji shown next to the name (e.g., 🌋, 🏝️)',
+      },
+    },
+    {
+      name: 'coverImage',
+      type: 'upload',
+      relationTo: 'media',
+      label: 'Cover Image',
+      admin: {
+        description: 'Image shown on the Top Destinations card',
       },
     },
   ],

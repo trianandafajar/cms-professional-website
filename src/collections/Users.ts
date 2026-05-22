@@ -159,5 +159,50 @@ export const Users: CollectionConfig = {
       defaultValue: 0,
       admin: { hidden: true },
     },
+    // Organizer / EO profile fields
+    {
+      name: 'isOrganizer',
+      type: 'checkbox',
+      defaultValue: false,
+      label: 'Is Event Organizer',
+      admin: {
+        position: 'sidebar',
+        description: 'Mark this user as an Event Organizer (EO)',
+      },
+    },
+    {
+      name: 'avatar',
+      type: 'upload',
+      relationTo: 'media',
+      label: 'Profile Photo',
+    },
+    {
+      name: 'bio',
+      type: 'textarea',
+      label: 'Bio / About',
+      admin: {
+        description: 'Short description shown on the organizer profile page',
+      },
+    },
+    {
+      name: 'website',
+      type: 'text',
+      label: 'Website URL',
+    },
+    {
+      name: 'instagram',
+      type: 'text',
+      label: 'Instagram Handle (e.g., @eventbro)',
+    },
+    {
+      name: 'followersCount',
+      type: 'number',
+      defaultValue: 0,
+      label: 'Followers Count',
+      admin: {
+        readOnly: true,
+        position: 'sidebar',
+      },
+    },
   ],
 }

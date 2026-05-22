@@ -133,8 +133,32 @@ export default function OnboardingLocationPage() {
           <span className="text-sm">Loading locations...</span>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-2xl border border-zinc-200 bg-white p-10 text-center text-sm text-zinc-500">
-          No locations match your search.
+        <div className="rounded-2xl border border-dashed border-zinc-300 bg-white p-10 text-center">
+          {locations.length === 0 ? (
+            <>
+              <p className="text-sm font-semibold text-[#12192f]">No locations available yet</p>
+              <p className="mx-auto mt-2 max-w-sm text-sm text-zinc-500">
+                Looks like the locations list hasn&apos;t been seeded. Run{' '}
+                <code className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-xs text-[#12192f]">
+                  pnpm seed:locations
+                </code>{' '}
+                or add some from the admin panel, then refresh.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-semibold text-[#12192f]">
+                No locations match &ldquo;{query}&rdquo;
+              </p>
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-[#5151eb] hover:text-[#3d3dcc]"
+              >
+                Clear search
+              </button>
+            </>
+          )}
         </div>
       ) : (
         <div className="mx-auto grid max-w-3xl gap-4 sm:grid-cols-2 md:grid-cols-3">

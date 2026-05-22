@@ -4,7 +4,13 @@ import { useMemo, useState } from 'react'
 import { CheckCircle2, ChevronLeft, ChevronRight, Circle, Plus } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 
 type TicketType = 'free' | 'paid'
@@ -102,7 +108,9 @@ export function OrganizationsEventBuilder() {
   }
 
   const toggleHighlight = (value: string) => {
-    setGoodToKnow((prev) => (prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]))
+    setGoodToKnow((prev) =>
+      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value],
+    )
   }
 
   return (
@@ -149,7 +157,10 @@ export function OrganizationsEventBuilder() {
                 <img
                   alt="Event cover"
                   className="h-56 w-full rounded-lg object-cover"
-                  src={imageUrls[currentImageIndex] || 'https://via.placeholder.com/1200x600?text=Add+Image'}
+                  src={
+                    imageUrls[currentImageIndex] ||
+                    'https://via.placeholder.com/1200x600?text=Add+Image'
+                  }
                 />
                 <div className="absolute bottom-2 right-2 flex gap-2">
                   <button className="rounded-full bg-white p-1.5" onClick={prevImage} type="button">
@@ -232,7 +243,11 @@ export function OrganizationsEventBuilder() {
               {activeEdit === 'datetime' || !date || !location ? (
                 <div className="grid gap-4 md:grid-cols-2">
                   <Input onChange={(e) => setDate(e.target.value)} type="date" value={date} />
-                  <Input onChange={(e) => setLocation(e.target.value)} placeholder="Enter a location" value={location} />
+                  <Input
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="Enter a location"
+                    value={location}
+                  />
                 </div>
               ) : (
                 <p className="text-sm text-zinc-700">
@@ -254,7 +269,11 @@ export function OrganizationsEventBuilder() {
                 </button>
               </div>
               {activeEdit === 'overview' || !summary ? (
-                <Input onChange={(e) => setSummary(e.target.value)} placeholder="Describe your event..." value={summary} />
+                <Input
+                  onChange={(e) => setSummary(e.target.value)}
+                  placeholder="Describe your event..."
+                  value={summary}
+                />
               ) : (
                 <p className="text-zinc-700">{summary}</p>
               )}
@@ -273,20 +292,22 @@ export function OrganizationsEventBuilder() {
               </div>
               {activeEdit === 'goodToKnow' ? (
                 <div className="flex flex-wrap gap-2">
-                  {['Age 18+', 'Door opens 09:00', 'Free parking', 'No smoking', 'Bring ID'].map((item) => (
-                    <button
-                      className={
-                        goodToKnow.includes(item)
-                          ? 'rounded-full border border-[#3f5fe6] bg-indigo-50 px-2 py-1 text-xs text-[#3f5fe6]'
-                          : 'rounded-full border border-zinc-300 px-2 py-1 text-xs'
-                      }
-                      key={item}
-                      onClick={() => toggleHighlight(item)}
-                      type="button"
-                    >
-                      {item}
-                    </button>
-                  ))}
+                  {['Age 18+', 'Door opens 09:00', 'Free parking', 'No smoking', 'Bring ID'].map(
+                    (item) => (
+                      <button
+                        className={
+                          goodToKnow.includes(item)
+                            ? 'rounded-full border border-[#3f5fe6] bg-indigo-50 px-2 py-1 text-xs text-[#3f5fe6]'
+                            : 'rounded-full border border-zinc-300 px-2 py-1 text-xs'
+                        }
+                        key={item}
+                        onClick={() => toggleHighlight(item)}
+                        type="button"
+                      >
+                        {item}
+                      </button>
+                    ),
+                  )}
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2">
@@ -294,7 +315,10 @@ export function OrganizationsEventBuilder() {
                     <p className="text-sm text-zinc-500">Add highlights for attendees.</p>
                   ) : (
                     goodToKnow.map((item) => (
-                      <span className="rounded-full border border-zinc-300 px-2 py-1 text-xs" key={item}>
+                      <span
+                        className="rounded-full border border-zinc-300 px-2 py-1 text-xs"
+                        key={item}
+                      >
                         {item}
                       </span>
                     ))
@@ -326,7 +350,10 @@ export function OrganizationsEventBuilder() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-4xl font-bold text-[#1e1248]">Add tickets</h2>
-              <Button className="bg-[#3f5fe6] hover:bg-[#324fcb]" onClick={() => setOpenTicketModal(true)}>
+              <Button
+                className="bg-[#3f5fe6] hover:bg-[#324fcb]"
+                onClick={() => setOpenTicketModal(true)}
+              >
                 <Plus className="mr-1 size-4" />
                 Add ticket
               </Button>
@@ -335,11 +362,14 @@ export function OrganizationsEventBuilder() {
             <div className="space-y-3">
               {tickets.length === 0 && (
                 <div className="rounded-xl border border-dashed border-zinc-300 p-6 text-sm text-zinc-500">
-                  Belum ada ticket. Klik Add ticket.
+                  No tickets yet. Click Add ticket.
                 </div>
               )}
               {tickets.map((ticket) => (
-                <div className="grid items-center gap-3 rounded-xl border border-zinc-200 p-4 md:grid-cols-[1fr_auto_auto_auto]" key={ticket.id}>
+                <div
+                  className="grid items-center gap-3 rounded-xl border border-zinc-200 p-4 md:grid-cols-[1fr_auto_auto_auto]"
+                  key={ticket.id}
+                >
                   <div>
                     <p className="font-semibold text-zinc-900">{ticket.name}</p>
                     <p className="text-sm text-zinc-500">
@@ -374,7 +404,9 @@ export function OrganizationsEventBuilder() {
                 {date || '-'} • {location || '-'}
               </p>
               <p className="mt-4 text-sm text-zinc-700">Total tickets: {tickets.length}</p>
-              <p className="text-sm text-zinc-700">Potential gross: Rp {totalGross.toLocaleString('id-ID')}</p>
+              <p className="text-sm text-zinc-700">
+                Potential gross: Rp {totalGross.toLocaleString('id-ID')}
+              </p>
             </div>
             <div className="flex justify-between pt-2">
               <Button onClick={() => setStep(2)} variant="outline">
@@ -418,9 +450,18 @@ export function OrganizationsEventBuilder() {
               </button>
             </div>
 
-            <Input onChange={(e) => setTicketName(e.target.value)} placeholder="Ticket name" value={ticketName} />
+            <Input
+              onChange={(e) => setTicketName(e.target.value)}
+              placeholder="Ticket name"
+              value={ticketName}
+            />
             <div className="grid gap-3 md:grid-cols-2">
-              <Input onChange={(e) => setTicketQty(e.target.value)} placeholder="Quantity" type="number" value={ticketQty} />
+              <Input
+                onChange={(e) => setTicketQty(e.target.value)}
+                placeholder="Quantity"
+                type="number"
+                value={ticketQty}
+              />
               <Input
                 disabled={ticketType === 'free'}
                 onChange={(e) => setTicketPrice(e.target.value)}
@@ -430,8 +471,16 @@ export function OrganizationsEventBuilder() {
               />
             </div>
             <div className="grid gap-3 md:grid-cols-2">
-              <Input onChange={(e) => setTicketStart(e.target.value)} type="datetime-local" value={ticketStart} />
-              <Input onChange={(e) => setTicketEnd(e.target.value)} type="datetime-local" value={ticketEnd} />
+              <Input
+                onChange={(e) => setTicketStart(e.target.value)}
+                type="datetime-local"
+                value={ticketStart}
+              />
+              <Input
+                onChange={(e) => setTicketEnd(e.target.value)}
+                type="datetime-local"
+                value={ticketEnd}
+              />
             </div>
             {ticketType === 'paid' && (
               <Input
@@ -456,4 +505,3 @@ export function OrganizationsEventBuilder() {
     </div>
   )
 }
-

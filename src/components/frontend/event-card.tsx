@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+
 type EventCardProps = {
   title: string
   date: string
@@ -8,6 +10,17 @@ type EventCardProps = {
   image: string
   organizer: string
   interested: number
+  /** Optional — used to build the detail link */
+  slug?: string
+  citySlug?: string
+}
+
+function titleToSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
 }
 
 export function EventCard({
@@ -18,9 +31,22 @@ export function EventCard({
   image,
   organizer,
   interested,
+  slug,
+  citySlug,
 }: EventCardProps) {
+  const eventSlug = slug ?? titleToSlug(title)
+  const city =
+    citySlug ??
+    encodeURIComponent(
+      location.split(',').pop()?.trim().toLowerCase().replace(/\s+/g, '-') ?? 'all',
+    )
+  const href = `/events/${city}/${eventSlug}`
+
   return (
-    <div className="group flex flex-col overflow-hidden rounded-xl border border-zinc-100 bg-white transition hover:shadow-lg">
+    <Link
+      href={href}
+      className="group flex flex-col overflow-hidden rounded-xl border border-zinc-100 bg-white transition hover:shadow-lg"
+    >
       <div className="relative aspect-16/10 overflow-hidden">
         <img
           src={image}
@@ -41,6 +67,6 @@ export function EventCard({
           <span>{interested.toLocaleString()} interested</span>
         </div>
       </div>
-    </div>
+    </Link>
   )
 }

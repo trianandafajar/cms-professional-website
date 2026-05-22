@@ -18,6 +18,7 @@ import { PopularCities } from '@/components/frontend/popular-cities'
 import { EventsSection } from '@/components/frontend/events-section'
 import { CityPicker } from '@/components/frontend/city-picker'
 import { VideoSection } from '@/components/frontend/video-section'
+import { FeaturedOrganizers } from '@/components/frontend/featured-organizers'
 import config from '@/payload.config'
 import './styles.css'
 
@@ -26,6 +27,31 @@ export default async function HomePage() {
   const payloadConfig = await config
   const payload = await getPayload({ config: payloadConfig })
   const { user } = await payload.auth({ headers })
+
+  // Fetch featured locations for "Top Destinations"
+  const { docs: featuredLocations } = await payload.find({
+    collection: 'locations',
+    where: { featured: { equals: true } },
+    depth: 1,
+    limit: 12,
+  })
+
+  // Fetch all locations for "Popular Cities"
+  const { docs: allLocations } = await payload.find({
+    collection: 'locations',
+    depth: 0,
+    limit: 24,
+    sort: 'name',
+  })
+
+  // Fetch featured organizers for homepage section
+  const { docs: featuredOrganizers } = await payload.find({
+    collection: 'users',
+    where: { isOrganizer: { equals: true } },
+    depth: 1,
+    limit: 6,
+    sort: '-followersCount',
+  })
 
   const categories = [
     { name: 'Music', icon: Music, href: '#' },
@@ -102,11 +128,11 @@ export default async function HomePage() {
           <div className="mx-auto max-w-[1400px] px-4 lg:px-8">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-[#12192f] md:text-3xl">Top destinations</h2>
-              <a href="#" className="text-sm font-semibold text-[#5151eb] hover:underline">
+              <a href="/events" className="text-sm font-semibold text-[#5151eb] hover:underline">
                 See all
               </a>
             </div>
-            <DestinationsScroll />
+            <DestinationsScroll destinations={featuredLocations} />
           </div>
         </section>
 
@@ -114,7 +140,28 @@ export default async function HomePage() {
         <section className="border-t border-zinc-100 py-12">
           <div className="mx-auto max-w-[1400px] px-4 lg:px-8">
             <h2 className="mb-6 text-2xl font-bold text-[#12192f] md:text-3xl">Popular cities</h2>
-            <PopularCities />
+            <PopularCities cities={allLocations} />
+          </div>
+        </section>
+
+        {/* Featured Organizers */}
+        <section className="bg-[#f8f9fc] py-12">
+          <div className="mx-auto max-w-[1400px] px-4 lg:px-8">
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-[#12192f] md:text-3xl">Event Organizers</h2>
+                <p className="mt-1 text-sm text-zinc-500">
+                  Follow your favourite organisers and never miss their events
+                </p>
+              </div>
+              <a
+                href="/organizers"
+                className="text-sm font-semibold text-[#5151eb] hover:underline"
+              >
+                See all →
+              </a>
+            </div>
+            <FeaturedOrganizers organizers={featuredOrganizers} />
           </div>
         </section>
       </main>

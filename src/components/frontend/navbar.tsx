@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -159,7 +160,15 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
     <header className="sticky top-0 z-50 border-b border-zinc-100 bg-white">
       <div className="mx-auto flex w-full max-w-[1400px] items-center gap-4 px-4 py-3 lg:px-8">
         {/* Logo */}
-        <Link className="shrink-0" href="/">
+        <Link className="flex shrink-0 items-center gap-2" href="/">
+          <Image
+            src="/icon.png"
+            alt="Eventbro"
+            width={32}
+            height={32}
+            priority
+            className="size-8 rounded-md object-contain"
+          />
           <span className="text-[26px] font-extrabold tracking-tight text-[#5151eb]">eventbro</span>
         </Link>
 
@@ -273,6 +282,14 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
             variant="ghost"
           >
             <Link href="#">Find Events</Link>
+          </Button>
+          <Button
+            asChild
+            className="text-sm font-medium text-zinc-700 hover:text-[#12192f]"
+            size="sm"
+            variant="ghost"
+          >
+            <Link href="/organizers">Organizers</Link>
           </Button>
           <Button
             asChild

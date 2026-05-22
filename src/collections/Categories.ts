@@ -7,6 +7,9 @@ export const Categories: CollectionConfig = {
     useAsTitle: 'name',
     group: 'Event Management',
   },
+  access: {
+    read: () => true,
+  },
   fields: [
     {
       name: 'name',

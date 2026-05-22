@@ -11,6 +11,7 @@ import { Roles } from './collections/Role'
 import { Permissions } from './collections/Permissions'
 import { Categories } from './collections/Categories'
 import { Locations } from './collections/Locations'
+import { Events } from './collections/Events'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -22,7 +23,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Permissions, Roles, Categories, Locations],
+  collections: [Users, Media, Permissions, Roles, Categories, Locations, Events],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
