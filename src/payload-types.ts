@@ -194,8 +194,17 @@ export interface Location {
   id: number;
   name: string;
   code?: string | null;
+  /**
+   * Used to group locations on the onboarding picker
+   */
   region?: ('sumatera' | 'jawa' | 'bali-nusra' | 'kalimantan' | 'sulawesi' | 'maluku-papua') | null;
+  /**
+   * Show this location at the top of the picker
+   */
   featured?: boolean | null;
+  /**
+   * Optional emoji shown next to the name (e.g., 🌋, 🏝️)
+   */
   emoji?: string | null;
   updatedAt: string;
   createdAt: string;
