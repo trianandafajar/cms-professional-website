@@ -1,4 +1,5 @@
 import React from 'react'
+import { DM_Sans } from 'next/font/google'
 import './styles.css'
 
 import { Inter } from 'next/font/google'
@@ -10,8 +11,8 @@ const inter = Inter({
 })
 
 export const metadata = {
-  description: 'A blank template using Payload in a Next.js app.',
-  title: 'Payload Blank Template',
+  description: 'Eventbro - Discover and manage events with a cleaner ticketing experience.',
+  title: 'Eventbro',
 }
 
 export default async function RootLayout(props: { children: React.ReactNode }) {
