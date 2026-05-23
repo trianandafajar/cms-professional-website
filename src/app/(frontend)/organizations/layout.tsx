@@ -38,7 +38,7 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
   const bottomItems = sidebarItems.filter(item => item.isBottom)
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="h-screen overflow-hidden bg-gray-50 flex flex-col">
       <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-4">
           <Link href="/organizations/dashboard" className="group flex items-center gap-2">
@@ -73,7 +73,7 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
         </div>
       </header>
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 overflow-hidden">
         <aside className="sticky top-15 flex h-[calc(100vh-63px)] w-16 flex-col justify-between items-center gap-4 border-r border-gray-200 bg-white py-2">
           <div className="flex flex-col items-center gap-4">
             {topItems.map((item, idx) => {
@@ -131,7 +131,7 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
           </div>
         </aside>
 
-        <main className="flex-1 p-7">{children}</main>
+        <main className="flex-1 overflow-y-auto p-7">{children}</main>
       </div>
     </div>
   )
