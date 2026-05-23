@@ -28,6 +28,7 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
     { icon: Home, href: '/organizations/dashboard', label: 'Dashboard', isBottom: false },
     { icon: Calendar, href: '/organizations/events', label: 'Events', isBottom: false },
     { icon: FileText, href: '/organizations/orders', label: 'Orders', isBottom: false },
+    { icon: Megaphone, href: '/organizations/marketing', label: 'Marketing', isBottom: false },
     { icon: BarChart3, href: '/organizations/finance', label: 'Finance', isBottom: false },
     { icon: Settings, href: '/organizations/settings', label: 'Settings', isBottom: true },
     { icon: HelpCircle, href: '/organizations/help', label: 'Help', isBottom: true },
@@ -130,7 +131,6 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
           </div>
         </aside>
 
-        {/* Konten utama */}
         <main className="flex-1 p-7">{children}</main>
       </div>
     </div>

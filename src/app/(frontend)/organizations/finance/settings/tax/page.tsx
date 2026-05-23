@@ -1,6 +1,6 @@
 export default function TaxpayerInfoPage() {
   return (
-    <div className="max-w-4xl max-h-[calc(100vh-263px)] min-h-[calc(100vh-263px)] overflow-y-auto">
+    <div className="max-full max-h-[calc(100vh-263px)] min-h-[calc(100vh-263px)] overflow-y-auto">
       <h1 className="text-4xl font-bold tracking-tight text-[#1E0A3C]">Taxpayer Information</h1>
 
       <div className="mt-12 space-y-8 text-lg leading-relaxed text-gray-700">
