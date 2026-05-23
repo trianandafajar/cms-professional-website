@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   CalendarDays,
   Ticket,
+  Receipt,
   CircleHelp,
   LogOut,
   User as UserIcon,
@@ -72,31 +73,43 @@ const profileMenu = [
     label: 'My Profile',
     href: '/organizers/me',
     icon: UserIcon,
+    organizerOnly: true,
   },
   {
     label: 'Dashboard',
     href: '/organizations/dashboard',
     icon: LayoutDashboard,
+    organizerOnly: true,
   },
   {
     label: 'My Events',
     href: '/organizations/events',
     icon: CalendarDays,
+    organizerOnly: true,
   },
   {
     label: 'My Tickets',
-    href: '/organizations/orders',
+    href: '/my/tickets',
     icon: Ticket,
+    organizerOnly: false,
+  },
+  {
+    label: 'My Orders',
+    href: '/my/orders',
+    icon: Receipt,
+    organizerOnly: false,
   },
   {
     label: 'Liked Events',
-    href: '/likes',
+    href: '/my/likes',
     icon: Heart,
+    organizerOnly: false,
   },
   {
     label: 'Help Center',
     href: '/organizations/help',
     icon: CircleHelp,
+    organizerOnly: true,
   },
 ]
 
@@ -111,7 +124,7 @@ function getInitials(value?: string | null) {
 
 export function FrontendNavbar({ user, userName }: NavbarProps) {
   const router = useRouter()
-  const { logout } = useAuthStore()
+  const { logout, user: authUser } = useAuthStore()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [locationOpen, setLocationOpen] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
@@ -127,6 +140,12 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
   const displayEmail = resolvedUser?.email || ''
   const initials = getInitials(resolvedUser?.name || resolvedUser?.email)
   const isAuthed = Boolean(resolvedUser)
+  const isOrganizer = Boolean(authUser?.isOrganizer)
+
+  const filteredProfileMenu = profileMenu.filter((item) => {
+    if (isOrganizer) return true
+    return !item.organizerOnly
+  })
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -309,7 +328,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
             size="sm"
             variant="ghost"
           >
-            <Link href="#">Find My Tickets</Link>
+            <Link href="/my/tickets">Find My Tickets</Link>
           </Button>
           {isAuthed && (
             <Button
@@ -318,7 +337,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
               size="sm"
               variant="ghost"
             >
-              <Link href="/likes" className="flex items-center gap-1.5">
+              <Link href="/my/likes" className="flex items-center gap-1.5">
                 <Heart className="size-4" />
                 Likes
               </Link>
@@ -367,7 +386,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
 
                 {/* Menu */}
                 <div className="p-1.5">
-                  {profileMenu.map(({ label, href, icon: Icon }) => (
+                  {filteredProfileMenu.map(({ label, href, icon: Icon }) => (
                     <Link
                       key={href}
                       href={href}
@@ -451,14 +470,14 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
             </Link>
             <Link
               className="rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-              href="#"
+              href="/my/tickets"
             >
               Find My Tickets
             </Link>
             {isAuthed && (
               <Link
                 className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-                href="/likes"
+                href="/my/likes"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <Heart className="size-4" />
@@ -481,7 +500,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                     )}
                   </div>
                 </div>
-                {profileMenu.map(({ label, href, icon: Icon }) => (
+                {filteredProfileMenu.map(({ label, href, icon: Icon }) => (
                   <Link
                     key={href}
                     href={href}

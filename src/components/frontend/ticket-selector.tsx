@@ -562,7 +562,7 @@ function SuccessScreen({
           Back to Home
         </a>
         <a
-          href="/organizations/orders"
+          href="/my/orders"
           className="rounded-xl bg-[#5151eb] px-6 py-2.5 text-sm font-bold text-white transition hover:bg-[#4040d0]"
         >
           View My Tickets

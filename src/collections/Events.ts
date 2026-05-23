@@ -179,5 +179,132 @@ export const Events: CollectionConfig = {
         position: 'sidebar',
       },
     },
+    // ─── Ticket Types (set by organizer) ─────────────────────────────────────
+    {
+      name: 'ticketTypes',
+      type: 'array',
+      label: 'Ticket Types',
+      admin: {
+        description:
+          'Define the ticket tiers for this event. Attendees will see these options when purchasing.',
+      },
+      fields: [
+        {
+          name: 'name',
+          type: 'text',
+          required: true,
+          label: 'Ticket Name',
+          admin: {
+            description: 'e.g., General Admission, VIP, VVIP Table',
+          },
+        },
+        {
+          name: 'description',
+          type: 'textarea',
+          label: 'Description',
+          admin: {
+            description: 'Brief description shown to attendees',
+          },
+        },
+        {
+          name: 'price',
+          type: 'number',
+          required: true,
+          label: 'Price',
+          defaultValue: 0,
+          admin: {
+            description: 'Price in IDR. Set to 0 for free tickets.',
+          },
+        },
+        {
+          name: 'currency',
+          type: 'select',
+          defaultValue: 'IDR',
+          options: [
+            { label: 'IDR (Rupiah)', value: 'IDR' },
+            { label: 'USD (Dollar)', value: 'USD' },
+          ],
+        },
+        {
+          name: 'quantity',
+          type: 'number',
+          required: true,
+          label: 'Total Quantity',
+          admin: {
+            description: 'Total number of tickets available for this tier',
+          },
+        },
+        {
+          name: 'sold',
+          type: 'number',
+          defaultValue: 0,
+          label: 'Sold',
+          admin: {
+            description: 'Number of tickets already sold (auto-updated)',
+            readOnly: true,
+          },
+        },
+        {
+          name: 'maxPerOrder',
+          type: 'number',
+          defaultValue: 10,
+          label: 'Max Per Order',
+          admin: {
+            description: 'Maximum tickets a single buyer can purchase',
+          },
+        },
+        {
+          name: 'perks',
+          type: 'array',
+          label: 'Perks / Benefits',
+          admin: {
+            description: 'List of benefits included with this ticket',
+          },
+          fields: [
+            {
+              name: 'perk',
+              type: 'text',
+              required: true,
+            },
+          ],
+        },
+        {
+          name: 'salesStart',
+          type: 'date',
+          label: 'Sales Start',
+          admin: {
+            date: { pickerAppearance: 'dayAndTime' },
+            description: 'When this ticket goes on sale (optional)',
+          },
+        },
+        {
+          name: 'salesEnd',
+          type: 'date',
+          label: 'Sales End',
+          admin: {
+            date: { pickerAppearance: 'dayAndTime' },
+            description: 'When sales close for this ticket (optional)',
+          },
+        },
+        {
+          name: 'isHidden',
+          type: 'checkbox',
+          defaultValue: false,
+          label: 'Hidden',
+          admin: {
+            description: 'Hide this ticket from public view',
+          },
+        },
+        {
+          name: 'sortOrder',
+          type: 'number',
+          defaultValue: 0,
+          label: 'Sort Order',
+          admin: {
+            description: 'Lower numbers appear first',
+          },
+        },
+      ],
+    },
   ],
 }

@@ -56,7 +56,7 @@ function formatTime(dateStr: string): string {
   })
 }
 
-// ─── Dummy ticket types ───────────────────────────────────────────────────────
+// ─── Ticket Type (shared with TicketSelector) ────────────────────────────────
 
 export type TicketType = {
   id: string
@@ -70,80 +70,59 @@ export type TicketType = {
   isSoldOut: boolean
 }
 
-const DUMMY_TICKET_TYPES: TicketType[] = [
-  {
-    id: 'tt-1',
-    name: 'General Admission',
-    description: 'Standard entry to the event. Access to all general areas.',
-    price: 150000,
-    currency: 'IDR',
-    available: 320,
-    maxPerOrder: 10,
-    perks: ['General area access', 'Welcome drink'],
-    isSoldOut: false,
-  },
-  {
-    id: 'tt-2',
-    name: 'VIP',
-    description: 'Premium experience with exclusive lounge access and priority entry.',
-    price: 350000,
-    currency: 'IDR',
-    available: 48,
-    maxPerOrder: 4,
-    perks: ['Priority entry', 'VIP lounge access', '2 complimentary drinks', 'Exclusive merch'],
-    isSoldOut: false,
-  },
-  {
-    id: 'tt-3',
-    name: 'VVIP Table (4 pax)',
-    description: 'Reserved table for 4 with dedicated service and premium bottle package.',
-    price: 2000000,
-    currency: 'IDR',
-    available: 8,
-    maxPerOrder: 2,
-    perks: [
-      'Reserved table for 4',
-      'Dedicated server',
-      '1 premium bottle',
-      'Priority entry',
-      'VIP lounge',
-    ],
-    isSoldOut: false,
-  },
-  {
-    id: 'tt-4',
-    name: 'Early Bird',
-    description: 'Limited early bird tickets at a discounted price. Same access as General.',
-    price: 99000,
-    currency: 'IDR',
-    available: 0,
-    maxPerOrder: 6,
-    perks: ['General area access', 'Welcome drink'],
-    isSoldOut: true,
-  },
-]
+/**
+ * Convert raw event.ticketTypes from Payload into the TicketType[] shape
+ * used by the TicketSelector component.
+ */
+function mapPayloadTicketTypes(rawTickets: NonNullable<Event['ticketTypes']>): TicketType[] {
+  const now = new Date()
 
-// ─── Dummy event fallback ─────────────────────────────────────────────────────
+  return rawTickets
+    .filter((t) => !t.isHidden)
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    .filter((t) => {
+      // Filter by sales window if set
+      if (t.salesStart && new Date(t.salesStart) > now) return false
+      if (t.salesEnd && new Date(t.salesEnd) < now) return false
+      return true
+    })
+    .map((t) => {
+      const available = Math.max(0, (t.quantity ?? 0) - (t.sold ?? 0))
+      return {
+        id: t.id ?? `tt-${t.name}`,
+        name: t.name,
+        description: t.description ?? '',
+        price: t.price ?? 0,
+        currency: t.currency ?? 'IDR',
+        available,
+        maxPerOrder: t.maxPerOrder ?? 10,
+        perks: (t.perks ?? []).map((p) => p.perk).filter(Boolean) as string[],
+        isSoldOut: available === 0,
+      }
+    })
+}
 
-const DUMMY_EVENT_TICKET = {
+// ─── Fallback event data (used when no real event found) ──────────────────────
+
+const FALLBACK_EVENT = {
   id: 0,
-  title: 'RnB & Slow Jams Day Party — Jakarta',
-  slug: 'rnb-slow-jams-jakarta',
+  title: 'Event Not Found',
+  slug: '',
   coverImage:
     'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=800&h=400&fit=crop&q=80',
-  startDate: '2026-06-14T16:00:00.000Z',
-  endDate: '2026-06-14T22:00:00.000Z',
-  venue: 'Jungle Jakarta',
-  address: 'Jl. Sudirman No. 88, Central Jakarta',
-  locationName: 'Jakarta',
-  categoryName: 'Music',
+  startDate: new Date().toISOString(),
+  endDate: null as string | null,
+  venue: '',
+  address: '',
+  locationName: '',
+  categoryName: '',
   isFree: false,
-  status: 'published' as const,
+  status: 'draft' as const,
   organizer: {
-    name: 'Soundwave Productions',
-    avatarUrl:
-      'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=80&h=80&fit=crop&q=80',
+    name: 'Unknown Organizer',
+    avatarUrl: '',
   },
+  ticketTypes: [] as NonNullable<Event['ticketTypes']>,
 }
 
 // ─── Metadata ─────────────────────────────────────────────────────────────────
@@ -177,26 +156,35 @@ export default async function EventTicketsPage({ params }: Props) {
     })
     if (docs.length > 0) realEvent = docs[0] as Event
   } catch {
-    // fall through to dummy
+    // fall through to fallback
   }
 
-  const ev = realEvent
-    ? {
-        id: realEvent.id,
-        title: realEvent.title,
-        slug: realEvent.slug ?? slug,
-        coverImage: getMediaUrl(realEvent.coverImage) ?? DUMMY_EVENT_TICKET.coverImage,
-        startDate: realEvent.startDate,
-        endDate: realEvent.endDate ?? null,
-        venue: realEvent.venue ?? '',
-        address: realEvent.address ?? '',
-        locationName: getLocationName(realEvent.location),
-        categoryName: getCategoryName(realEvent.category),
-        isFree: realEvent.isFree ?? false,
-        status: realEvent.status,
-        organizer: DUMMY_EVENT_TICKET.organizer,
-      }
-    : DUMMY_EVENT_TICKET
+  // If no event found, show not found
+  if (!realEvent) {
+    notFound()
+  }
+
+  const organizerData =
+    realEvent.organizer && typeof realEvent.organizer === 'object'
+      ? { name: (realEvent.organizer as any).name ?? 'Organizer', avatarUrl: '' }
+      : { name: 'Organizer', avatarUrl: '' }
+
+  const ev = {
+    id: realEvent.id,
+    title: realEvent.title,
+    slug: realEvent.slug ?? slug,
+    coverImage: getMediaUrl(realEvent.coverImage) ?? FALLBACK_EVENT.coverImage,
+    startDate: realEvent.startDate,
+    endDate: realEvent.endDate ?? null,
+    venue: realEvent.venue ?? '',
+    address: realEvent.address ?? '',
+    locationName: getLocationName(realEvent.location),
+    categoryName: getCategoryName(realEvent.category),
+    isFree: realEvent.isFree ?? false,
+    status: realEvent.status,
+    organizer: organizerData,
+    ticketTypes: realEvent.ticketTypes ?? [],
+  }
 
   // Redirect if event is cancelled or completed
   if (ev.status === 'cancelled' || ev.status === 'completed') {
@@ -205,21 +193,38 @@ export default async function EventTicketsPage({ params }: Props) {
 
   const cityName = ev.locationName || slugToDisplayName(city)
   const eventDetailHref = `/events/${city}/${slug}`
-  const ticketTypes = ev.isFree
-    ? [
-        {
-          id: 'tt-free',
-          name: 'Free Registration',
-          description: 'Register for free to secure your spot.',
-          price: 0,
-          currency: 'IDR',
-          available: 500,
-          maxPerOrder: 10,
-          perks: ['General area access'],
-          isSoldOut: false,
-        } satisfies TicketType,
-      ]
-    : DUMMY_TICKET_TYPES
+
+  // Build ticket types from Payload data
+  let ticketTypes: TicketType[]
+
+  if (ev.isFree) {
+    // Free event: show a single free registration ticket
+    ticketTypes = [
+      {
+        id: 'tt-free',
+        name: 'Free Registration',
+        description: 'Register for free to secure your spot.',
+        price: 0,
+        currency: 'IDR',
+        available:
+          ev.ticketTypes.length > 0
+            ? ev.ticketTypes.reduce(
+                (sum, t) => sum + Math.max(0, (t.quantity ?? 0) - (t.sold ?? 0)),
+                0,
+              )
+            : 500,
+        maxPerOrder: 10,
+        perks: ['General area access'],
+        isSoldOut: false,
+      },
+    ]
+  } else if (ev.ticketTypes.length > 0) {
+    // Paid event with organizer-defined ticket types
+    ticketTypes = mapPayloadTicketTypes(ev.ticketTypes)
+  } else {
+    // No ticket types defined yet — show a message
+    ticketTypes = []
+  }
 
   return (
     <div className="min-h-screen bg-[#f8f9fc]">
@@ -270,16 +275,36 @@ export default async function EventTicketsPage({ params }: Props) {
             </p>
 
             <div className="mt-6">
-              <TicketSelector
-                ticketTypes={ticketTypes}
-                eventTitle={ev.title}
-                eventSlug={slug}
-                citySlug={city}
-                isFree={ev.isFree}
-                currentUser={
-                  currentUser ? { name: currentUser.name ?? '', email: currentUser.email } : null
-                }
-              />
+              {ticketTypes.length > 0 ? (
+                <TicketSelector
+                  ticketTypes={ticketTypes}
+                  eventTitle={ev.title}
+                  eventSlug={slug}
+                  citySlug={city}
+                  isFree={ev.isFree}
+                  currentUser={
+                    currentUser ? { name: currentUser.name ?? '', email: currentUser.email } : null
+                  }
+                />
+              ) : (
+                <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
+                  <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-zinc-100">
+                    <Clock className="size-7 text-zinc-400" />
+                  </div>
+                  <h3 className="mt-4 text-lg font-bold text-[#12192f]">Tickets Coming Soon</h3>
+                  <p className="mt-2 text-sm text-zinc-500">
+                    The organizer hasn&apos;t set up ticket types for this event yet. Check back
+                    later!
+                  </p>
+                  <Link
+                    href={eventDetailHref}
+                    className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[#5151eb] hover:underline"
+                  >
+                    <ArrowLeft className="size-4" />
+                    Back to event details
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
 
@@ -290,9 +315,7 @@ export default async function EventTicketsPage({ params }: Props) {
               <div className="relative aspect-video overflow-hidden">
                 <img
                   src={
-                    typeof ev.coverImage === 'string'
-                      ? ev.coverImage
-                      : DUMMY_EVENT_TICKET.coverImage
+                    typeof ev.coverImage === 'string' ? ev.coverImage : FALLBACK_EVENT.coverImage
                   }
                   alt={ev.title}
                   className="h-full w-full object-cover"

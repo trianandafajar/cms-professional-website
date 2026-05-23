@@ -74,6 +74,7 @@ export interface Config {
     categories: Category;
     locations: Location;
     events: Event;
+    posts: Post;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -88,6 +89,7 @@ export interface Config {
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     locations: LocationsSelect<false> | LocationsSelect<true>;
     events: EventsSelect<false> | EventsSelect<true>;
+    posts: PostsSelect<false> | PostsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -346,6 +348,78 @@ export interface Event {
     | null;
   interestedCount?: number | null;
   capacity?: number | null;
+  /**
+   * Define the ticket tiers for this event. Attendees will see these options when purchasing.
+   */
+  ticketTypes?:
+    | {
+        /**
+         * e.g., General Admission, VIP, VVIP Table
+         */
+        name: string;
+        /**
+         * Brief description shown to attendees
+         */
+        description?: string | null;
+        /**
+         * Price in IDR. Set to 0 for free tickets.
+         */
+        price: number;
+        currency?: ('IDR' | 'USD') | null;
+        /**
+         * Total number of tickets available for this tier
+         */
+        quantity: number;
+        /**
+         * Number of tickets already sold (auto-updated)
+         */
+        sold?: number | null;
+        /**
+         * Maximum tickets a single buyer can purchase
+         */
+        maxPerOrder?: number | null;
+        /**
+         * List of benefits included with this ticket
+         */
+        perks?:
+          | {
+              perk: string;
+              id?: string | null;
+            }[]
+          | null;
+        /**
+         * When this ticket goes on sale (optional)
+         */
+        salesStart?: string | null;
+        /**
+         * When sales close for this ticket (optional)
+         */
+        salesEnd?: string | null;
+        /**
+         * Hide this ticket from public view
+         */
+        isHidden?: boolean | null;
+        /**
+         * Lower numbers appear first
+         */
+        sortOrder?: number | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "posts".
+ */
+export interface Post {
+  id: number;
+  author: number | User;
+  content: string;
+  image?: (number | null) | Media;
+  likesCount?: number | null;
+  commentsCount?: number | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -400,6 +474,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'events';
         value: number | Event;
+      } | null)
+    | ({
+        relationTo: 'posts';
+        value: number | Post;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -579,6 +657,41 @@ export interface EventsSelect<T extends boolean = true> {
       };
   interestedCount?: T;
   capacity?: T;
+  ticketTypes?:
+    | T
+    | {
+        name?: T;
+        description?: T;
+        price?: T;
+        currency?: T;
+        quantity?: T;
+        sold?: T;
+        maxPerOrder?: T;
+        perks?:
+          | T
+          | {
+              perk?: T;
+              id?: T;
+            };
+        salesStart?: T;
+        salesEnd?: T;
+        isHidden?: T;
+        sortOrder?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "posts_select".
+ */
+export interface PostsSelect<T extends boolean = true> {
+  author?: T;
+  content?: T;
+  image?: T;
+  likesCount?: T;
+  commentsCount?: T;
   updatedAt?: T;
   createdAt?: T;
 }

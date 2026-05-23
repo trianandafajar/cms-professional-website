@@ -4,45 +4,28 @@ import React, { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  Home,
-  Calendar,
-  FileText,
-  Megaphone,
-  BarChart3,
-  Settings,
-  HelpCircle,
-  PlusCircle,
-  Search,
-  ChevronDown,
-  LogOut,
-  LayoutDashboard,
-  CircleHelp,
+  Ticket,
+  Receipt,
+  Heart,
   User as UserIcon,
-  Palette,
+  LogOut,
+  ChevronDown,
+  Search,
+  Home,
 } from 'lucide-react'
 import Image from 'next/image'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import NotificationDrawer from '@/components/organizations/layouts/notification'
 import { useAuthStore } from '@/stores/authStore'
-
-const profileMenu = [
-  { label: 'My Profile', href: '/organizers/me', icon: UserIcon },
-  { label: 'Dashboard', href: '/organizations/dashboard', icon: LayoutDashboard },
-  { label: 'Help Center', href: '/organizations/help', icon: CircleHelp },
-]
 
 function getInitials(value?: string | null) {
   if (!value) return 'U'
   const parts = value.trim().split(/\s+/)
-  if (parts.length === 1) {
-    return parts[0].slice(0, 2).toUpperCase()
-  }
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
-export default function OrganizationsLayout({ children }: { children: React.ReactNode }) {
+export default function MyLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const { user, logout } = useAuthStore()
@@ -53,23 +36,11 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
   const initials = getInitials(user?.name || user?.email)
 
   const sidebarItems = [
-    { icon: Home, href: '/organizations/dashboard', label: 'Dashboard', isBottom: false },
-    { icon: Calendar, href: '/organizations/events', label: 'Events', isBottom: false },
-    { icon: FileText, href: '/organizations/orders', label: 'Orders', isBottom: false },
-    {
-      icon: Palette,
-      href: '/organizations/ticket-designer',
-      label: 'Ticket Designer',
-      isBottom: false,
-    },
-    { icon: Megaphone, href: '/organizations/marketing', label: 'Marketing', isBottom: false },
-    { icon: BarChart3, href: '/organizations/finance', label: 'Finance', isBottom: false },
-    { icon: Settings, href: '/organizations/settings', label: 'Settings', isBottom: true },
-    { icon: HelpCircle, href: '/organizations/help', label: 'Help', isBottom: true },
+    { icon: Ticket, href: '/my/tickets', label: 'My Tickets' },
+    { icon: Receipt, href: '/my/orders', label: 'My Orders' },
+    { icon: Heart, href: '/my/likes', label: 'Liked Events' },
+    { icon: UserIcon, href: '/my/profile', label: 'Profile' },
   ]
-
-  const topItems = sidebarItems.filter((item) => !item.isBottom)
-  const bottomItems = sidebarItems.filter((item) => item.isBottom)
 
   async function handleLogout() {
     if (loggingOut) return
@@ -77,7 +48,7 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
     try {
       await logout()
     } catch {
-      // ignore - cookie may still be cleared
+      // ignore
     } finally {
       setLoggingOut(false)
       router.refresh()
@@ -87,7 +58,7 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
 
   return (
     <div className="h-screen overflow-hidden bg-white flex flex-col">
-      {/* ─── Navbar (matching landing page style) ─── */}
+      {/* ─── Navbar ─── */}
       <header className="sticky top-0 z-50 border-b border-zinc-100 bg-white">
         <div className="flex w-full items-center gap-4 px-4 py-3 lg:px-6">
           {/* Logo */}
@@ -110,39 +81,24 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
             <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
             <input
               className="h-10 w-full rounded-lg border border-zinc-200 bg-[#fdfdfd] pl-10 pr-4 text-sm outline-none placeholder:text-zinc-500 focus:border-[#5151eb] focus:ring-1 focus:ring-[#5151eb]/20"
-              placeholder="Search events, orders..."
+              placeholder="Search events..."
               type="search"
             />
           </form>
 
           {/* Nav Links */}
           <nav className="ml-auto hidden items-center gap-1 lg:flex">
-            <Button
-              asChild
-              className="text-sm font-medium text-zinc-700 hover:text-[#12192f]"
-              size="sm"
-              variant="ghost"
+            <Link
+              href="/"
+              className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 hover:text-[#12192f]"
             >
-              <Link href="/">Find Events</Link>
-            </Button>
-            <Button
-              asChild
-              className="text-sm font-medium text-zinc-700 hover:text-[#12192f]"
-              size="sm"
-              variant="ghost"
-            >
-              <Link href="/organizations/events/create">
-                <PlusCircle className="size-4 mr-1" />
-                Create Event
-              </Link>
-            </Button>
+              <Home className="size-4" />
+              Find Events
+            </Link>
           </nav>
 
-          {/* Right side: Notification + Profile */}
+          {/* Profile */}
           <div className="flex items-center gap-2">
-            <NotificationDrawer />
-
-            {/* Profile Pill (same style as landing page) */}
             <Popover>
               <PopoverTrigger asChild>
                 <button
@@ -162,9 +118,8 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
               <PopoverContent
                 align="end"
                 sideOffset={8}
-                className="w-[300px] overflow-hidden rounded-2xl border border-zinc-200 bg-white p-0 shadow-xl ring-0"
+                className="w-[280px] overflow-hidden rounded-2xl border border-zinc-200 bg-white p-0 shadow-xl ring-0"
               >
-                {/* Header */}
                 <div className="border-b border-zinc-100 px-4 py-4">
                   <div className="flex items-center gap-3">
                     <div className="flex size-11 items-center justify-center rounded-full bg-[#5151eb] text-base font-semibold text-white">
@@ -180,10 +135,8 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
                     </div>
                   </div>
                 </div>
-
-                {/* Menu */}
                 <div className="p-1.5">
-                  {profileMenu.map(({ label, href, icon: Icon }) => (
+                  {sidebarItems.map(({ label, href, icon: Icon }) => (
                     <Link
                       key={href}
                       href={href}
@@ -193,9 +146,7 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
                       {label}
                     </Link>
                   ))}
-
                   <div className="my-1 border-t border-zinc-100" />
-
                   <button
                     type="button"
                     onClick={handleLogout}
@@ -215,45 +166,13 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
       {/* ─── Body ─── */}
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
-        <aside className="sticky top-0 flex h-[calc(100vh-63px)] w-16 flex-col justify-between items-center border-r border-zinc-100 bg-white py-3">
+        <aside className="sticky top-0 flex h-[calc(100vh-63px)] w-16 flex-col items-center border-r border-zinc-100 bg-white py-4">
           <div className="flex flex-col items-center gap-3">
-            {topItems.map((item, idx) => {
+            {sidebarItems.map((item) => {
               const isActive = pathname.startsWith(item.href)
               const Icon = item.icon
-
               return (
-                <Tooltip key={idx}>
-                  <TooltipTrigger asChild>
-                    <Link
-                      href={item.href}
-                      className={`rounded-xl p-3 transition-all ${
-                        isActive
-                          ? 'bg-[#5151eb] text-white shadow-sm'
-                          : 'text-zinc-500 hover:bg-zinc-50 hover:text-[#12192f]'
-                      }`}
-                    >
-                      <Icon size={22} />
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    side="right"
-                    sideOffset={12}
-                    className="rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 shadow-md"
-                  >
-                    {item.label}
-                  </TooltipContent>
-                </Tooltip>
-              )
-            })}
-          </div>
-
-          <div className="flex flex-col items-center gap-3">
-            {bottomItems.map((item, idx) => {
-              const isActive = pathname.startsWith(item.href)
-              const Icon = item.icon
-
-              return (
-                <Tooltip key={idx}>
+                <Tooltip key={item.href}>
                   <TooltipTrigger asChild>
                     <Link
                       href={item.href}
