@@ -1,0 +1,349 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import { Heart, MessageCircle, Share2, MoreHorizontal, Trash2, Edit3, Loader2 } from 'lucide-react'
+import { apiClient } from '@/lib/apiClient'
+import { OrganizerCreatePost } from './organizer-create-post'
+import type { Media } from '@/payload-types'
+
+interface Post {
+  id: number
+  content: string
+  image?: Media | number | null
+  author: { id: number; name: string; avatar?: Media | null } | number
+  likesCount: number
+  commentsCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+type Props = {
+  organizerId: number
+  isOwner: boolean
+  avatarUrl?: string | null
+  organizerName: string
+}
+
+function getMediaUrl(media: unknown): string | null {
+  if (media && typeof media === 'object' && 'url' in media) {
+    return (media as Media).url ?? null
+  }
+  return null
+}
+
+function timeAgo(dateStr: string): string {
+  const now = new Date()
+  const date = new Date(dateStr)
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+  if (seconds < 60) return 'just now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d ago`
+  const weeks = Math.floor(days / 7)
+  if (weeks < 4) return `${weeks}w ago`
+  return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+function PostCard({
+  post,
+  organizerName,
+  avatarUrl,
+  isOwner,
+  onDelete,
+  onEdit,
+}: {
+  post: Post
+  organizerName: string
+  avatarUrl: string | null
+  isOwner: boolean
+  onDelete: (id: number) => void
+  onEdit: (post: Post) => void
+}) {
+  const [showMenu, setShowMenu] = useState(false)
+  const postImageUrl = getMediaUrl(post.image)
+
+  const initials = organizerName
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+
+  return (
+    <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt={organizerName}
+              className="size-10 rounded-full object-cover shrink-0"
+            />
+          ) : (
+            <div className="size-10 rounded-full bg-linear-to-br from-[#5151eb] to-indigo-400 flex items-center justify-center text-white text-sm font-bold shrink-0">
+              {initials}
+            </div>
+          )}
+          <div>
+            <p className="text-sm font-semibold text-[#12192f]">{organizerName}</p>
+            <p className="text-xs text-zinc-400">{timeAgo(post.createdAt)}</p>
+          </div>
+        </div>
+
+        {isOwner && (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowMenu(!showMenu)}
+              className="flex size-8 items-center justify-center rounded-full hover:bg-zinc-100 transition"
+            >
+              <MoreHorizontal className="size-4 text-zinc-400" />
+            </button>
+            {showMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+                <div className="absolute right-0 top-full z-20 mt-1 w-36 rounded-xl border border-zinc-100 bg-white py-1 shadow-lg">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMenu(false)
+                      onEdit(post)
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 transition"
+                  >
+                    <Edit3 className="size-3.5" />
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMenu(false)
+                      onDelete(post.id)
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition"
+                  >
+                    <Trash2 className="size-3.5" />
+                    Delete
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Content */}
+      <p className="mt-3 text-sm text-zinc-700 leading-relaxed whitespace-pre-wrap">
+        {post.content}
+      </p>
+
+      {/* Image */}
+      {postImageUrl && (
+        <div className="mt-3 overflow-hidden rounded-xl">
+          <img
+            src={postImageUrl}
+            alt="Post image"
+            className="w-full object-cover max-h-80"
+            loading="lazy"
+          />
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="mt-4 flex items-center gap-5 border-t border-zinc-100 pt-3">
+        <button
+          type="button"
+          className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-[#5151eb] transition"
+        >
+          <Heart className="size-4" />
+          <span>{(post.likesCount ?? 0).toLocaleString()}</span>
+        </button>
+        <button
+          type="button"
+          className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-[#5151eb] transition"
+        >
+          <MessageCircle className="size-4" />
+          <span>{post.commentsCount ?? 0} comments</span>
+        </button>
+        <button
+          type="button"
+          className="ml-auto flex items-center gap-1.5 text-sm text-zinc-500 hover:text-[#5151eb] transition"
+        >
+          <Share2 className="size-4" />
+          Share
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Edit Post Modal
+function EditPostModal({
+  post,
+  onClose,
+  onSaved,
+}: {
+  post: Post
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [content, setContent] = useState(post.content)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
+    if (!content.trim()) return
+    setSaving(true)
+    setError(null)
+
+    try {
+      await apiClient.patch(`/api/organizer/posts/${post.id}`, { content: content.trim() })
+      onSaved()
+      onClose()
+    } catch (err: any) {
+      setError(err.message || 'Failed to update post')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between border-b border-zinc-100 px-6 py-4">
+          <h2 className="text-lg font-bold text-[#12192f]">Edit Post</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex size-8 items-center justify-center rounded-full hover:bg-zinc-100 transition"
+          >
+            <span className="text-zinc-500 text-xl">&times;</span>
+          </button>
+        </div>
+        <form onSubmit={handleSave} className="p-6 space-y-4">
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            rows={5}
+            maxLength={2000}
+            className="w-full resize-none rounded-xl border border-zinc-200 px-4 py-3 text-sm text-[#12192f] placeholder:text-zinc-400 focus:border-[#5151eb] focus:ring-2 focus:ring-[#5151eb]/20 outline-none transition"
+          />
+          {error && <p className="text-sm text-red-500">{error}</p>}
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl px-5 py-2.5 text-sm font-semibold text-zinc-600 hover:bg-zinc-100 transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving || !content.trim()}
+              className="flex items-center gap-2 rounded-xl bg-[#5151eb] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#4040d0] transition disabled:opacity-50"
+            >
+              {saving && <Loader2 className="size-4 animate-spin" />}
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+export function OrganizerFeed({ organizerId, isOwner, avatarUrl, organizerName }: Props) {
+  const [posts, setPosts] = useState<Post[]>([])
+  const [loading, setLoading] = useState(true)
+  const [editingPost, setEditingPost] = useState<Post | null>(null)
+
+  const fetchPosts = useCallback(async () => {
+    try {
+      const data = await apiClient.get<{ docs: Post[] }>(`/api/organizer/${organizerId}/posts`)
+      setPosts(data.docs)
+    } catch {
+      // silently fail
+    } finally {
+      setLoading(false)
+    }
+  }, [organizerId])
+
+  useEffect(() => {
+    fetchPosts()
+  }, [fetchPosts])
+
+  async function handleDelete(postId: number) {
+    if (!confirm('Are you sure you want to delete this post?')) return
+    try {
+      await apiClient.delete(`/api/organizer/posts/${postId}`)
+      setPosts((prev) => prev.filter((p) => p.id !== postId))
+    } catch {
+      alert('Failed to delete post')
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="size-6 animate-spin text-[#5151eb]" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="mx-auto max-w-2xl space-y-4">
+      {/* Create post form (only for owner) */}
+      {isOwner && (
+        <OrganizerCreatePost
+          onPostCreated={fetchPosts}
+          avatarUrl={avatarUrl}
+          organizerName={organizerName}
+        />
+      )}
+
+      {/* Posts list */}
+      {posts.length === 0 && !isOwner && (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 py-16 text-center">
+          <MessageCircle className="size-10 text-zinc-300 mb-3" />
+          <p className="text-base font-semibold text-zinc-400">No posts yet</p>
+        </div>
+      )}
+
+      {posts.length === 0 && isOwner && (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 py-12 text-center">
+          <MessageCircle className="size-10 text-zinc-300 mb-3" />
+          <p className="text-base font-semibold text-zinc-400">
+            Share your first update with followers
+          </p>
+        </div>
+      )}
+
+      {posts.map((post) => (
+        <PostCard
+          key={post.id}
+          post={post}
+          organizerName={organizerName}
+          avatarUrl={avatarUrl}
+          isOwner={isOwner}
+          onDelete={handleDelete}
+          onEdit={setEditingPost}
+        />
+      ))}
+
+      {/* Edit modal */}
+      {editingPost && (
+        <EditPostModal
+          post={editingPost}
+          onClose={() => setEditingPost(null)}
+          onSaved={fetchPosts}
+        />
+      )}
+    </div>
+  )
+}

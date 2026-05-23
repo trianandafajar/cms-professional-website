@@ -1,18 +1,19 @@
 // src/middleware.ts
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  if (pathname.startsWith('/onboarding')) {
-    // Cek cookie session Payload (atau token)
-    const token = request.cookies.get('payload-token')?.value;
+  const { pathname } = request.nextUrl
+  const token = request.cookies.get('payload-token')?.value
+
+  // Protect /onboarding and /organizations routes
+  if (pathname.startsWith('/onboarding') || pathname.startsWith('/organizations')) {
     if (!token) {
-      return NextResponse.redirect(new URL('/auth/signin', request.url));
+      return NextResponse.redirect(new URL('/auth/signin', request.url))
     }
-    // Di sini Anda bisa cek isOnboarded dari API, tapi untuk sederhananya skip dulu
   }
-  return NextResponse.next();
+
+  return NextResponse.next()
 }
 
-export const config = { matcher: ['/onboarding/:path*'] };
+export const config = { matcher: ['/onboarding/:path*', '/organizations/:path*'] }

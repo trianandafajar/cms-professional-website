@@ -1,6 +1,7 @@
-// organizations/orders/[id]/page.tsx
+'use client'
 
-import { Calendar, Mail, Phone, MapPin, Ticket, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Calendar, Mail, Phone, MapPin, Ticket, CheckCircle2, X } from 'lucide-react'
+import Link from 'next/link'
 
 export default function OrderDetailPage() {
   const order = {
@@ -10,186 +11,139 @@ export default function OrderDetailPage() {
     paymentMethod: 'Midtrans',
     transactionId: 'TRX-9812739812',
     total: 300000,
-
-    buyer: {
-      name: 'Reno',
-      email: 'reno@example.com',
-      phone: '+62 812 3456 7890',
-    },
-
+    buyer: { name: 'Reno', email: 'reno@example.com', phone: '+62 812 3456 7890' },
     event: {
       name: 'React Conference 2026',
       date: '30 June 2026 • 10:00 WIB',
       location: 'Semarang, Jawa Tengah',
     },
-
     tickets: [
-      {
-        id: 1,
-        type: 'General Admission',
-        attendee: 'Reno',
-        qty: 1,
-        price: 150000,
-        checkedIn: true,
-      },
-      {
-        id: 2,
-        type: 'General Admission',
-        attendee: 'John Doe',
-        qty: 1,
-        price: 150000,
-        checkedIn: false,
-      },
+      { id: 1, type: 'General Admission', attendee: 'Reno', price: 150000, checkedIn: true },
+      { id: 2, type: 'General Admission', attendee: 'John Doe', price: 150000, checkedIn: false },
     ],
   }
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-5xl font-bold text-[#1E0A3C]">Order Detail</h1>
+  const statusColor =
+    order.status === 'Completed'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+      : order.status === 'Pending'
+        ? 'border-amber-200 bg-amber-50 text-amber-700'
+        : 'border-red-200 bg-red-50 text-red-600'
 
-        <p className="mt-2 text-lg text-gray-500">{order.id}</p>
+  return (
+    <div className="mx-auto max-w-5xl space-y-6">
+      <Link
+        href="/organizations/orders"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-[#5151eb] hover:text-[#4040d9]"
+      >
+        <ArrowLeft size={15} />
+        Back to orders
+      </Link>
+
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-zinc-900">Order Detail</h1>
+          <p className="mt-0.5 text-sm text-zinc-500">{order.id}</p>
+        </div>
+        <span
+          className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${statusColor}`}
+        >
+          {order.status}
+        </span>
       </div>
 
-      {/* Top Grid */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Order */}
-        <div className="rounded-3xl border border-gray-200 bg-white p-6">
-          <h2 className="text-xl font-bold">Order Information</h2>
-
-          <div className="mt-5 space-y-4">
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="rounded-xl border border-zinc-200 bg-white p-5">
+          <h2 className="text-sm font-semibold text-zinc-900">Order Information</h2>
+          <div className="mt-4 space-y-3">
+            <InfoRow label="Purchase Date" value={order.purchaseDate} />
+            <InfoRow label="Payment Method" value={order.paymentMethod} />
+            <InfoRow label="Transaction ID" value={order.transactionId} />
             <div>
-              <p className="text-sm text-gray-500">Status</p>
-
-              <span className="mt-1 inline-flex rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-700">
-                {order.status}
-              </span>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Purchase Date</p>
-
-              <p className="font-medium">{order.purchaseDate}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Payment Method</p>
-
-              <p className="font-medium">{order.paymentMethod}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Transaction ID</p>
-
-              <p className="font-medium">{order.transactionId}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Total Payment</p>
-
-              <p className="text-xl font-bold text-blue-600">
+              <p className="text-xs text-zinc-500">Total Payment</p>
+              <p className="mt-0.5 text-lg font-bold text-[#5151eb]">
                 Rp {order.total.toLocaleString('id-ID')}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Buyer */}
-        <div className="rounded-3xl border border-gray-200 bg-white p-6">
-          <h2 className="text-xl font-bold">Buyer Information</h2>
-
-          <div className="mt-5 space-y-4">
-            <div className="flex items-center gap-3">
-              <Mail size={18} />
-
-              <div>
-                <p className="font-medium">{order.buyer.email}</p>
-              </div>
+        <div className="rounded-xl border border-zinc-200 bg-white p-5">
+          <h2 className="text-sm font-semibold text-zinc-900">Buyer Information</h2>
+          <div className="mt-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Mail size={14} className="text-zinc-400" />
+              <span className="text-sm text-zinc-700">{order.buyer.email}</span>
             </div>
-
-            <div className="flex items-center gap-3">
-              <Phone size={18} />
-
-              <div>
-                <p className="font-medium">{order.buyer.phone}</p>
-              </div>
+            <div className="flex items-center gap-2">
+              <Phone size={14} className="text-zinc-400" />
+              <span className="text-sm text-zinc-700">{order.buyer.phone}</span>
             </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Full Name</p>
-
-              <p className="font-semibold">{order.buyer.name}</p>
-            </div>
+            <InfoRow label="Full Name" value={order.buyer.name} />
           </div>
         </div>
 
-        {/* Event */}
-        <div className="rounded-3xl border border-gray-200 bg-white p-6">
-          <h2 className="text-xl font-bold">Event Information</h2>
-
-          <div className="mt-5 space-y-4">
-            <div className="flex items-center gap-3">
-              <Calendar size={18} />
-
-              <span>{order.event.date}</span>
+        <div className="rounded-xl border border-zinc-200 bg-white p-5">
+          <h2 className="text-sm font-semibold text-zinc-900">Event Information</h2>
+          <div className="mt-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Calendar size={14} className="text-zinc-400" />
+              <span className="text-sm text-zinc-700">{order.event.date}</span>
             </div>
-
-            <div className="flex items-center gap-3">
-              <MapPin size={18} />
-
-              <span>{order.event.location}</span>
+            <div className="flex items-center gap-2">
+              <MapPin size={14} className="text-zinc-400" />
+              <span className="text-sm text-zinc-700">{order.event.location}</span>
             </div>
-
-            <div>
-              <p className="font-semibold">{order.event.name}</p>
-            </div>
+            <p className="text-sm font-medium text-zinc-900">{order.event.name}</p>
           </div>
         </div>
       </div>
 
-      {/* Tickets */}
-      <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white">
-        <div className="border-b border-gray-200 px-6 py-5">
-          <h2 className="text-xl font-bold">Tickets</h2>
+      <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
+        <div className="border-b border-zinc-100 px-5 py-3.5">
+          <h2 className="text-sm font-semibold text-zinc-900">Tickets</h2>
         </div>
-
         <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-4 text-left">Ticket</th>
-
-              <th className="px-6 py-4 text-left">Attendee</th>
-
-              <th className="px-6 py-4 text-left">Price</th>
-
-              <th className="px-6 py-4 text-left">Check-in</th>
+          <thead>
+            <tr className="border-b border-zinc-100 bg-zinc-50/50">
+              <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                Ticket
+              </th>
+              <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                Attendee
+              </th>
+              <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                Price
+              </th>
+              <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                Check-in
+              </th>
             </tr>
           </thead>
-
           <tbody>
             {order.tickets.map((ticket) => (
-              <tr key={ticket.id} className="border-t border-gray-100">
-                <td className="px-6 py-5">
-                  <div className="flex items-center gap-3">
-                    <Ticket size={18} />
-
-                    {ticket.type}
+              <tr key={ticket.id} className="border-b border-zinc-50 last:border-b-0">
+                <td className="px-5 py-3.5">
+                  <div className="flex items-center gap-2">
+                    <Ticket size={14} className="text-[#5151eb]" />
+                    <span className="text-sm text-zinc-800">{ticket.type}</span>
                   </div>
                 </td>
-
-                <td className="px-6 py-5">{ticket.attendee}</td>
-
-                <td className="px-6 py-5">Rp {ticket.price.toLocaleString('id-ID')}</td>
-
-                <td className="px-6 py-5">
+                <td className="px-5 py-3.5 text-sm text-zinc-700">{ticket.attendee}</td>
+                <td className="px-5 py-3.5 text-sm font-medium text-zinc-900">
+                  Rp {ticket.price.toLocaleString('id-ID')}
+                </td>
+                <td className="px-5 py-3.5">
                   {ticket.checkedIn ? (
-                    <span className="flex items-center gap-2 text-green-600">
-                      <CheckCircle2 size={16} />
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600">
+                      <CheckCircle2 size={13} />
                       Checked In
                     </span>
                   ) : (
-                    <span className="text-gray-500">Not Checked In</span>
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-zinc-400">
+                      <X size={13} />
+                      Not Yet
+                    </span>
                   )}
                 </td>
               </tr>
@@ -198,20 +152,26 @@ export default function OrderDetailPage() {
         </table>
       </div>
 
-      {/* Actions */}
-      <div className="flex gap-3">
-        <button className="rounded-xl border border-gray-300 px-5 py-3 font-medium">
+      <div className="flex gap-2">
+        <button className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50">
           Resend Ticket
         </button>
-
-        <button className="rounded-xl border border-gray-300 px-5 py-3 font-medium">
+        <button className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50">
           Download PDF
         </button>
-
-        <button className="rounded-xl bg-red-500 px-5 py-3 font-medium text-white">
+        <button className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700">
           Refund Order
         </button>
       </div>
+    </div>
+  )
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs text-zinc-500">{label}</p>
+      <p className="mt-0.5 text-sm font-medium text-zinc-800">{value}</p>
     </div>
   )
 }

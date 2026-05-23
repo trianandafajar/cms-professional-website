@@ -1,129 +1,83 @@
 'use client'
 
-import {
-  Drawer,
-  DrawerContent,
-} from '@/components/ui/drawer'
-
-import {
-  Calendar,
-  CreditCard,
-  Flag,
-  Receipt,
-} from 'lucide-react'
+import { Drawer, DrawerContent } from '@/components/ui/drawer'
+import { Calendar, CreditCard, Flag, Receipt, X } from 'lucide-react'
 
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
-export default function PayoutFilterDrawer({
-  open,
-  onOpenChange,
-}: Props) {
+export default function PayoutFilterDrawer({ open, onOpenChange }: Props) {
   return (
-    <Drawer
-      direction="right"
-      open={open}
-      onOpenChange={onOpenChange}
-    >
-      <DrawerContent className="h-screen !max-w-[520px] border-l border-gray-200 bg-white">
+    <Drawer direction="right" open={open} onOpenChange={onOpenChange}>
+      <DrawerContent className="h-screen !max-w-[400px] border-l border-zinc-200 bg-white">
         <div className="flex h-full flex-col">
           {/* Header */}
-          <div className="border-b border-gray-200 px-8 py-8">
-            <div className="flex items-center justify-between">
-              <h2 className="text-3xl font-bold text-[#1E0A3C]">
-                Payout filters
-              </h2>
-
-              <button className="text-sm font-semibold text-gray-500">
-                Clear
-              </button>
-            </div>
+          <div className="flex items-center justify-between border-b border-zinc-100 px-6 py-4">
+            <h2 className="text-lg font-bold text-zinc-900">Payout Filters</h2>
+            <button
+              onClick={() => onOpenChange(false)}
+              className="rounded-lg p-1.5 transition hover:bg-zinc-100"
+            >
+              <X size={18} className="text-zinc-500" />
+            </button>
           </div>
 
           {/* Body */}
-          <div className="flex-1 space-y-6 overflow-y-auto px-8 py-8">
-            <div className="rounded-2xl border border-gray-300 p-5">
-              <label className="mb-3 block text-sm font-medium">
-                Payout date range
-              </label>
+          <div className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
+            <FilterField icon={Calendar} label="Payout date range">
+              <select className="w-full bg-transparent text-sm outline-none">
+                <option>All time</option>
+                <option>Last 30 days</option>
+                <option>Last 90 days</option>
+                <option>This year</option>
+              </select>
+            </FilterField>
 
-              <div className="flex items-center gap-3">
-                <Calendar size={18} />
+            <FilterField icon={Flag} label="Payout status">
+              <select className="w-full bg-transparent text-sm outline-none">
+                <option>All</option>
+                <option>Paid</option>
+                <option>Pending</option>
+                <option>Processing</option>
+              </select>
+            </FilterField>
 
-                <select className="w-full bg-transparent outline-none">
-                  <option>All time</option>
-                  <option>Last 30 days</option>
-                  <option>Last 90 days</option>
-                  <option>This year</option>
-                </select>
-              </div>
-            </div>
+            <FilterField icon={CreditCard} label="Payout method">
+              <select className="w-full bg-transparent text-sm outline-none">
+                <option>All</option>
+                <option>Bank Transfer</option>
+                <option>Manual Transfer</option>
+              </select>
+            </FilterField>
 
-            <div className="rounded-2xl border border-gray-300 p-5">
-              <div className="flex items-center gap-3">
-                <Flag size={18} />
+            <FilterField icon={Receipt} label="Payout ID">
+              <input
+                placeholder="e.g: 23179153"
+                className="w-full bg-transparent text-sm outline-none"
+              />
+            </FilterField>
 
-                <select className="w-full bg-transparent outline-none">
-                  <option>Payout Status</option>
-                  <option>Paid</option>
-                  <option>Pending</option>
-                  <option>Processing</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-gray-300 p-5">
-              <div className="flex items-center gap-3">
-                <CreditCard size={18} />
-
-                <select className="w-full bg-transparent outline-none">
-                  <option>Payout Method</option>
-                  <option>Bank Transfer</option>
-                  <option>Manual Transfer</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-gray-300 p-5">
-              <label className="mb-3 block text-sm font-medium">
-                Enter a single payout ID
-              </label>
-
-              <div className="flex items-center gap-3">
-                <Receipt size={18} />
-
-                <input
-                  placeholder="e.g: 23179153"
-                  className="w-full bg-transparent outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-gray-300 p-5">
-              <label className="mb-3 block text-sm font-medium">
-                Event name
-              </label>
-
+            <div>
+              <label className="text-xs font-medium text-zinc-600">Event name</label>
               <input
                 placeholder="Search event..."
-                className="w-full bg-transparent outline-none"
+                className="mt-1.5 h-9 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-[#5151eb] focus:ring-2 focus:ring-[#5151eb]/10"
               />
             </div>
           </div>
 
           {/* Footer */}
-          <div className="border-t border-gray-200 p-6">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="border-t border-zinc-100 px-6 py-4">
+            <div className="flex gap-3">
               <button
                 onClick={() => onOpenChange(false)}
-                className="rounded-xl border border-gray-300 py-3 font-semibold"
+                className="flex-1 rounded-lg border border-zinc-200 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
               >
                 Cancel
               </button>
-
-              <button className="rounded-xl bg-blue-600 py-3 font-semibold text-white">
+              <button className="flex-1 rounded-lg bg-[#5151eb] py-2.5 text-sm font-medium text-white transition hover:bg-[#4040d9]">
                 Apply
               </button>
             </div>
@@ -131,5 +85,25 @@ export default function PayoutFilterDrawer({
         </div>
       </DrawerContent>
     </Drawer>
+  )
+}
+
+function FilterField({
+  icon: Icon,
+  label,
+  children,
+}: {
+  icon: any
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <div>
+      <label className="text-xs font-medium text-zinc-600">{label}</label>
+      <div className="mt-1.5 flex items-center gap-2 rounded-lg border border-zinc-200 px-3 py-2.5">
+        <Icon size={14} className="text-zinc-400" />
+        {children}
+      </div>
+    </div>
   )
 }

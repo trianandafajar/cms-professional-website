@@ -1,7 +1,7 @@
 import { headers as getHeaders } from 'next/headers.js'
 import { getPayload } from 'payload'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import {
   Globe,
   Calendar,
@@ -16,6 +16,7 @@ import {
 import { FrontendNavbar } from '@/components/frontend/navbar'
 import { OrganizerTabs } from '@/components/frontend/organizer-tabs'
 import { FollowButton } from '@/components/frontend/follow-button'
+import { OrganizerOwnerActions } from '@/components/frontend/organizer-owner-actions'
 import {
   getDummyOrganizerById,
   formatFollowers,
@@ -39,6 +40,11 @@ function getMediaUrl(media: unknown): string | null {
 
 export async function generateMetadata({ params }: Props) {
   const { id } = await params
+
+  // "me" redirect — no special metadata needed
+  if (id === 'me') {
+    return { title: 'My Profile | Eventbro' }
+  }
 
   // Dummy organizer
   if (id.startsWith('eo-')) {
@@ -423,6 +429,20 @@ export default async function OrganizerProfilePage({ params, searchParams }: Pro
   const payload = await getPayload({ config: payloadConfig })
   const { user: currentUser } = await payload.auth({ headers })
 
+  // ── Handle /organizers/me → redirect to own profile ───────────────────────
+  if (id === 'me') {
+    if (!currentUser) {
+      redirect('/auth/signin')
+    }
+    const isEO =
+      currentUser.isOrganizer ||
+      (currentUser.roleName && currentUser.roleName.toLowerCase().includes('organizer'))
+    if (!isEO) {
+      redirect('/')
+    }
+    redirect(`/organizers/${currentUser.id}`)
+  }
+
   const navUser = currentUser ? { name: currentUser.name, email: currentUser.email } : null
 
   // ── Dummy organizer path ──────────────────────────────────────────────────
@@ -440,7 +460,14 @@ export default async function OrganizerProfilePage({ params, searchParams }: Pro
     notFound()
   }
 
-  if (!organizer.isOrganizer) notFound()
+  if (
+    !organizer.isOrganizer &&
+    !(organizer.roleName && organizer.roleName.toLowerCase().includes('organizer'))
+  )
+    notFound()
+
+  // Check if the current user is the owner of this profile
+  const isOwner = Boolean(currentUser && currentUser.id === organizer.id)
 
   let upcomingEvents: Event[] = []
   let upcomingTotal = 0
@@ -571,9 +598,22 @@ export default async function OrganizerProfilePage({ params, searchParams }: Pro
               </div>
             </div>
 
-            {/* Follow button */}
+            {/* Follow button or Edit button */}
             <div className="shrink-0 self-start pt-1 sm:pt-2">
-              <FollowButton />
+              {isOwner ? (
+                <OrganizerOwnerActions
+                  organizer={{
+                    id: organizer.id,
+                    name: organizer.name,
+                    bio: organizer.bio,
+                    website: organizer.website,
+                    instagram: organizer.instagram,
+                    avatarUrl,
+                  }}
+                />
+              ) : (
+                <FollowButton />
+              )}
             </div>
           </div>
         </div>
@@ -609,6 +649,9 @@ export default async function OrganizerProfilePage({ params, searchParams }: Pro
             pastEvents={pastEvents as Event[]}
             upcomingTotal={upcomingTotal}
             pastTotal={pastTotal}
+            isOwner={isOwner}
+            avatarUrl={avatarUrl}
+            organizerName={organizer.name}
           />
         </div>
       </div>

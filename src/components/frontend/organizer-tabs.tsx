@@ -2,7 +2,8 @@
 
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Calendar, CheckCircle2, Rss, MapPin, Clock, Heart, Share2 } from 'lucide-react'
+import { Calendar, CheckCircle2, Rss, MapPin, Clock, Heart, Share2, Plus } from 'lucide-react'
+import { OrganizerFeed } from './organizer-feed'
 import type { Event, Media, Location, Category } from '@/payload-types'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -44,47 +45,6 @@ function formatTime(dateStr: string): string {
     hour12: true,
   })
 }
-
-// ─── static feed data (placeholder until a Posts collection exists) ──────────
-
-const FEED_POSTS = [
-  {
-    id: 'f1',
-    content:
-      "Thank you to everyone who came to our event last week! Your energy was absolutely incredible 🎉 Stay tuned for the next one — it's going to be even bigger!",
-    image: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=600&h=380&fit=crop&q=80',
-    likes: 248,
-    comments: 34,
-    time: '2 days ago',
-  },
-  {
-    id: 'f2',
-    content:
-      "Important announcement! Early bird tickets for next month's event are now available. Get 30% off for the first 100 buyers. Link in bio!",
-    image: null,
-    likes: 512,
-    comments: 87,
-    time: '5 days ago',
-  },
-  {
-    id: 'f3',
-    content:
-      'Behind the scenes of our event prep. Our team is working hard to deliver the best experience for all of you 💪',
-    image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&h=380&fit=crop&q=80',
-    likes: 189,
-    comments: 21,
-    time: '1 week ago',
-  },
-  {
-    id: 'f4',
-    content:
-      'A special collaboration with an international artist is in the works. Stay tuned for a big announcement next week! 🌟',
-    image: null,
-    likes: 934,
-    comments: 156,
-    time: '2 weeks ago',
-  },
-]
 
 // ─── Event Card ──────────────────────────────────────────────────────────────
 
@@ -208,80 +168,30 @@ function EventCard({ event, isPast = false }: { event: Event; isPast?: boolean }
   )
 }
 
-// ─── Feed Post Card ──────────────────────────────────────────────────────────
-
-function FeedPost({
-  post,
-  organizerName,
-  avatarInitials,
-}: {
-  post: (typeof FEED_POSTS)[0]
-  organizerName: string
-  avatarInitials: string
-}) {
-  return (
-    <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="size-10 rounded-full bg-linear-to-br from-[#5151eb] to-indigo-400 flex items-center justify-center text-white text-sm font-bold shrink-0">
-          {avatarInitials}
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-[#12192f]">{organizerName}</p>
-          <p className="text-xs text-zinc-400">{post.time}</p>
-        </div>
-      </div>
-
-      {/* Content */}
-      <p className="mt-3 text-sm text-zinc-700 leading-relaxed">{post.content}</p>
-
-      {/* Image */}
-      {post.image && (
-        <div className="mt-3 overflow-hidden rounded-xl">
-          <img
-            src={post.image}
-            alt="Post image"
-            className="w-full object-cover max-h-64"
-            loading="lazy"
-          />
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="mt-4 flex items-center gap-5 border-t border-zinc-100 pt-3">
-        <button
-          type="button"
-          className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-[#5151eb] transition"
-        >
-          <Heart className="size-4" />
-          <span>{post.likes.toLocaleString()}</span>
-        </button>
-        <button
-          type="button"
-          className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-[#5151eb] transition"
-        >
-          <Rss className="size-4" />
-          <span>{post.comments} comments</span>
-        </button>
-        <button
-          type="button"
-          className="ml-auto flex items-center gap-1.5 text-sm text-zinc-500 hover:text-[#5151eb] transition"
-        >
-          <Share2 className="size-4" />
-          Share
-        </button>
-      </div>
-    </div>
-  )
-}
-
 // ─── Empty State ─────────────────────────────────────────────────────────────
 
-function EmptyState({ message }: { message: string }) {
+function EmptyState({
+  message,
+  actionHref,
+  actionLabel,
+}: {
+  message: string
+  actionHref?: string
+  actionLabel?: string
+}) {
   return (
     <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 py-16 text-center">
       <Calendar className="size-10 text-zinc-300 mb-3" />
       <p className="text-base font-semibold text-zinc-400">{message}</p>
+      {actionHref && actionLabel && (
+        <Link
+          href={actionHref}
+          className="mt-4 flex items-center gap-2 rounded-xl bg-[#5151eb] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#4040d0] transition shadow-sm"
+        >
+          <Plus className="size-4" />
+          {actionLabel}
+        </Link>
+      )}
     </div>
   )
 }
@@ -295,6 +205,9 @@ type Props = {
   pastEvents: Event[]
   upcomingTotal: number
   pastTotal: number
+  isOwner?: boolean
+  avatarUrl?: string | null
+  organizerName?: string
 }
 
 const TABS = [
@@ -310,6 +223,9 @@ export function OrganizerTabs({
   pastEvents,
   upcomingTotal,
   pastTotal,
+  isOwner = false,
+  avatarUrl = null,
+  organizerName: orgName,
 }: Props) {
   const router = useRouter()
   const pathname = usePathname()
@@ -320,7 +236,7 @@ export function OrganizerTabs({
 
   // Derive initials from the first event's organizer name (fallback)
   const avatarInitials = 'EO'
-  const organizerName = 'Event Organizer'
+  const organizerName = orgName || 'Event Organizer'
 
   return (
     <div>
@@ -359,7 +275,11 @@ export function OrganizerTabs({
         {activeTab === 'upcoming' && (
           <>
             {upcomingEvents.length === 0 ? (
-              <EmptyState message="No upcoming events at the moment" />
+              <EmptyState
+                message="No upcoming events at the moment"
+                actionHref={isOwner ? '/organizations/events/create' : undefined}
+                actionLabel={isOwner ? 'Create Event' : undefined}
+              />
             ) : (
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {upcomingEvents.map((event) => (
@@ -387,16 +307,12 @@ export function OrganizerTabs({
 
         {/* Feed */}
         {activeTab === 'feed' && (
-          <div className="mx-auto max-w-2xl space-y-4">
-            {FEED_POSTS.map((post) => (
-              <FeedPost
-                key={post.id}
-                post={post}
-                organizerName={organizerName}
-                avatarInitials={avatarInitials}
-              />
-            ))}
-          </div>
+          <OrganizerFeed
+            organizerId={Number(organizerId)}
+            isOwner={isOwner}
+            avatarUrl={avatarUrl}
+            organizerName={organizerName}
+          />
         )}
       </div>
     </div>

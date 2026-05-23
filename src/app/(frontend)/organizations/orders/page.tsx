@@ -1,17 +1,8 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-
-import { Search, Receipt, Download, Eye } from 'lucide-react'
-
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import Link from 'next/link';
+import { Search, Receipt, Download, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
+import Link from 'next/link'
 
 const dummyOrders = [
   {
@@ -60,203 +51,215 @@ const dummyOrders = [
   },
   {
     id: 'ORD-2026-005',
-    buyer: 'Emily Davis',
-    email: 'emily@example.com',
+    buyer: 'Alex Johnson',
+    email: 'alex@example.com',
     ticket: 'VIP',
-    qty: 2,
-    total: 1000000,
-    status: 'Refunded',
-    checkin: false,
-    date: '2026-06-15',
+    qty: 1,
+    total: 500000,
+    status: 'Completed',
+    checkin: true,
+    date: '2026-06-16',
   },
   {
     id: 'ORD-2026-006',
-    buyer: 'Emily Davis',
-    email: 'emily@example.com',
-    ticket: 'VIP',
-    qty: 2,
-    total: 1000000,
-    status: 'Refunded',
+    buyer: 'Lisa Park',
+    email: 'lisa@example.com',
+    ticket: 'General Admission',
+    qty: 3,
+    total: 450000,
+    status: 'Pending',
     checkin: false,
-    date: '2026-06-15',
-  },
-  {
-    id: 'ORD-2026-007',
-    buyer: 'Emily Davis',
-    email: 'emily@example.com',
-    ticket: 'VIP',
-    qty: 2,
-    total: 1000000,
-    status: 'Refunded',
-    checkin: false,
-    date: '2026-06-15',
-  },
-  {
-    id: 'ORD-2026-008',
-    buyer: 'Emily Davis',
-    email: 'emily@example.com',
-    ticket: 'VIP',
-    qty: 2,
-    total: 1000000,
-    status: 'Refunded',
-    checkin: false,
-    date: '2026-06-15',
+    date: '2026-06-17',
   },
 ]
 
+const statusOptions = ['All', 'Completed', 'Pending', 'Refunded']
+
 export default function OrdersPage() {
   const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('all')
+  const [status, setStatus] = useState('All')
+  const [page, setPage] = useState(1)
+  const perPage = 5
 
-  const orders = useMemo(() => {
+  const filtered = useMemo(() => {
     return dummyOrders.filter((order) => {
       const matchesSearch =
         order.id.toLowerCase().includes(search.toLowerCase()) ||
         order.buyer.toLowerCase().includes(search.toLowerCase()) ||
         order.email.toLowerCase().includes(search.toLowerCase())
-
-      const matchesStatus = status === 'all' || order.status === status
-
+      const matchesStatus = status === 'All' || order.status === status
       return matchesSearch && matchesStatus
     })
   }, [search, status])
 
-  return (
-    <div className="mx-auto max-w-7xl  pt-10 -mt-10">
-      {/* Header */}
-      <div>
-        <h1 className="text-5xl font-bold tracking-tight text-gray-900">Order Management</h1>
+  const totalPages = Math.ceil(filtered.length / perPage)
+  const paginated = filtered.slice((page - 1) * perPage, page * perPage)
 
-        <p className="mt-5 max-w-5xl text-xl text-gray-600">
-          Manage orders, attendees, refunds, ticket delivery, and customer information.
-        </p>
+  return (
+    <div className="mx-auto max-w-6xl">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Orders</h1>
+        <p className="mt-1 text-sm text-zinc-500">Manage orders, attendees, and ticket delivery</p>
       </div>
 
-      {/* Filters */}
-      <div className="mt-4 flex flex-wrap gap-4">
-        <div className="relative flex-1 min-w-[320px]">
-          <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search order number, email, or buyer"
-            className="h-16 w-full rounded-2xl border border-gray-300 pl-12 pr-4 text-lg outline-none focus:border-blue-500"
-          />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+            <input
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                setPage(1)
+              }}
+              placeholder="Search orders..."
+              className="h-9 w-72 rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm outline-none transition placeholder:text-zinc-400 focus:border-[#5151eb] focus:ring-2 focus:ring-[#5151eb]/10"
+            />
+          </div>
+          <div className="flex items-center rounded-lg border border-zinc-200 bg-white p-0.5">
+            {statusOptions.map((s) => (
+              <button
+                key={s}
+                onClick={() => {
+                  setStatus(s)
+                  setPage(1)
+                }}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${status === s ? 'bg-[#5151eb] text-white' : 'text-zinc-600 hover:bg-zinc-50'}`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
-
-        <div className="w-55">
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger variant="eventbrite">
-              <SelectValue />
-            </SelectTrigger>
-
-            <SelectContent>
-              <SelectItem value="all">All Orders</SelectItem>
-
-              <SelectItem value="Completed">Completed</SelectItem>
-
-              <SelectItem value="Pending">Pending</SelectItem>
-
-              <SelectItem value="Refunded">Refunded</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <button className="flex h-16 items-center gap-2 rounded-2xl border border-gray-300 px-6 font-semibold text-[#1E0A3C] transition hover:bg-gray-50">
-          <Download size={18} />
+        <button className="flex h-9 items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50">
+          <Download size={14} />
           Export
         </button>
       </div>
 
-      {/* Table */}
-      <div className="mt-5 overflow-hidden rounded-3xl border border-gray-200 bg-white">
-        {orders.length > 0 ? (
-          <>
-            <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white">
-              <div className="max-h-115 overflow-y-auto scrollbar-none">
-                <table className="w-full">
-                  <thead className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-4 text-left">Order</th>
-                      <th className="px-6 py-4 text-left">Buyer</th>
-                      <th className="px-6 py-4 text-left">Ticket</th>
-                      <th className="px-6 py-4 text-left">Qty</th>
-                      <th className="px-6 py-4 text-left">Total</th>
-                      <th className="px-6 py-4 text-left">Status</th>
-                      <th className="px-6 py-4 text-left">Check-in</th>
-                      <th className="px-6 py-4 text-left">Action</th>
-                    </tr>
-                  </thead>
-
-                  <tbody className="divide-y divide-gray-100">
-                    {orders.map((order) => (
-                      <tr key={order.id} className="border-b border-gray-100">
-                        <td className="px-6 py-5">
-                          <div>
-                            <p className="font-semibold">{order.id}</p>
-                            <p className="text-sm text-gray-500">{order.date}</p>
-                          </div>
-                        </td>
-
-                        <td className="px-6 py-5">
-                          <div>
-                            <p className="font-medium">{order.buyer}</p>
-                            <p className="text-sm text-gray-500">{order.email}</p>
-                          </div>
-                        </td>
-
-                        <td className="px-6 py-5">{order.ticket}</td>
-
-                        <td className="px-6 py-5">{order.qty}</td>
-
-                        <td className="px-6 py-5">Rp {order.total.toLocaleString('id-ID')}</td>
-
-                        <td className="px-6 py-5">
-                          <span
-                            className={`rounded-full px-3 py-1 text-sm font-medium ${
-                              order.status === 'Completed'
-                                ? 'bg-green-100 text-green-700'
-                                : order.status === 'Pending'
-                                  ? 'bg-yellow-100 text-yellow-700'
-                                  : 'bg-red-100 text-red-700'
-                            }`}
-                          >
-                            {order.status}
-                          </span>
-                        </td>
-
-                        <td className="px-6 py-5">
-                          {order.checkin ? 'Checked In' : 'Not Checked In'}
-                        </td>
-
-                        <td className="px-6 py-5">
-                          <Link href={`/organizations/orders/${order.id}`} className="flex items-center gap-2 text-blue-600 hover:text-blue-700">
-                            <Eye size={16} />
-                            View
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </>
+      <div className="mt-5">
+        {paginated.length > 0 ? (
+          <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-zinc-100 bg-zinc-50/50">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                    Order
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                    Buyer
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                    Ticket
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                    Total
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                    Check-in
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginated.map((order) => (
+                  <tr
+                    key={order.id}
+                    className="border-b border-zinc-50 transition last:border-b-0 hover:bg-indigo-50/20"
+                  >
+                    <td className="px-4 py-3.5">
+                      <p className="text-sm font-semibold text-zinc-900">{order.id}</p>
+                      <p className="text-xs text-zinc-400">{order.date}</p>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <p className="text-sm font-medium text-zinc-800">{order.buyer}</p>
+                      <p className="text-xs text-zinc-400">{order.email}</p>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <p className="text-sm text-zinc-700">{order.ticket}</p>
+                      <p className="text-xs text-zinc-400">×{order.qty}</p>
+                    </td>
+                    <td className="px-4 py-3.5 text-sm font-medium text-zinc-900">
+                      Rp {order.total.toLocaleString('id-ID')}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${order.status === 'Completed' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : order.status === 'Pending' ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-red-200 bg-red-50 text-red-600'}`}
+                      >
+                        {order.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <span
+                        className={`text-xs font-medium ${order.checkin ? 'text-emerald-600' : 'text-zinc-400'}`}
+                      >
+                        {order.checkin ? 'Checked In' : 'Not Yet'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5 text-right">
+                      <Link
+                        href={`/organizations/orders/${order.id}`}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-[#5151eb] transition hover:text-[#4040d9]"
+                      >
+                        <Eye size={13} />
+                        View
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
-          <div className="flex min-h-125 flex-col items-center justify-center">
-            <div className="flex h-32 w-32 items-center justify-center rounded-full bg-gray-100">
-              <Receipt size={60} className="text-gray-400" />
+          <div className="flex flex-col items-center justify-center rounded-xl border border-zinc-200 bg-white py-16">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50">
+              <Receipt size={22} className="text-[#5151eb]" />
             </div>
-
-            <h3 className="mt-8 text-3xl font-bold text-[#1E0A3C]">No orders found</h3>
-
-            <p className="mt-3 max-w-md text-center text-gray-500">
-              Orders will appear here after attendees purchase tickets for your event.
+            <h3 className="mt-4 text-base font-semibold text-zinc-900">No orders found</h3>
+            <p className="mt-1 text-sm text-zinc-500">
+              Try adjusting your search or filter criteria
             </p>
           </div>
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-xs text-zinc-500">
+            Showing {paginated.length} of {filtered.length} orders
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(page - 1)}
+              disabled={page <= 1}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 transition hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft size={14} className="text-zinc-600" />
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium transition ${p === page ? 'bg-[#5151eb] text-white' : 'border border-zinc-200 text-zinc-600 hover:bg-zinc-50'}`}
+              >
+                {p}
+              </button>
+            ))}
+            <button
+              onClick={() => setPage(page + 1)}
+              disabled={page >= totalPages}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 transition hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronRight size={14} className="text-zinc-600" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

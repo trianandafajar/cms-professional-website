@@ -13,7 +13,6 @@ import {
   LayoutDashboard,
   CalendarDays,
   Ticket,
-  Settings,
   CircleHelp,
   LogOut,
   User as UserIcon,
@@ -23,6 +22,7 @@ import { useState, useRef, useEffect } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { useAuthStore } from '@/stores/authStore'
 
 type NavbarUser = {
   name?: string | null
@@ -69,6 +69,11 @@ const trendingSearches = [
 
 const profileMenu = [
   {
+    label: 'My Profile',
+    href: '/organizers/me',
+    icon: UserIcon,
+  },
+  {
     label: 'Dashboard',
     href: '/organizations/dashboard',
     icon: LayoutDashboard,
@@ -89,11 +94,6 @@ const profileMenu = [
     icon: Heart,
   },
   {
-    label: 'Account Settings',
-    href: '/organizations/settings',
-    icon: Settings,
-  },
-  {
     label: 'Help Center',
     href: '/organizations/help',
     icon: CircleHelp,
@@ -111,6 +111,7 @@ function getInitials(value?: string | null) {
 
 export function FrontendNavbar({ user, userName }: NavbarProps) {
   const router = useRouter()
+  const { logout } = useAuthStore()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [locationOpen, setLocationOpen] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
@@ -148,10 +149,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
     if (loggingOut) return
     setLoggingOut(true)
     try {
-      await fetch('/api/users/logout', {
-        method: 'POST',
-        credentials: 'include',
-      })
+      await logout()
     } catch {
       // ignore network errors; cookie may still be cleared on server
     } finally {

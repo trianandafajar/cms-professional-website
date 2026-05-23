@@ -1,18 +1,12 @@
 import React from 'react'
 import EventsHeader from '@/components/organizations/events/events-header'
 
-export default function EventsLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function EventsLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto max-w-7xl">
+    <div className="mx-auto max-w-6xl">
       <EventsHeader />
 
-      <div className="mt-6">
-        {children}
-      </div>
+      <div className="mt-5">{children}</div>
     </div>
   )
 }

@@ -1,28 +1,60 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   Home,
   Calendar,
   FileText,
   Megaphone,
   BarChart3,
-  Building2,
   Settings,
-  Grid3x3,
   HelpCircle,
   PlusCircle,
+  Search,
+  ChevronDown,
+  LogOut,
+  Heart,
+  LayoutDashboard,
+  Ticket,
+  CircleHelp,
+  User as UserIcon,
 } from 'lucide-react'
 import Image from 'next/image'
-import NotificationDrawer from '@/components/organizations/layouts/notification'
-import AccountPopover from '@/components/organizations/layouts/account'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import NotificationDrawer from '@/components/organizations/layouts/notification'
+import { useAuthStore } from '@/stores/authStore'
+
+const profileMenu = [
+  { label: 'My Profile', href: '/organizers/me', icon: UserIcon },
+  { label: 'Dashboard', href: '/organizations/dashboard', icon: LayoutDashboard },
+  { label: 'My Events', href: '/organizations/events', icon: Calendar },
+  { label: 'My Tickets', href: '/organizations/orders', icon: Ticket },
+  { label: 'Liked Events', href: '/likes', icon: Heart },
+  { label: 'Help Center', href: '/organizations/help', icon: CircleHelp },
+]
+
+function getInitials(value?: string | null) {
+  if (!value) return 'U'
+  const parts = value.trim().split(/\s+/)
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase()
+  }
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
 
 export default function OrganizationsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
+  const { user, logout } = useAuthStore()
+  const [loggingOut, setLoggingOut] = useState(false)
+
+  const displayName = user?.name || user?.email || ''
+  const displayEmail = user?.email || ''
+  const initials = getInitials(user?.name || user?.email)
 
   const sidebarItems = [
     { icon: Home, href: '/organizations/dashboard', label: 'Dashboard', isBottom: false },
@@ -34,48 +66,155 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
     { icon: HelpCircle, href: '/organizations/help', label: 'Help', isBottom: true },
   ]
 
-  const topItems = sidebarItems.filter(item => !item.isBottom)
-  const bottomItems = sidebarItems.filter(item => item.isBottom)
+  const topItems = sidebarItems.filter((item) => !item.isBottom)
+  const bottomItems = sidebarItems.filter((item) => item.isBottom)
+
+  async function handleLogout() {
+    if (loggingOut) return
+    setLoggingOut(true)
+    try {
+      await logout()
+    } catch {
+      // ignore - cookie may still be cleared
+    } finally {
+      setLoggingOut(false)
+      router.refresh()
+      router.push('/')
+    }
+  }
 
   return (
-    <div className="h-screen overflow-hidden bg-gray-50 flex flex-col">
-      <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-4">
-          <Link href="/organizations/dashboard" className="group flex items-center gap-2">
-            <div className="relative flex items-center justify-center rounded-2xl">
-              <Image
-                src="/icon.png"
-                alt="EventBro Logo"
-                width={32}
-                height={32}
-                className="object-contain"
-                priority
-              />
-            </div>
-            <div className="flex items-baseline leading-none">
-              <span className="text-[1.45rem] font-semibold tracking-tight text-gray-900">
-                Event
-              </span>
-              <span className="text-[1.45rem] font-bold tracking-tight text-blue-600 ml-1">
-                Bro
-              </span>
-            </div>
+    <div className="h-screen overflow-hidden bg-white flex flex-col">
+      {/* ─── Navbar (matching landing page style) ─── */}
+      <header className="sticky top-0 z-50 border-b border-zinc-100 bg-white">
+        <div className="flex w-full items-center gap-4 px-4 py-3 lg:px-6">
+          {/* Logo */}
+          <Link href="/" className="flex shrink-0 items-center gap-2">
+            <Image
+              src="/icon.png"
+              alt="Eventbro"
+              width={32}
+              height={32}
+              priority
+              className="size-8 rounded-md object-contain"
+            />
+            <span className="text-[26px] font-extrabold tracking-tight text-[#5151eb]">
+              eventbro
+            </span>
           </Link>
-        </div>
 
-        <div className="flex items-center gap-4">
-          <Button className="flex items-center gap-2 px-4 py-2 border-2 border-blue-500 text-blue-500 rounded-lg hover:bg-blue-100 font-semibold transition-colors hover:text-blue-500" variant="outline" size="sm">
-            <PlusCircle size={20} />
-            Create
-          </Button>
-          <NotificationDrawer />
-          <AccountPopover />
+          {/* Search Bar */}
+          <form className="relative hidden flex-1 max-w-[420px] lg:flex">
+            <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
+            <input
+              className="h-10 w-full rounded-lg border border-zinc-200 bg-[#fdfdfd] pl-10 pr-4 text-sm outline-none placeholder:text-zinc-500 focus:border-[#5151eb] focus:ring-1 focus:ring-[#5151eb]/20"
+              placeholder="Search events, orders..."
+              type="search"
+            />
+          </form>
+
+          {/* Nav Links */}
+          <nav className="ml-auto hidden items-center gap-1 lg:flex">
+            <Button
+              asChild
+              className="text-sm font-medium text-zinc-700 hover:text-[#12192f]"
+              size="sm"
+              variant="ghost"
+            >
+              <Link href="/">Find Events</Link>
+            </Button>
+            <Button
+              asChild
+              className="text-sm font-medium text-zinc-700 hover:text-[#12192f]"
+              size="sm"
+              variant="ghost"
+            >
+              <Link href="/organizations/events/create">
+                <PlusCircle className="size-4 mr-1" />
+                Create Event
+              </Link>
+            </Button>
+          </nav>
+
+          {/* Right side: Notification + Profile */}
+          <div className="flex items-center gap-2">
+            <NotificationDrawer />
+
+            {/* Profile Pill (same style as landing page) */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 py-1 pl-1 pr-3 text-sm font-medium text-[#5151eb] transition hover:bg-indigo-100"
+                  aria-label="Open profile menu"
+                >
+                  <span className="flex size-8 items-center justify-center rounded-full bg-[#5151eb] text-xs font-semibold text-white">
+                    {initials}
+                  </span>
+                  <span className="hidden max-w-[140px] truncate sm:inline">
+                    {displayName || 'User'}
+                  </span>
+                  <ChevronDown className="size-3.5 text-[#5151eb]" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="end"
+                sideOffset={8}
+                className="w-[300px] overflow-hidden rounded-2xl border border-zinc-200 bg-white p-0 shadow-xl ring-0"
+              >
+                {/* Header */}
+                <div className="border-b border-zinc-100 px-4 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-11 items-center justify-center rounded-full bg-[#5151eb] text-base font-semibold text-white">
+                      {initials}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-zinc-900">
+                        {displayName || 'User'}
+                      </p>
+                      {displayEmail && (
+                        <p className="truncate text-xs text-zinc-500">{displayEmail}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Menu */}
+                <div className="p-1.5">
+                  {profileMenu.map(({ label, href, icon: Icon }) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-indigo-50 hover:text-[#5151eb]"
+                    >
+                      <Icon className="size-4 text-zinc-500" />
+                      {label}
+                    </Link>
+                  ))}
+
+                  <div className="my-1 border-t border-zinc-100" />
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    disabled={loggingOut}
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-rose-600 transition hover:bg-rose-50 disabled:opacity-60"
+                  >
+                    <LogOut className="size-4" />
+                    {loggingOut ? 'Logging out…' : 'Log out'}
+                  </button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
       </header>
 
+      {/* ─── Body ─── */}
       <div className="flex flex-1 overflow-hidden">
-        <aside className="sticky top-15 flex h-[calc(100vh-63px)] w-16 flex-col justify-between items-center gap-4 border-r border-gray-200 bg-white py-2">
-          <div className="flex flex-col items-center gap-4">
+        {/* Sidebar */}
+        <aside className="sticky top-0 flex h-[calc(100vh-63px)] w-16 flex-col justify-between items-center border-r border-zinc-100 bg-white py-3">
+          <div className="flex flex-col items-center gap-3">
             {topItems.map((item, idx) => {
               const isActive = pathname.startsWith(item.href)
               const Icon = item.icon
@@ -87,14 +226,18 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
                       href={item.href}
                       className={`rounded-xl p-3 transition-all ${
                         isActive
-                          ? 'bg-blue-600 text-white shadow-sm'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                          ? 'bg-[#5151eb] text-white shadow-sm'
+                          : 'text-zinc-500 hover:bg-zinc-50 hover:text-[#12192f]'
                       }`}
                     >
-                      <Icon size={24} />
+                      <Icon size={22} />
                     </Link>
                   </TooltipTrigger>
-                  <TooltipContent side="right" sideOffset={12} className="rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-800 shadow-md">
+                  <TooltipContent
+                    side="right"
+                    sideOffset={12}
+                    className="rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 shadow-md"
+                  >
                     {item.label}
                   </TooltipContent>
                 </Tooltip>
@@ -102,8 +245,7 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
             })}
           </div>
 
-          {/* Bagian bawah */}
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col items-center gap-3">
             {bottomItems.map((item, idx) => {
               const isActive = pathname.startsWith(item.href)
               const Icon = item.icon
@@ -115,14 +257,18 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
                       href={item.href}
                       className={`rounded-xl p-3 transition-all ${
                         isActive
-                          ? 'bg-blue-600 text-white shadow-sm'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                          ? 'bg-[#5151eb] text-white shadow-sm'
+                          : 'text-zinc-500 hover:bg-zinc-50 hover:text-[#12192f]'
                       }`}
                     >
-                      <Icon size={24} />
+                      <Icon size={22} />
                     </Link>
                   </TooltipTrigger>
-                  <TooltipContent side="right" sideOffset={12} className="rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-800 shadow-md">
+                  <TooltipContent
+                    side="right"
+                    sideOffset={12}
+                    className="rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 shadow-md"
+                  >
                     {item.label}
                   </TooltipContent>
                 </Tooltip>
@@ -131,7 +277,8 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
           </div>
         </aside>
 
-        <main className="flex-1 overflow-y-auto p-7">{children}</main>
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto bg-[#fdfdfd] p-7">{children}</main>
       </div>
     </div>
   )

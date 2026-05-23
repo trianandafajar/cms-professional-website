@@ -12,6 +12,7 @@ import { Permissions } from './collections/Permissions'
 import { Categories } from './collections/Categories'
 import { Locations } from './collections/Locations'
 import { Events } from './collections/Events'
+import { Posts } from './collections/Posts'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -23,7 +24,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Permissions, Roles, Categories, Locations, Events],
+  collections: [Users, Media, Permissions, Roles, Categories, Locations, Events, Posts],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
@@ -122,6 +123,173 @@ export default buildConfig({
           docs: likedEvents,
           totalDocs: Array.isArray(likedEvents) ? likedEvents.length : 0,
         })
+      },
+    },
+    // Update organizer profile (own profile only)
+    {
+      path: '/organizer/profile',
+      method: 'patch',
+      handler: async (req) => {
+        const { payload, user } = req
+
+        if (!user) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        if (!user.isOrganizer) {
+          return Response.json({ error: 'Not an organizer' }, { status: 403 })
+        }
+
+        const body = await (req.json as () => Promise<any>)()
+        const allowedFields = ['name', 'bio', 'website', 'instagram', 'avatar']
+        const updateData: Record<string, any> = {}
+
+        for (const field of allowedFields) {
+          if (body[field] !== undefined) {
+            updateData[field] = body[field]
+          }
+        }
+
+        const updated = await payload.update({
+          collection: 'users',
+          id: user.id,
+          data: updateData,
+          depth: 1,
+        })
+
+        return Response.json({ doc: updated })
+      },
+    },
+    // Create a post (organizer only)
+    {
+      path: '/organizer/posts',
+      method: 'post',
+      handler: async (req) => {
+        const { payload, user } = req
+
+        if (!user) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        if (!user.isOrganizer) {
+          return Response.json({ error: 'Not an organizer' }, { status: 403 })
+        }
+
+        const body = await (req.json as () => Promise<any>)()
+
+        const post = await payload.create({
+          collection: 'posts',
+          data: {
+            author: user.id,
+            content: body.content,
+            image: body.image || undefined,
+          },
+        })
+
+        return Response.json({ doc: post })
+      },
+    },
+    // Get posts for an organizer
+    {
+      path: '/organizer/:userId/posts',
+      method: 'get',
+      handler: async (req) => {
+        const { payload } = req
+        const userId = Number(req.routeParams?.userId)
+
+        if (!userId || isNaN(userId)) {
+          return Response.json({ error: 'Invalid user ID' }, { status: 400 })
+        }
+
+        const posts = await payload.find({
+          collection: 'posts',
+          where: {
+            author: { equals: userId },
+          },
+          sort: '-createdAt',
+          limit: 20,
+          depth: 1,
+        })
+
+        return Response.json(posts)
+      },
+    },
+    // Update a post (owner only)
+    {
+      path: '/organizer/posts/:postId',
+      method: 'patch',
+      handler: async (req) => {
+        const { payload, user } = req
+
+        if (!user) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        const postId = Number(req.routeParams?.postId)
+        if (!postId || isNaN(postId)) {
+          return Response.json({ error: 'Invalid post ID' }, { status: 400 })
+        }
+
+        const existingPost = await payload.findByID({
+          collection: 'posts',
+          id: postId,
+          depth: 0,
+        })
+
+        const authorId =
+          typeof existingPost.author === 'object' ? existingPost.author.id : existingPost.author
+        if (authorId !== user.id) {
+          return Response.json({ error: 'Forbidden' }, { status: 403 })
+        }
+
+        const body = await (req.json as () => Promise<any>)()
+        const updated = await payload.update({
+          collection: 'posts',
+          id: postId,
+          data: {
+            content: body.content,
+            image: body.image !== undefined ? body.image : undefined,
+          },
+          depth: 1,
+        })
+
+        return Response.json({ doc: updated })
+      },
+    },
+    // Delete a post (owner only)
+    {
+      path: '/organizer/posts/:postId',
+      method: 'delete',
+      handler: async (req) => {
+        const { payload, user } = req
+
+        if (!user) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        const postId = Number(req.routeParams?.postId)
+        if (!postId || isNaN(postId)) {
+          return Response.json({ error: 'Invalid post ID' }, { status: 400 })
+        }
+
+        const existingPost = await payload.findByID({
+          collection: 'posts',
+          id: postId,
+          depth: 0,
+        })
+
+        const authorId =
+          typeof existingPost.author === 'object' ? existingPost.author.id : existingPost.author
+        if (authorId !== user.id && user.roleName !== 'admin') {
+          return Response.json({ error: 'Forbidden' }, { status: 403 })
+        }
+
+        await payload.delete({
+          collection: 'posts',
+          id: postId,
+        })
+
+        return Response.json({ success: true })
       },
     },
   ],

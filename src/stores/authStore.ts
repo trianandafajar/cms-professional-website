@@ -12,6 +12,11 @@ export interface User {
   roleName?: string
   isOnboarded?: boolean | null
   onboardingStep?: number | null
+  isOrganizer?: boolean | null
+  avatar?: any
+  bio?: string | null
+  website?: string | null
+  instagram?: string | null
 }
 
 interface AuthState {

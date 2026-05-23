@@ -9,7 +9,7 @@ import DescriptionSection from '@/components/organizations/event-editor/sections
 
 export default function CreateEventsPage() {
   return (
-    <div className="space-y-5 pb-32 max-h-[calc(100vh-93px)] overflow-y-auto -mt-16 pt-10 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+    <div className="space-y-4 pb-28 max-h-[calc(100vh-93px)] overflow-y-auto -mt-14 pt-8 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
       <MediaSection />
       <OverviewSection />
       <DateLocationSection />

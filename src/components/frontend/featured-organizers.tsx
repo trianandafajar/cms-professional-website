@@ -25,9 +25,15 @@ function getAvatarUrl(avatar: unknown): string | null {
   return null
 }
 
-// ─── Card (horizontal, Instagram-style) ─────────────────────────────────────
+function formatFollowersCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}jt`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}rb`
+  return String(n)
+}
 
-function OrganizerCard({ org }: { org: DummyOrganizer }) {
+// ─── Card for Dummy Organizer ────────────────────────────────────────────────
+
+function DummyOrganizerCard({ org }: { org: DummyOrganizer }) {
   const initials = org.name
     .split(' ')
     .map((w) => w[0])
@@ -37,7 +43,6 @@ function OrganizerCard({ org }: { org: DummyOrganizer }) {
 
   return (
     <div className="flex shrink-0 flex-col items-center rounded-2xl border border-zinc-100 bg-white p-4 text-center transition hover:shadow-md hover:border-[#5151eb]/20 min-w-[140px]">
-      {/* Avatar */}
       <Link href={`/organizers/${org.id}`} className="relative">
         {org.avatar ? (
           <img
@@ -60,19 +65,16 @@ function OrganizerCard({ org }: { org: DummyOrganizer }) {
         )}
       </Link>
 
-      {/* Name */}
       <Link href={`/organizers/${org.id}`}>
         <p className="mt-2.5 text-xs font-bold text-[#12192f] hover:text-[#5151eb] transition line-clamp-1 max-w-[120px]">
           {org.name}
         </p>
       </Link>
 
-      {/* Followers */}
       <p className="mt-0.5 text-[11px] text-zinc-400">
         {formatFollowers(org.followersCount)} followers
       </p>
 
-      {/* Upcoming events badge */}
       {org.upcomingEvents > 0 && (
         <span className="mt-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
           {org.upcomingEvents} events
@@ -84,17 +86,59 @@ function OrganizerCard({ org }: { org: DummyOrganizer }) {
   )
 }
 
+// ─── Card for Real Payload Organizer ─────────────────────────────────────────
+
+function PayloadOrganizerCard({ org }: { org: OrganizerItem }) {
+  const avatarUrl = getAvatarUrl(org.avatar)
+  const initials = org.name
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+
+  return (
+    <div className="flex shrink-0 flex-col items-center rounded-2xl border border-zinc-100 bg-white p-4 text-center transition hover:shadow-md hover:border-[#5151eb]/20 min-w-[140px]">
+      <Link href={`/organizers/${org.id}`} className="relative">
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt={org.name}
+            className="size-14 rounded-full object-cover ring-2 ring-zinc-100"
+          />
+        ) : (
+          <div className="size-14 rounded-full bg-linear-to-br from-[#5151eb] to-indigo-400 flex items-center justify-center text-white text-base font-bold ring-2 ring-zinc-100">
+            {initials}
+          </div>
+        )}
+      </Link>
+
+      <Link href={`/organizers/${org.id}`}>
+        <p className="mt-2.5 text-xs font-bold text-[#12192f] hover:text-[#5151eb] transition line-clamp-1 max-w-[120px]">
+          {org.name}
+        </p>
+      </Link>
+
+      <p className="mt-0.5 text-[11px] text-zinc-400">
+        {formatFollowersCount(org.followersCount ?? 0)} followers
+      </p>
+
+      <FollowButton size="sm" />
+    </div>
+  )
+}
+
 // ─── Main export ─────────────────────────────────────────────────────────────
 
 export function FeaturedOrganizers({ organizers }: Props) {
-  // Use dummy data — swap for real `organizers` prop once Payload has EO accounts
-  const displayList = DUMMY_ORGANIZERS.slice(0, 6)
+  // Use real Payload organizers when available, fallback to dummy data
+  const hasRealOrganizers = organizers.length > 0
 
   return (
     <div className="destinations-scroll flex gap-3 overflow-x-auto scroll-smooth pb-3">
-      {displayList.map((org) => (
-        <OrganizerCard key={org.id} org={org} />
-      ))}
+      {hasRealOrganizers
+        ? organizers.map((org) => <PayloadOrganizerCard key={org.id} org={org} />)
+        : DUMMY_ORGANIZERS.slice(0, 6).map((org) => <DummyOrganizerCard key={org.id} org={org} />)}
     </div>
   )
 }

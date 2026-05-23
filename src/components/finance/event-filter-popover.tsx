@@ -1,59 +1,83 @@
 'use client'
 
 import { Filter } from 'lucide-react'
-
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-
-import { Input } from '@/components/ui/input'
-
-import { Button } from '@/components/ui/button'
+import { useState } from 'react'
 
 export default function EventFilterPopover() {
+  const [eventName, setEventName] = useState('')
+  const [status, setStatus] = useState('all')
+  const [dateRange, setDateRange] = useState('all')
+
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-6 py-3 font-semibold text-[#1E0A3C] transition hover:bg-gray-50">
-          <Filter size={18} />
+        <button className="flex h-9 items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50">
+          <Filter size={14} />
           Filters
-        </Button>
+        </button>
       </PopoverTrigger>
 
-      <PopoverContent align="start" className="w-[420px] p-4">
-        <h3 className="text-lg font-bold text-[#1E0A3C]">Event Filters</h3>
+      <PopoverContent
+        align="start"
+        className="w-72 rounded-lg border border-zinc-200 bg-white p-4 shadow-lg"
+      >
+        <h3 className="text-sm font-semibold text-zinc-900">Event Filters</h3>
 
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 space-y-3">
           <div>
-            <label>Event name</label>
-            <Input className="mt-2" placeholder="Search event..." />
+            <label className="text-xs font-medium text-zinc-600">Event name</label>
+            <input
+              value={eventName}
+              onChange={(e) => setEventName(e.target.value)}
+              placeholder="Search event..."
+              className="mt-1.5 h-9 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-[#5151eb] focus:ring-2 focus:ring-[#5151eb]/10"
+            />
           </div>
 
           <div>
-            <label>Status</label>
-
-            <select className="mt-2 h-11 w-full rounded-lg border border-gray-300 px-3">
-              <option>All</option>
-              <option>Active</option>
-              <option>Completed</option>
-              <option>Draft</option>
+            <label className="text-xs font-medium text-zinc-600">Status</label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="mt-1.5 h-9 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-[#5151eb] focus:ring-2 focus:ring-[#5151eb]/10"
+            >
+              <option value="all">All</option>
+              <option value="active">Active</option>
+              <option value="completed">Completed</option>
+              <option value="draft">Draft</option>
             </select>
           </div>
 
           <div>
-            <label>Date range</label>
-
-            <select className="mt-2 h-11 w-full rounded-lg border border-gray-300 px-3">
-              <option>All time</option>
-              <option>Last 30 days</option>
-              <option>Last 90 days</option>
-              <option>This year</option>
+            <label className="text-xs font-medium text-zinc-600">Date range</label>
+            <select
+              value={dateRange}
+              onChange={(e) => setDateRange(e.target.value)}
+              className="mt-1.5 h-9 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-[#5151eb] focus:ring-2 focus:ring-[#5151eb]/10"
+            >
+              <option value="all">All time</option>
+              <option value="30">Last 30 days</option>
+              <option value="90">Last 90 days</option>
+              <option value="year">This year</option>
             </select>
           </div>
         </div>
 
-        <div className="mt-6 flex justify-end gap-3">
-          <button className="rounded-lg border border-gray-300 px-4 py-2">Reset</button>
-
-          <button className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white">Apply</button>
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            onClick={() => {
+              setEventName('')
+              setStatus('all')
+              setDateRange('all')
+            }}
+            className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
+          >
+            Reset
+          </button>
+          <button className="rounded-lg bg-[#5151eb] px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[#4040d9]">
+            Apply
+          </button>
         </div>
       </PopoverContent>
     </Popover>

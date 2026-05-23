@@ -25,80 +25,77 @@ const steps = [
 
 export default function EventEditorLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-[calc(100vh-93px)] max-h-[calc(100vh-93px)] bg-[#F8F7FA] -mt-16 pt-10">
+    <div className="flex min-h-[calc(100vh-93px)] max-h-[calc(100vh-93px)] bg-[#fafafa] -mt-16 pt-10">
       {/* Sidebar */}
-      <aside className="sticky top-[73px] flex h-[calc(100vh-73px)] w-[360px] flex-col border-r border-gray-200 bg-[#F8F7FA]">
+      <aside className="sticky top-[73px] flex h-[calc(100vh-73px)] w-[320px] flex-col border-r border-zinc-100 bg-white">
         {/* Back */}
-        <div className="border-b border-gray-200 px-6 py-5">
+        <div className="border-b border-zinc-100 px-5 py-4">
           <Link
             href="/organizations/events/list"
-            className="flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-700"
+            className="flex items-center gap-2 text-sm font-medium text-[#5151eb] hover:text-[#4040d9]"
           >
-            <ArrowLeft size={16} />
+            <ArrowLeft size={15} />
             Back to events
           </Link>
         </div>
 
         {/* Event Card */}
-        <div className="border-b border-gray-200 px-5 py-6">
-          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+        <div className="border-b border-zinc-100 px-4 py-5">
+          <div className="overflow-hidden rounded-xl border border-zinc-100 bg-zinc-50">
             {/* Cover */}
-            <div className="relative h-20 bg-gradient-to-r from-blue-200 via-blue-100 to-blue-500">
-              <div className="absolute right-0 top-0 h-20 w-40 rounded-bl-full bg-blue-500" />
-            </div>
+            <div className="relative h-16 bg-gradient-to-br from-[#5151eb]/20 via-indigo-100 to-[#5151eb]/10" />
 
             {/* Content */}
-            <div className="p-5">
-              <h2 className="text-2xl font-bold tracking-tight text-gray-900">Untitled Event</h2>
+            <div className="bg-white p-4">
+              <h2 className="text-base font-bold text-zinc-900">Untitled Event</h2>
 
-              <div className="mt-5 flex items-center gap-2 text-gray-600">
-                <Calendar size={18} />
-
-                <span className="text-sm font-medium">Thu, May 21, 2026, 7:53 AM</span>
+              <div className="mt-3 flex items-center gap-2 text-zinc-500">
+                <Calendar size={14} />
+                <span className="text-xs font-medium">Thu, May 21, 2026, 7:53 AM</span>
               </div>
 
               {/* Status */}
-              <button className="mt-6 rounded-full border border-gray-300 bg-white px-5 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+              <span className="mt-3 inline-flex items-center rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-0.5 text-xs font-medium text-zinc-600">
                 Draft
-              </button>
+              </span>
             </div>
           </div>
         </div>
 
         {/* Steps */}
         <div className="flex-1 overflow-y-auto">
-          <div className="px-5 py-5">
-            <p className="mb-4 text-sm font-semibold text-gray-500">Steps</p>
+          <div className="px-4 py-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+              Steps
+            </p>
 
             <div className="space-y-1">
               {steps.map((step, idx) => (
                 <div
                   key={idx}
-                  className={`rounded-2xl border transition ${
-                    step.active ? 'border-blue-200 bg-blue-50' : 'border-transparent'
-                  }`}
+                  className={`rounded-lg transition ${step.active ? 'bg-indigo-50' : ''}`}
                 >
-                  <button className="flex w-full items-start gap-4 p-4 text-left">
+                  <button className="flex w-full items-start gap-3 p-3 text-left">
                     {/* Icon */}
                     <div className="mt-0.5">
                       {step.active ? (
-                        <CheckCircle2 size={22} className="text-blue-600" />
+                        <CheckCircle2 size={18} className="text-[#5151eb]" />
                       ) : (
-                        <Circle size={22} className="text-gray-300" />
+                        <Circle size={18} className="text-zinc-300" />
                       )}
                     </div>
 
                     {/* Content */}
                     <div>
                       <h3
-                        className={`text-sm font-semibold ${
-                          step.active ? 'text-blue-700' : 'text-gray-700'
+                        className={`text-sm font-medium ${
+                          step.active ? 'text-[#5151eb]' : 'text-zinc-700'
                         }`}
                       >
                         {step.title}
                       </h3>
 
-                      <p className="mt-1 text-sm leading-relaxed text-gray-500">
+                      <p className="mt-0.5 text-xs leading-relaxed text-zinc-500">
                         {step.description}
                       </p>
                     </div>
@@ -112,13 +109,13 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
 
       {/* Main */}
       <main className="flex-1">
-        <div className="mx-auto max-w-5xl px-8 py-10">{children}</div>
+        <div className="mx-auto max-w-4xl px-8 py-8">{children}</div>
       </main>
 
       {/* Save Bar */}
-      <div className="fixed bottom-0 left-[460px] right-0 z-40 border-t border-gray-200 bg-white/90 backdrop-blur">
-        <div className="flex items-center justify-end px-8 py-4">
-          <button className="rounded-xl bg-blue-500 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-600">
+      <div className="fixed bottom-0 left-[420px] right-0 z-40 border-t border-zinc-100 bg-white/95 backdrop-blur-sm">
+        <div className="flex items-center justify-end px-8 py-3">
+          <button className="rounded-lg bg-[#5151eb] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#4040d9]">
             Save and continue
           </button>
         </div>
