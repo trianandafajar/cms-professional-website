@@ -18,8 +18,8 @@ export async function middleware(request: NextRequest) {
   }
 
   // /organizations/* is only for organizers
-  // We check via a lightweight API call to verify the user's role
-  if (pathname.startsWith('/organizations')) {
+  // /my/* is only for attendees (non-organizers)
+  if (pathname.startsWith('/organizations') || pathname.startsWith('/my')) {
     if (!token) {
       return NextResponse.redirect(new URL('/auth/signin', request.url))
     }
@@ -34,9 +34,15 @@ export async function middleware(request: NextRequest) {
       if (meRes.ok) {
         const data = await meRes.json()
         const user = data?.user
-        if (user && !user.isOrganizer) {
-          // Not an organizer — redirect to attendee dashboard
-          return NextResponse.redirect(new URL('/my/tickets', request.url))
+        if (user) {
+          if (pathname.startsWith('/organizations') && !user.isOrganizer) {
+            // Not an organizer — redirect to attendee dashboard
+            return NextResponse.redirect(new URL('/my/tickets', request.url))
+          }
+          if (pathname.startsWith('/my') && user.isOrganizer) {
+            // Organizer trying to access attendee routes — redirect to organizer dashboard
+            return NextResponse.redirect(new URL('/organizations/dashboard', request.url))
+          }
         }
       }
     } catch {

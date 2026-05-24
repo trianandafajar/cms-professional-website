@@ -1,7 +1,15 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Search, Receipt, Download, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
+import {
+  Search,
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+} from 'lucide-react'
 import Link from 'next/link'
 
 const dummyOrders = [
@@ -9,6 +17,7 @@ const dummyOrders = [
     id: 'ORD-2026-001',
     buyer: 'John Doe',
     email: 'john@example.com',
+    event: 'React Conference 2026',
     ticket: 'General Admission',
     qty: 2,
     total: 300000,
@@ -20,6 +29,7 @@ const dummyOrders = [
     id: 'ORD-2026-002',
     buyer: 'Sarah Wilson',
     email: 'sarah@example.com',
+    event: 'React Conference 2026',
     ticket: 'VIP',
     qty: 1,
     total: 500000,
@@ -31,6 +41,7 @@ const dummyOrders = [
     id: 'ORD-2026-003',
     buyer: 'Michael Chen',
     email: 'michael@example.com',
+    event: 'Laravel Meetup',
     ticket: 'General Admission',
     qty: 4,
     total: 600000,
@@ -42,6 +53,7 @@ const dummyOrders = [
     id: 'ORD-2026-004',
     buyer: 'Emily Davis',
     email: 'emily@example.com',
+    event: 'Next.js Summit',
     ticket: 'VIP',
     qty: 2,
     total: 1000000,
@@ -53,6 +65,7 @@ const dummyOrders = [
     id: 'ORD-2026-005',
     buyer: 'Alex Johnson',
     email: 'alex@example.com',
+    event: 'Next.js Summit',
     ticket: 'VIP',
     qty: 1,
     total: 500000,
@@ -64,6 +77,7 @@ const dummyOrders = [
     id: 'ORD-2026-006',
     buyer: 'Lisa Park',
     email: 'lisa@example.com',
+    event: 'Laravel Meetup',
     ticket: 'General Admission',
     qty: 3,
     total: 450000,
@@ -71,29 +85,110 @@ const dummyOrders = [
     checkin: false,
     date: '2026-06-17',
   },
+  {
+    id: 'ORD-2026-007',
+    buyer: 'David Kim',
+    email: 'david@example.com',
+    event: 'Vue.js Workshop',
+    ticket: 'General Admission',
+    qty: 1,
+    total: 150000,
+    status: 'Completed',
+    checkin: true,
+    date: '2026-06-18',
+  },
+  {
+    id: 'ORD-2026-008',
+    buyer: 'Nina Patel',
+    email: 'nina@example.com',
+    event: 'Vue.js Workshop',
+    ticket: 'VIP',
+    qty: 2,
+    total: 700000,
+    status: 'Pending',
+    checkin: false,
+    date: '2026-06-19',
+  },
 ]
 
 const statusOptions = ['All', 'Completed', 'Pending', 'Refunded']
 
+type SortField = 'date' | 'total' | 'buyer' | null
+type SortDir = 'asc' | 'desc'
+
 export default function OrdersPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('All')
+  const [event, setEvent] = useState('All')
+  const [sortField, setSortField] = useState<SortField>(null)
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [page, setPage] = useState(1)
   const perPage = 5
 
+  // Extract unique events for filter
+  const events = useMemo(() => {
+    const unique = [...new Set(dummyOrders.map((o) => o.event))]
+    return unique.sort()
+  }, [])
+
   const filtered = useMemo(() => {
-    return dummyOrders.filter((order) => {
+    let data = dummyOrders.filter((order) => {
       const matchesSearch =
         order.id.toLowerCase().includes(search.toLowerCase()) ||
         order.buyer.toLowerCase().includes(search.toLowerCase()) ||
         order.email.toLowerCase().includes(search.toLowerCase())
       const matchesStatus = status === 'All' || order.status === status
-      return matchesSearch && matchesStatus
+      const matchesEvent = event === 'All' || order.event === event
+      return matchesSearch && matchesStatus && matchesEvent
     })
-  }, [search, status])
+
+    // Sort
+    if (sortField) {
+      data = [...data].sort((a, b) => {
+        let cmp = 0
+        if (sortField === 'date') {
+          cmp = a.date.localeCompare(b.date)
+        } else if (sortField === 'total') {
+          cmp = a.total - b.total
+        } else if (sortField === 'buyer') {
+          cmp = a.buyer.localeCompare(b.buyer)
+        }
+        return sortDir === 'asc' ? cmp : -cmp
+      })
+    }
+
+    return data
+  }, [search, status, event, sortField, sortDir])
 
   const totalPages = Math.ceil(filtered.length / perPage)
   const paginated = filtered.slice((page - 1) * perPage, page * perPage)
+
+  function toggleSort(field: SortField) {
+    if (sortField === field) {
+      if (sortDir === 'desc') {
+        setSortDir('asc')
+      } else {
+        // Reset sort
+        setSortField(null)
+        setSortDir('desc')
+      }
+    } else {
+      setSortField(field)
+      setSortDir('desc')
+    }
+    setPage(1)
+  }
+
+  function SortIcon({ field }: { field: SortField }) {
+    if (sortField !== field) {
+      return <ArrowUpDown size={12} className="text-zinc-300" />
+    }
+    return sortDir === 'desc' ? (
+      <ArrowDown size={12} className="text-[#5151eb]" />
+    ) : (
+      <ArrowUp size={12} className="text-[#5151eb]" />
+    )
+  }
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -102,109 +197,153 @@ export default function OrdersPage() {
         <p className="mt-1 text-sm text-zinc-500">Manage orders, attendees, and ticket delivery</p>
       </div>
 
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-            <input
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value)
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Search */}
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+          <input
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setPage(1)
+            }}
+            placeholder="Search orders..."
+            className="h-9 w-64 rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm outline-none transition placeholder:text-zinc-400 focus:border-[#5151eb]"
+          />
+        </div>
+
+        {/* Status filter */}
+        <div className="flex items-center rounded-lg border border-zinc-200 bg-white p-0.5">
+          {statusOptions.map((s) => (
+            <button
+              key={s}
+              onClick={() => {
+                setStatus(s)
                 setPage(1)
               }}
-              placeholder="Search orders..."
-              className="h-9 w-72 rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm outline-none transition placeholder:text-zinc-400 focus:border-[#5151eb] focus:ring-2 focus:ring-[#5151eb]/10"
-            />
-          </div>
-          <div className="flex items-center rounded-lg border border-zinc-200 bg-white p-0.5">
-            {statusOptions.map((s) => (
-              <button
-                key={s}
-                onClick={() => {
-                  setStatus(s)
-                  setPage(1)
-                }}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${status === s ? 'bg-[#5151eb] text-white' : 'text-zinc-600 hover:bg-zinc-50'}`}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+                status === s ? 'bg-[#5151eb] text-white' : 'text-zinc-600 hover:bg-zinc-50'
+              }`}
+            >
+              {s}
+            </button>
+          ))}
         </div>
-        <button className="flex h-9 items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50">
-          <Download size={14} />
-          Export
-        </button>
+
+        {/* Event filter */}
+        <select
+          value={event}
+          onChange={(e) => {
+            setEvent(e.target.value)
+            setPage(1)
+          }}
+          className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-[#5151eb]"
+        >
+          <option value="All">All Events</option>
+          {events.map((ev) => (
+            <option key={ev} value={ev}>
+              {ev}
+            </option>
+          ))}
+        </select>
+
+        <div className="ml-auto">
+          <button className="flex h-9 items-center rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50">
+            Export
+          </button>
+        </div>
       </div>
 
+      {/* Table */}
       <div className="mt-5">
         {paginated.length > 0 ? (
-          <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
+          <div className="overflow-hidden rounded-xl border border-zinc-200">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-zinc-100 bg-zinc-50/50">
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                <tr className="border-b border-zinc-100 bg-zinc-50/80">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
                     Order
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Buyer
+                  <th
+                    className="cursor-pointer px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 select-none"
+                    onClick={() => toggleSort('buyer')}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      Buyer
+                      <SortIcon field="buyer" />
+                    </span>
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                    Event
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
                     Ticket
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Total
+                  <th
+                    className="cursor-pointer px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500 select-none"
+                    onClick={() => toggleSort('total')}
+                  >
+                    <span className="inline-flex items-center justify-end gap-1">
+                      Total
+                      <SortIcon field="total" />
+                    </span>
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
                     Status
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Check-in
+                  <th
+                    className="cursor-pointer px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 select-none"
+                    onClick={() => toggleSort('date')}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      Date
+                      <SortIcon field="date" />
+                    </span>
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
                     Action
                   </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-zinc-100 bg-white">
                 {paginated.map((order) => (
-                  <tr
-                    key={order.id}
-                    className="border-b border-zinc-50 transition last:border-b-0 hover:bg-indigo-50/20"
-                  >
+                  <tr key={order.id} className="transition hover:bg-zinc-50/50">
                     <td className="px-4 py-3.5">
                       <p className="text-sm font-semibold text-zinc-900">{order.id}</p>
-                      <p className="text-xs text-zinc-400">{order.date}</p>
                     </td>
                     <td className="px-4 py-3.5">
                       <p className="text-sm font-medium text-zinc-800">{order.buyer}</p>
                       <p className="text-xs text-zinc-400">{order.email}</p>
                     </td>
                     <td className="px-4 py-3.5">
+                      <p className="text-sm text-zinc-700">{order.event}</p>
+                    </td>
+                    <td className="px-4 py-3.5">
                       <p className="text-sm text-zinc-700">{order.ticket}</p>
                       <p className="text-xs text-zinc-400">×{order.qty}</p>
                     </td>
-                    <td className="px-4 py-3.5 text-sm font-medium text-zinc-900">
+                    <td className="px-4 py-3.5 text-right text-sm font-medium text-zinc-900">
                       Rp {order.total.toLocaleString('id-ID')}
                     </td>
                     <td className="px-4 py-3.5">
                       <span
-                        className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${order.status === 'Completed' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : order.status === 'Pending' ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-red-200 bg-red-50 text-red-600'}`}
+                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          order.status === 'Completed'
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : order.status === 'Pending'
+                              ? 'bg-amber-50 text-amber-700'
+                              : 'bg-red-50 text-red-600'
+                        }`}
                       >
                         {order.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3.5">
-                      <span
-                        className={`text-xs font-medium ${order.checkin ? 'text-emerald-600' : 'text-zinc-400'}`}
-                      >
-                        {order.checkin ? 'Checked In' : 'Not Yet'}
-                      </span>
-                    </td>
+                    <td className="px-4 py-3.5 text-sm text-zinc-500">{order.date}</td>
                     <td className="px-4 py-3.5 text-right">
                       <Link
                         href={`/organizations/orders/${order.id}`}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-[#5151eb] transition hover:text-[#4040d9]"
+                        className="inline-flex items-center gap-1 text-xs font-medium text-[#5151eb] transition hover:text-[#3d3dcc]"
                       >
                         <Eye size={13} />
                         View
@@ -216,11 +355,8 @@ export default function OrdersPage() {
             </table>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-zinc-200 bg-white py-16">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50">
-              <Receipt size={22} className="text-[#5151eb]" />
-            </div>
-            <h3 className="mt-4 text-base font-semibold text-zinc-900">No orders found</h3>
+          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-200 py-16">
+            <h3 className="text-base font-semibold text-zinc-900">No orders found</h3>
             <p className="mt-1 text-sm text-zinc-500">
               Try adjusting your search or filter criteria
             </p>
@@ -228,16 +364,18 @@ export default function OrdersPage() {
         )}
       </div>
 
+      {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between">
           <p className="text-xs text-zinc-500">
-            Showing {paginated.length} of {filtered.length} orders
+            Showing {(page - 1) * perPage + 1}–{Math.min(page * perPage, filtered.length)} of{' '}
+            {filtered.length} orders
           </p>
           <div className="flex items-center gap-1">
             <button
               onClick={() => setPage(page - 1)}
               disabled={page <= 1}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 transition hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ChevronLeft size={14} className="text-zinc-600" />
             </button>
@@ -245,7 +383,11 @@ export default function OrdersPage() {
               <button
                 key={p}
                 onClick={() => setPage(p)}
-                className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium transition ${p === page ? 'bg-[#5151eb] text-white' : 'border border-zinc-200 text-zinc-600 hover:bg-zinc-50'}`}
+                className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium transition ${
+                  p === page
+                    ? 'bg-[#5151eb] text-white'
+                    : 'border border-zinc-200 text-zinc-600 hover:bg-zinc-50'
+                }`}
               >
                 {p}
               </button>
@@ -253,7 +395,7 @@ export default function OrdersPage() {
             <button
               onClick={() => setPage(page + 1)}
               disabled={page >= totalPages}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 transition hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ChevronRight size={14} className="text-zinc-600" />
             </button>

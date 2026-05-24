@@ -179,7 +179,7 @@ export const Events: CollectionConfig = {
         position: 'sidebar',
       },
     },
-    // ─── Ticket Types (set by organizer) ─────────────────────────────────────
+     // ─── Ticket Types (set by organizer) ─────────────────────────────────────
     {
       name: 'ticketTypes',
       type: 'array',

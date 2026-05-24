@@ -1,8 +1,6 @@
 'use client'
 
-import { Download, Filter } from 'lucide-react'
 import { useState } from 'react'
-
 import PayoutFilterDrawer from '@/components/finance/payout-filter-drawer'
 import PayoutEmpty from '@/components/finance/payout-empty'
 
@@ -27,7 +25,7 @@ const upcomingPayouts = [
   },
   {
     id: 'UP-2026-003',
-    event: 'Laravel Meetup',
+    event: 'Vue.js Workshop',
     gross: 2500000,
     fees: 125000,
     net: 2375000,
@@ -36,7 +34,7 @@ const upcomingPayouts = [
   },
   {
     id: 'UP-2026-004',
-    event: 'Laravel Meetup',
+    event: 'Next.js Summit',
     gross: 2500000,
     fees: 125000,
     net: 2375000,
@@ -45,7 +43,7 @@ const upcomingPayouts = [
   },
   {
     id: 'UP-2026-005',
-    event: 'Laravel Meetup',
+    event: 'Tailwind CSS Conf',
     gross: 2500000,
     fees: 125000,
     net: 2375000,
@@ -57,73 +55,91 @@ const upcomingPayouts = [
 export default function UpcomingPayoutPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
 
+  const totalUpcoming = upcomingPayouts.reduce((sum, item) => sum + item.net, 0)
+
   return (
-    <div className="space-y-4">
-      <p className="text-lg text-gray-600">
-        View upcoming payouts that are scheduled to be transferred.
-      </p>
-
-      <div className="flex items-center justify-between">
-        <button
-          onClick={() => setDrawerOpen(true)}
-          className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-6 py-3 font-semibold text-[#1E0A3C] transition hover:bg-gray-50"
-        >
-          <Filter size={18} />
-          Filters
-        </button>
-
-        <button className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-6 py-3 font-semibold text-[#1E0A3C] transition hover:bg-gray-50">
-          <Download size={18} />
-          Export
-        </button>
+    <div className="space-y-5">
+      {/* Summary */}
+      <div className="rounded-xl border border-zinc-200 bg-white p-5">
+        <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">Total Upcoming</p>
+        <p className="mt-2 text-2xl font-bold text-zinc-900">
+          Rp {totalUpcoming.toLocaleString('id-ID')}
+        </p>
+        <p className="mt-1 text-sm text-zinc-500">
+          {upcomingPayouts.length} scheduled payout{upcomingPayouts.length !== 1 ? 's' : ''}
+        </p>
       </div>
 
-      {upcomingPayouts.length === 0 && <PayoutEmpty />}
+      {/* Actions */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-zinc-500">Payouts scheduled to be transferred to your account</p>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setDrawerOpen(true)}
+            className="flex h-9 items-center rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+          >
+            Filters
+          </button>
+          <button className="flex h-9 items-center rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50">
+            Export
+          </button>
+        </div>
+      </div>
 
-      {upcomingPayouts.length > 0 && (
-        <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white">
-          <div className="max-h-86.5 overflow-y-auto scrollbar-none">
-            <table className="w-full">
-              <thead className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50">
-                <tr>
-                  <th className="px-6 py-4 text-left">ID</th>
-                  <th className="px-6 py-4 text-left">Event</th>
-                  <th className="px-6 py-4 text-left">Gross</th>
-                  <th className="px-6 py-4 text-left">Fees</th>
-                  <th className="px-6 py-4 text-left">Net</th>
-                  <th className="px-6 py-4 text-left">Status</th>
-                  <th className="px-6 py-4 text-left">Expected Date</th>
+      {upcomingPayouts.length === 0 ? (
+        <PayoutEmpty />
+      ) : (
+        <div className="overflow-hidden rounded-xl border border-zinc-200">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-zinc-100 bg-zinc-50/80">
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  ID
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  Event
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  Gross
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  Fees
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  Net
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  Status
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                  Expected Date
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-100 bg-white">
+              {upcomingPayouts.map((item) => (
+                <tr key={item.id} className="transition hover:bg-zinc-50/50">
+                  <td className="px-4 py-3.5 text-sm font-medium text-zinc-900">{item.id}</td>
+                  <td className="px-4 py-3.5 text-sm text-zinc-700">{item.event}</td>
+                  <td className="px-4 py-3.5 text-right text-sm text-zinc-700">
+                    Rp {item.gross.toLocaleString('id-ID')}
+                  </td>
+                  <td className="px-4 py-3.5 text-right text-sm text-zinc-400">
+                    Rp {item.fees.toLocaleString('id-ID')}
+                  </td>
+                  <td className="px-4 py-3.5 text-right text-sm font-semibold text-zinc-900">
+                    Rp {item.net.toLocaleString('id-ID')}
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                      {item.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3.5 text-sm text-zinc-500">{item.date}</td>
                 </tr>
-              </thead>
-
-              <tbody>
-                {upcomingPayouts.map((item) => (
-                  <tr key={item.id} className="border-b border-gray-100">
-                    <td className="px-6 py-5 font-medium">{item.id}</td>
-                    <td className="px-6 py-5">{item.event}</td>
-
-                    <td className="px-6 py-5">Rp {item.gross.toLocaleString('id-ID')}</td>
-
-                    <td className="px-6 py-5">Rp {item.fees.toLocaleString('id-ID')}</td>
-
-                    <td className="px-6 py-5 font-semibold">
-                      Rp {item.net.toLocaleString('id-ID')}
-                    </td>
-
-                    <td className="px-6 py-5">
-                      <span className="rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700">
-                        {item.status}
-                      </span>
-                    </td>
-
-                    <td className="px-6 py-5">{item.date}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="border-t border-gray-200 bg-white px-6 py-4">Pagination Here</div>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 

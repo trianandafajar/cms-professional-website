@@ -6,10 +6,12 @@ import { usePathname } from 'next/navigation'
 const payoutTabs = [
   {
     label: 'Payment Accounts',
+    description: 'Manage connected payment providers',
     href: '/organizations/finance/settings',
   },
   {
-    label: 'Taxpayer info',
+    label: 'Taxpayer Info',
+    description: 'Tax details and compliance',
     href: '/organizations/finance/settings/tax',
   },
 ]
@@ -18,10 +20,13 @@ export default function FinancePayoutLayout({ children }: { children: React.Reac
   const pathname = usePathname()
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full gap-6">
       {/* Sidebar */}
-      <aside className="w-62 shrink-0 border-r border-gray-200 bg-white pt-4 px-3.5">
-        <div className="space-y-2">
+      <aside className="w-72 shrink-0 rounded-2xl border border-zinc-100 bg-white p-4">
+        <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+          Settings
+        </p>
+        <nav className="space-y-1.5">
           {payoutTabs.map((tab) => {
             const active = pathname === tab.href
 
@@ -29,19 +34,26 @@ export default function FinancePayoutLayout({ children }: { children: React.Reac
               <Link
                 key={tab.href}
                 href={tab.href}
-                className={`flex items-center rounded-2xl px-6 py-4 font-semibold transition mx-2 ${
-                  active ? 'bg-blue-600 text-white' : 'bg-gray-50 text-[#1E0A3C] hover:bg-gray-100'
+                className={`group flex flex-col rounded-xl px-4 py-3.5 transition-all ${
+                  active ? 'bg-[#5151eb] text-white' : 'text-zinc-700 hover:bg-zinc-50'
                 }`}
               >
-                {tab.label}
+                <p className={`text-sm font-semibold ${active ? 'text-white' : 'text-zinc-800'}`}>
+                  {tab.label}
+                </p>
+                <p className={`text-xs ${active ? 'text-white/70' : 'text-zinc-400'}`}>
+                  {tab.description}
+                </p>
               </Link>
             )
           })}
-        </div>
+        </nav>
       </aside>
 
       {/* Content */}
-      <main className="flex-1 overflow-y-auto bg-[#F8F7FA] p-6">{children}</main>
+      <main className="flex-1 overflow-y-auto rounded-2xl border border-zinc-100 bg-white p-8">
+        {children}
+      </main>
     </div>
   )
 }

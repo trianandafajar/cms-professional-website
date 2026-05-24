@@ -91,19 +91,19 @@ const profileMenu = [
     label: 'My Tickets',
     href: '/my/tickets',
     icon: Ticket,
-    organizerOnly: false,
+    attendeeOnly: true,
   },
   {
     label: 'My Orders',
     href: '/my/orders',
     icon: Receipt,
-    organizerOnly: false,
+    attendeeOnly: true,
   },
   {
     label: 'Liked Events',
     href: '/my/likes',
     icon: Heart,
-    organizerOnly: false,
+    attendeeOnly: true,
   },
   {
     label: 'Help Center',
@@ -143,7 +143,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
   const isOrganizer = Boolean(authUser?.isOrganizer)
 
   const filteredProfileMenu = profileMenu.filter((item) => {
-    if (isOrganizer) return true
+    if (isOrganizer) return item.organizerOnly === true
     return !item.organizerOnly
   })
 
@@ -322,15 +322,17 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
           >
             <Link href="/organizations/events/create">Create Events</Link>
           </Button>
-          <Button
-            asChild
-            className="text-sm font-medium text-zinc-700 hover:text-[#12192f]"
-            size="sm"
-            variant="ghost"
-          >
-            <Link href="/my/tickets">Find My Tickets</Link>
-          </Button>
-          {isAuthed && (
+          {!isOrganizer && (
+            <Button
+              asChild
+              className="text-sm font-medium text-zinc-700 hover:text-[#12192f]"
+              size="sm"
+              variant="ghost"
+            >
+              <Link href="/my/tickets">Find My Tickets</Link>
+            </Button>
+          )}
+          {isAuthed && !isOrganizer && (
             <Button
               asChild
               className="text-sm font-medium text-zinc-700 hover:text-[#12192f]"
@@ -468,13 +470,15 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
             >
               Create Events
             </Link>
-            <Link
-              className="rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-              href="/my/tickets"
-            >
-              Find My Tickets
-            </Link>
-            {isAuthed && (
+            {!isOrganizer && (
+              <Link
+                className="rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                href="/my/tickets"
+              >
+                Find My Tickets
+              </Link>
+            )}
+            {isAuthed && !isOrganizer && (
               <Link
                 className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
                 href="/my/likes"
