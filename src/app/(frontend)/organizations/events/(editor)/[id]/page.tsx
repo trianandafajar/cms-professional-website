@@ -7,6 +7,7 @@ import { useParams } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { apiClient } from '@/lib/apiClient'
 import type { Event } from '@/payload-types'
+import { useEventEditorStore } from '@/stores/eventEditorStore'
 
 import MediaSection from '@/components/organizations/event-editor/sections/media-section'
 import OverviewSection from '@/components/organizations/event-editor/sections/overview-section'
@@ -19,6 +20,7 @@ export default function EditEventPage() {
   const [event, setEvent] = useState<Event | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { setEventData } = useEventEditorStore()
 
   useEffect(() => {
     async function loadEvent() {
@@ -26,6 +28,36 @@ export default function EditEventPage() {
         setIsLoading(true)
         const data = await apiClient.get<Event>(`/api/events/${eventId}?depth=1`)
         setEvent(data)
+
+        // Populate the editor store with event data
+        const coverUrl =
+          typeof data.coverImage === 'object' && data.coverImage?.url
+            ? data.coverImage.url
+            : typeof data.bannerImage === 'object' && data.bannerImage?.url
+              ? data.bannerImage.url
+              : ''
+
+        const startDate = data.startDate
+          ? new Date(data.startDate).toLocaleDateString('en-US', {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+            })
+          : ''
+
+        const location =
+          data.venue || (typeof data.location === 'object' && data.location?.name) || ''
+
+        setEventData({
+          eventTitle: data.title || '',
+          eventDate: startDate,
+          eventStatus: data.status || 'draft',
+          eventLocation: typeof location === 'string' ? location : '',
+          bannerImage: coverUrl,
+        })
       } catch (err: any) {
         setError(err.message || 'Failed to load event')
       } finally {
@@ -36,7 +68,7 @@ export default function EditEventPage() {
     if (eventId) {
       loadEvent()
     }
-  }, [eventId])
+  }, [eventId, setEventData])
 
   if (isLoading) {
     return (
@@ -56,7 +88,7 @@ export default function EditEventPage() {
   }
 
   return (
-    <div className="space-y-4 pb-28 max-h-[calc(100vh-93px)] overflow-y-auto -mt-14 pt-8 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+    <div className="space-y-4 pb-28 max-h-[calc(100vh-93px)] overflow-y-auto -mt-14 pt-8 scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
       <MediaSection />
       <OverviewSection />
       <DateLocationSection />

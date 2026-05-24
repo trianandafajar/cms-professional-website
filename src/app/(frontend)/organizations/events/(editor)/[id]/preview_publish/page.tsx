@@ -1,11 +1,7 @@
-// src/app/(frontend)/organizations/events/[id]/preview_publish/page.tsx
-
 'use client'
 
-import { useState } from 'react';
-import Link from 'next/link'
-
-import { Calendar, MapPin, Tag, Ticket, Eye } from 'lucide-react'
+import { useState, useRef, useCallback } from 'react'
+import { Calendar, MapPin, Ticket, Upload, X, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -14,258 +10,430 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { TagsInput } from '@/components/ui/tags-input'
+import { useEventEditorStore } from '@/stores/eventEditorStore'
 
 export default function PreviewPublishPage() {
-  const [tags, setTags] = useState<string[]>(['testevent', 'test2024', 'test_session', 'testday', 'test_run'])
+  const [tags, setTags] = useState<string[]>(['testevent', 'test2024', 'test_session'])
+  const [visibility, setVisibility] = useState<'public' | 'private'>('public')
+
+  // Banner from shared store (syncs with sidebar preview)
+  const {
+    bannerImage,
+    bannerZoom: zoom,
+    bannerPosX: posX,
+    bannerPosY: posY,
+    eventTitle,
+    eventDate,
+    eventLocation,
+    setBannerImage,
+    setBannerZoom: setZoom,
+    setBannerPosition,
+    resetBanner,
+  } = useEventEditorStore()
+
+  const [isDragging, setIsDragging] = useState(false)
+  const dragStart = useRef({ x: 0, y: 0, posX: 50, posY: 50 })
+  const editorRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const result = ev.target?.result
+      if (typeof result === 'string') {
+        setBannerImage(result)
+      }
+    }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  function removeBanner() {
+    setBannerImage('')
+  }
+
+  function resetPosition() {
+    resetBanner()
+  }
+
+  function handleZoomIn() {
+    setZoom(Math.min(zoom + 0.25, 3))
+  }
+
+  function handleZoomOut() {
+    setZoom(Math.max(zoom - 0.25, 1))
+  }
+
+  // Drag handlers
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (zoom <= 1) return
+      e.preventDefault()
+      setIsDragging(true)
+      dragStart.current = { x: e.clientX, y: e.clientY, posX, posY }
+    },
+    [zoom, posX, posY],
+  )
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (!isDragging || !editorRef.current) return
+      const rect = editorRef.current.getBoundingClientRect()
+      const dx = ((e.clientX - dragStart.current.x) / rect.width) * 100
+      const dy = ((e.clientY - dragStart.current.y) / rect.height) * 100
+
+      const newX = Math.max(0, Math.min(100, dragStart.current.posX - dx))
+      const newY = Math.max(0, Math.min(100, dragStart.current.posY - dy))
+      setBannerPosition(newX, newY)
+    },
+    [isDragging, setBannerPosition],
+  )
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false)
+  }, [])
+
+  const bannerStyle: React.CSSProperties = bannerImage
+    ? {
+        backgroundImage: `url(${bannerImage})`,
+        backgroundSize: `${zoom * 100}%`,
+        backgroundPosition: `${posX}% ${posY}%`,
+        backgroundRepeat: 'no-repeat',
+      }
+    : {}
+
   return (
     <div className="max-h-[calc(100vh-93px)] -mt-16 pt-10 overflow-y-auto pb-32 scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-      {/* HEADER */}
-      <div>
-        <h1 className="text-5xl font-bold tracking-tight text-[#1E0A3C]">
-          Your event is almost ready to publish
-        </h1>
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        className="hidden"
+      />
 
-        <p className="mt-5 text-xl text-gray-600">
-          Review your settings and let everyone find your event.
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Preview & Publish</h1>
+        <p className="mt-1 text-sm text-zinc-500">
+          Review your event, customize the banner, and publish when ready
         </p>
       </div>
 
-      {/* CONTENT */}
-      <div className="mt-10 overflow-hidden rounded-3xl border border-gray-200 bg-white">
-        <div className="grid grid-cols-2 gap-10 p-8">
-          {/* LEFT */}
-          <div>
-            {/* EVENT CARD */}
-            <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
-              {/* IMAGE */}
-              <div className="relative h-65 overflow-hidden bg-gray-100">
-                <img
-                  src="https://images.unsplash.com/photo-1511578314322-379afb476865?q=80&w=1400&auto=format&fit=crop"
-                  alt="Event Cover"
-                  className="h-full w-full object-cover"
-                />
-              </div>
-
-              {/* CONTENT */}
-              <div className="p-6">
-                <h2 className="text-3xl font-bold text-[#1E0A3C]">test</h2>
-
-                {/* DATE */}
-                <div className="mt-5 flex items-start gap-3">
-                  <Calendar size={18} className="mt-1 text-gray-500" />
-
-                  <div>
-                    <p className="text-lg font-semibold text-[#1E0A3C]">
-                      Tuesday, June 30 · 10am - 12pm WIB
-                    </p>
-                  </div>
-                </div>
-
-                {/* LOCATION */}
-                <div className="mt-4 flex items-start gap-3">
-                  <MapPin size={18} className="mt-1 text-gray-500" />
-
-                  <div>
-                    <p className="text-base text-gray-600">Margosari, Semarang, Jawa Tengah</p>
-                  </div>
-                </div>
-
-                {/* FOOTER */}
-                <div className="mt-7 flex items-center justify-between">
-                  <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2">
-                      <Ticket size={18} className="text-gray-500" />
-
-                      <span className="font-semibold text-[#1E0A3C]">$0.00</span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Tag size={18} className="text-gray-500" />
-
-                      <span className="font-semibold text-[#1E0A3C]">100</span>
-                    </div>
-                  </div>
-
-                  <Link
-                    href="#"
-                    className="flex items-center gap-2 font-semibold text-blue-600 transition hover:text-blue-700"
-                  >
-                    <Eye size={18} />
-                    Preview
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* ORGANIZER */}
-            <div className="mt-10">
-              <h3 className="text-3xl font-bold text-[#1E0A3C]">Organized by</h3>
-
-              <div className="relative mt-8">
-                <label className="absolute left-5 top-0 z-10 -translate-y-1/2 bg-white px-2 text-sm font-medium text-gray-500">
-                  Organizer
-                </label>
-
-                <input
-                  defaultValue="EventBro Organizer"
-                  className="h-16 w-full rounded-2xl border border-gray-300 px-5 text-lg outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
-                />
-              </div>
-
-              <p className="mt-4 text-sm leading-relaxed text-gray-500">
-                Adding a name will create an organizer profile after publishing, and this event will
-                appear on the organizer's profile page.
+      {/* Main content */}
+      <div className="space-y-6">
+        {/* ─── Banner Editor ─── */}
+        <div className="rounded-xl border border-zinc-200 bg-white p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="text-sm font-semibold text-zinc-900">Banner Image</h3>
+              <p className="mt-0.5 text-xs text-zinc-400">
+                {bannerImage && zoom > 1
+                  ? 'Drag to reposition, use controls to zoom'
+                  : 'Upload an image and adjust position & zoom'}
               </p>
-
-              <button className="mt-5 text-base font-semibold text-blue-600 hover:text-blue-700">
-                View organizer info
-              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              {bannerImage && (
+                <>
+                  <button
+                    onClick={handleZoomOut}
+                    disabled={zoom <= 1}
+                    className="flex size-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <ZoomOut size={14} />
+                  </button>
+                  <span className="text-xs font-medium text-zinc-500 w-10 text-center">
+                    {Math.round(zoom * 100)}%
+                  </span>
+                  <button
+                    onClick={handleZoomIn}
+                    disabled={zoom >= 3}
+                    className="flex size-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <ZoomIn size={14} />
+                  </button>
+                  <button
+                    onClick={resetPosition}
+                    className="flex size-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:bg-zinc-50"
+                    title="Reset position"
+                  >
+                    <RotateCcw size={14} />
+                  </button>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex size-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:bg-zinc-50"
+                    title="Change image"
+                  >
+                    <Upload size={14} />
+                  </button>
+                  <button
+                    onClick={removeBanner}
+                    className="flex size-8 items-center justify-center rounded-lg border border-zinc-200 text-red-500 transition hover:bg-red-50"
+                    title="Remove image"
+                  >
+                    <X size={14} />
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
-          {/* RIGHT */}
-          <div>
-            {/* TYPE */}
-            <div>
-              <h3 className="text-3xl font-bold text-[#1E0A3C]">Event type and category</h3>
+          {/* Editor area */}
+          {bannerImage ? (
+            <div
+              ref={editorRef}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              className={`relative h-56 overflow-hidden rounded-xl border border-zinc-200 ${
+                zoom > 1 ? 'cursor-grab' : 'cursor-default'
+              } ${isDragging ? 'cursor-grabbing' : ''}`}
+              style={bannerStyle}
+            >
+              {/* Overlay hint */}
+              {zoom > 1 && !isDragging && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/10 opacity-0 transition hover:opacity-100">
+                  <span className="rounded-lg bg-black/60 px-3 py-1.5 text-xs font-medium text-white">
+                    Drag to reposition
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-200 py-16 text-sm font-medium text-zinc-500 transition hover:border-[#5151eb] hover:text-[#5151eb]"
+            >
+              <Upload size={16} />
+              Upload Banner Image
+            </button>
+          )}
 
-              <p className="mt-4 text-lg leading-relaxed text-gray-600">
-                Your type and category help your event appear in more searches.
-              </p>
+          {/* Zoom slider */}
+          {bannerImage && (
+            <div className="mt-3 flex items-center gap-3">
+              <ZoomOut size={12} className="text-zinc-400" />
+              <input
+                type="range"
+                min={100}
+                max={300}
+                value={zoom * 100}
+                onChange={(e) => setZoom(Number(e.target.value) / 100)}
+                className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-zinc-200 accent-[#5151eb]"
+              />
+              <ZoomIn size={12} className="text-zinc-400" />
+            </div>
+          )}
+        </div>
 
-              {/* TYPE */}
-              <Select defaultValue="other">
-                <SelectTrigger
-                  className="h-16 w-full rounded-2xl border-gray-300 px-5 text-lg"
-                  variant="eventbrite"
-                >
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
+        {/* ─── Preview + Settings Grid ─── */}
+        <div className="grid grid-cols-5 gap-6">
+          {/* LEFT: Live Preview */}
+          <div className="col-span-3">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+              Event Preview
+            </p>
+            <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+              {/* Banner preview */}
+              <div className="relative h-48 overflow-hidden bg-zinc-100" style={bannerStyle}>
+                {!bannerImage && (
+                  <div className="flex h-full items-center justify-center">
+                    <p className="text-sm text-zinc-400">No banner image</p>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-linear-to-t from-black/30 to-transparent" />
+              </div>
 
-                <SelectContent>
-                  <SelectItem value="other">Other</SelectItem>
+              {/* Event Info */}
+              <div className="p-6">
+                <h2 className="text-xl font-bold text-zinc-900">
+                  {eventTitle || 'Untitled Event'}
+                </h2>
 
-                  <SelectItem value="conference">Conference</SelectItem>
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-center gap-3 text-sm text-zinc-600">
+                    <Calendar size={15} className="shrink-0 text-[#5151eb]" />
+                    <span>{eventDate || 'No date set'}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-zinc-600">
+                    <MapPin size={15} className="shrink-0 text-[#5151eb]" />
+                    <span>{eventLocation || 'No location set'}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-zinc-600">
+                    <Ticket size={15} className="shrink-0 text-[#5151eb]" />
+                    <span>Tickets available</span>
+                  </div>
+                </div>
 
-                  <SelectItem value="workshop">Workshop</SelectItem>
+                {tags.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-1.5">
+                    {tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-600"
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
-                  <SelectItem value="music">Music</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* CATEGORY */}
-              <div className="mt-6 grid grid-cols-2 gap-5">
-                <Select defaultValue="other">
-                  <SelectTrigger
-                    className="h-16 w-full rounded-2xl border-gray-300 px-5 text-lg"
-                    variant="eventbrite"
+                <div className="mt-4">
+                  <span
+                    className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      visibility === 'public'
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'bg-zinc-100 text-zinc-600'
+                    }`}
                   >
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
+                    {visibility === 'public' ? 'Public Event' : 'Private Event'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
 
-                  <SelectContent>
-                    <SelectItem value="other">Other</SelectItem>
-
-                    <SelectItem value="technology">Technology</SelectItem>
-
-                    <SelectItem value="education">Education</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <div className="relative">
-                  <Select defaultValue="general">
-                    <SelectTrigger
-                      className="h-16 w-full rounded-2xl border-gray-300 px-5 text-lg"
-                      variant="eventbrite"
-                    >
-                      <SelectValue placeholder="Select subcategory" />
+          {/* RIGHT: Settings */}
+          <div className="col-span-2 space-y-5">
+            {/* Event Type & Category */}
+            <div className="rounded-xl border border-zinc-200 bg-white p-5">
+              <h3 className="text-sm font-semibold text-zinc-900">Event Type & Category</h3>
+              <div className="mt-3 space-y-3">
+                <div>
+                  <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                    Type
+                  </label>
+                  <Select defaultValue="conference">
+                    <SelectTrigger className="mt-1.5 h-10 w-full rounded-lg border-zinc-200 text-sm">
+                      <SelectValue placeholder="Select type" />
                     </SelectTrigger>
-
                     <SelectContent>
-                      <SelectItem value="general">General</SelectItem>
-
-                      <SelectItem value="frontend">Frontend</SelectItem>
-
-                      <SelectItem value="backend">Backend</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="conference">Conference</SelectItem>
+                      <SelectItem value="workshop">Workshop</SelectItem>
+                      <SelectItem value="music">Music</SelectItem>
+                      <SelectItem value="networking">Networking</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                      Category
+                    </label>
+                    <Select defaultValue="technology">
+                      <SelectTrigger className="mt-1.5 h-10 w-full rounded-lg border-zinc-200 text-sm">
+                        <SelectValue placeholder="Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="other">Other</SelectItem>
+                        <SelectItem value="technology">Technology</SelectItem>
+                        <SelectItem value="education">Education</SelectItem>
+                        <SelectItem value="business">Business</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                      Subcategory
+                    </label>
+                    <Select defaultValue="frontend">
+                      <SelectTrigger className="mt-1.5 h-10 w-full rounded-lg border-zinc-200 text-sm">
+                        <SelectValue placeholder="Subcategory" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="general">General</SelectItem>
+                        <SelectItem value="frontend">Frontend</SelectItem>
+                        <SelectItem value="backend">Backend</SelectItem>
+                        <SelectItem value="ai">AI / ML</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* TAGS */}
-            <div className="mt-6">
-              <TagsInput
-                value={tags}
-                options={[
-                  'Technology',
-                  'Frontend',
-                  'Backend',
-                  'React',
-                  'Next.js',
-                  'Workshop',
-                  'AI',
-                  'Startup',
-                  'Business',
-                  'Community',
-                ]}
-              />
+            {/* Tags */}
+            <div className="rounded-xl border border-zinc-200 bg-white p-5">
+              <h3 className="text-sm font-semibold text-zinc-900">Tags</h3>
+              <div className="mt-3">
+                <TagsInput
+                  value={tags}
+                  options={[
+                    'Technology',
+                    'Frontend',
+                    'Backend',
+                    'React',
+                    'Next.js',
+                    'Workshop',
+                    'AI',
+                    'Startup',
+                    'Business',
+                    'Community',
+                  ]}
+                />
+              </div>
             </div>
 
-            {/* PUBLIC / PRIVATE */}
-            <div className="mt-12 border-t border-gray-200 pt-10">
-              <h3 className="text-3xl font-bold text-[#1E0A3C]">
-                Is your event public or private?
-              </h3>
-
-              <div className="mt-8 space-y-5">
-                {/* PUBLIC */}
+            {/* Visibility */}
+            <div className="rounded-xl border border-zinc-200 bg-white p-5">
+              <h3 className="text-sm font-semibold text-zinc-900">Visibility</h3>
+              <div className="mt-3 space-y-2">
                 <label
-                  className="flex cursor-pointer items-start gap-4 rounded-2xl border border-gray-200 p-5 transition
-                    has-checked:border-blue-200 has-checked:bg-blue-50"
+                  className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3.5 transition ${
+                    visibility === 'public'
+                      ? 'border-[#5151eb]/30 bg-[#5151eb]/5'
+                      : 'border-zinc-200 hover:border-zinc-300'
+                  }`}
                 >
                   <input
                     type="radio"
                     name="visibility"
-                    defaultChecked
-                    className="mt-1 h-5 w-5 accent-blue-600"
+                    checked={visibility === 'public'}
+                    onChange={() => setVisibility('public')}
+                    className="mt-0.5 size-4 accent-[#5151eb]"
                   />
                   <div>
-                    <p className="text-lg font-semibold text-[#1E0A3C]">Public</p>
-                    <p className="mt-1 text-sm text-gray-500">
-                      Shared on EventBro and search engines
-                    </p>
+                    <p className="text-sm font-semibold text-zinc-900">Public</p>
+                    <p className="text-xs text-zinc-500">Visible on Eventbro and search engines</p>
                   </div>
                 </label>
-
-                {/* PRIVATE */}
                 <label
-                  className="flex cursor-pointer items-start gap-4 rounded-2xl border border-gray-200 p-5 transition
-                    has-checked:border-blue-200 has-checked:bg-blue-50
-                    hover:border-gray-300"
+                  className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3.5 transition ${
+                    visibility === 'private'
+                      ? 'border-[#5151eb]/30 bg-[#5151eb]/5'
+                      : 'border-zinc-200 hover:border-zinc-300'
+                  }`}
                 >
-                  <input type="radio" name="visibility" className="mt-1 h-5 w-5 accent-blue-600" />
+                  <input
+                    type="radio"
+                    name="visibility"
+                    checked={visibility === 'private'}
+                    onChange={() => setVisibility('private')}
+                    className="mt-0.5 size-4 accent-[#5151eb]"
+                  />
                   <div>
-                    <p className="text-lg font-semibold text-[#1E0A3C]">Private</p>
-                    <p className="mt-1 text-sm text-gray-500">Shared only with selected audience</p>
+                    <p className="text-sm font-semibold text-zinc-900">Private</p>
+                    <p className="text-xs text-zinc-500">Only accessible via direct link</p>
                   </div>
                 </label>
               </div>
             </div>
+
+            {/* Organizer */}
+            <div className="rounded-xl border border-zinc-200 bg-white p-5">
+              <h3 className="text-sm font-semibold text-zinc-900">Organizer</h3>
+              <input
+                defaultValue="Eventbro Organizer"
+                className="mt-3 h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-[#5151eb]"
+              />
+            </div>
           </div>
-        </div>
-      </div>
-
-      {/* FOOTER */}
-      <div className="fixed bottom-0 left-115 right-0 z-40 border-t border-gray-200 bg-white/90 backdrop-blur">
-        <div className="flex items-center justify-end gap-4 px-8 py-4">
-          <button className="rounded-2xl border border-gray-300 px-6 py-3 text-base font-semibold text-gray-700 transition hover:bg-gray-50">
-            Back
-          </button>
-
-          <button className="rounded-2xl bg-blue-500 px-7 py-3 text-base font-semibold text-white transition hover:bg-blue-600">
-            Publish event
-          </button>
         </div>
       </div>
     </div>
