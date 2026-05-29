@@ -2,7 +2,7 @@
 
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 
@@ -22,14 +22,27 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
     eventStatus,
     eventLocation,
   } = useEventEditorStore()
+  const [isSaving, setIsSaving] = useState(false)
 
-  // Extract event ID from pathname (e.g., /organizations/events/abc123 or /organizations/events/abc123/tickets)
+  // Listen for save-complete event from create page
+  useEffect(() => {
+    function handleSaveEnd() { setIsSaving(false) }
+    window.addEventListener('event-editor-saved', handleSaveEnd)
+    return () => {
+      window.removeEventListener('event-editor-saved', handleSaveEnd)
+    }
+  }, [])
+
+  // Reset saving state on navigation
+  useEffect(() => {
+    setIsSaving(false)
+  }, [pathname])
+
   const segments = pathname.split('/')
   const eventsIdx = segments.indexOf('events')
   const eventId = eventsIdx >= 0 ? segments[eventsIdx + 1] : null
   const isCreatePage = eventId === 'create'
 
-  // Determine current step based on pathname
   const currentStep = pathname.includes('/tickets')
     ? 1
     : pathname.includes('/preview_publish')
@@ -56,24 +69,24 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
 
   function handleSaveAndContinue() {
     if (isCreatePage) {
-      // For create page, we'd normally save first then redirect
-      // For now, just show that it needs to be saved first
+      setIsSaving(true)
+      window.dispatchEvent(new CustomEvent('event-editor-save'))
       return
     }
 
-    // Navigate to next step
+    setIsSaving(true)
     if (currentStep === 0 && steps[1].href) {
       router.push(steps[1].href)
     } else if (currentStep === 1 && steps[2].href) {
       router.push(steps[2].href)
+    } else {
+      setIsSaving(false)
     }
   }
 
   return (
     <div className="flex min-h-[calc(100vh-93px)] max-h-[calc(100vh-93px)] bg-[#fafafa] -mt-16 pt-10">
-      {/* Sidebar */}
       <aside className="sticky top-[73px] flex h-[calc(100vh-73px)] w-[320px] flex-col border-r border-zinc-100 bg-white">
-        {/* Back */}
         <div className="border-b border-zinc-100 px-5 py-4">
           <Link
             href="/organizations/events/list"
@@ -84,10 +97,8 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
           </Link>
         </div>
 
-        {/* Event Card */}
         <div className="border-b border-zinc-100 px-4 py-5">
           <div className="overflow-hidden rounded-xl border border-zinc-100 bg-zinc-50">
-            {/* Cover - shows banner from editor */}
             <div
               className="relative h-24 overflow-hidden bg-zinc-100"
               style={
@@ -105,23 +116,17 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
                 <div className="h-full w-full bg-linear-to-br from-[#5151eb]/20 via-indigo-100 to-[#5151eb]/10" />
               )}
             </div>
-
-            {/* Content */}
             <div className="bg-white p-4">
               <h2 className="text-base font-bold text-zinc-900 truncate">
                 {eventTitle || (isCreatePage ? 'New Event' : 'Untitled Event')}
               </h2>
-
               <div className="mt-3 flex items-center gap-2 text-zinc-500">
                 <Calendar size={14} />
                 <span className="text-xs font-medium">{eventDate || 'No date set'}</span>
               </div>
-
               {eventLocation && (
                 <p className="mt-1.5 text-xs text-zinc-400 truncate">{eventLocation}</p>
               )}
-
-              {/* Status */}
               <span
                 className={`mt-3 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${
                   eventStatus === 'published'
@@ -137,13 +142,11 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
           </div>
         </div>
 
-        {/* Steps */}
         <div className="flex-1 overflow-y-auto">
           <div className="px-4 py-4">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">
               Steps
             </p>
-
             <div className="space-y-1">
               {steps.map((step, idx) => {
                 const isActive = idx === currentStep
@@ -152,7 +155,6 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
 
                 const content = (
                   <div className="flex w-full items-start gap-3 p-3 text-left">
-                    {/* Icon */}
                     <div className="mt-0.5">
                       {isCompleted ? (
                         <CheckCircle2 size={18} className="text-emerald-500" />
@@ -162,8 +164,6 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
                         <Circle size={18} className="text-zinc-300" />
                       )}
                     </div>
-
-                    {/* Content */}
                     <div>
                       <h3
                         className={`text-sm font-medium ${
@@ -176,7 +176,6 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
                       >
                         {step.title}
                       </h3>
-
                       <p className="mt-0.5 text-xs leading-relaxed text-zinc-500">
                         {step.description}
                       </p>
@@ -190,9 +189,7 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
                     className={`rounded-lg transition ${isActive ? 'bg-indigo-50' : ''}`}
                   >
                     {isClickable ? (
-                      <Link href={step.href!} className="block">
-                        {content}
-                      </Link>
+                      <Link href={step.href!} className="block">{content}</Link>
                     ) : (
                       <div className={!isClickable && !isActive ? 'opacity-50' : ''}>{content}</div>
                     )}
@@ -204,15 +201,12 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
         </div>
       </aside>
 
-      {/* Main */}
       <main className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-4xl px-8 py-8 pb-24">{children}</div>
       </main>
 
-      {/* Save Bar */}
       <div className="fixed bottom-0 left-[420px] right-0 z-40 border-t border-zinc-100 bg-white/95 backdrop-blur-sm">
         <div className="flex items-center justify-between px-8 py-3">
-          {/* Back button for steps > 0 */}
           {currentStep > 0 && !isCreatePage ? (
             <button
               onClick={() => {
@@ -226,12 +220,15 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
           ) : (
             <div />
           )}
-
           <button
             onClick={handleSaveAndContinue}
-            className="rounded-lg bg-[#5151eb] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#4040d9]"
+            disabled={isSaving}
+            className="rounded-lg bg-[#5151eb] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#4040d9] disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            {currentStep === 2 ? 'Publish Event' : 'Save and continue'}
+            {isSaving && (
+              <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            )}
+            {isSaving ? 'Saving...' : currentStep === 2 ? 'Publish Event' : 'Save and continue'}
           </button>
         </div>
       </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState, useEffect } from 'react'
 import {
   Search,
   Eye,
@@ -9,6 +9,7 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  ChevronDown,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -123,13 +124,32 @@ export default function OrdersPage() {
   const [sortField, setSortField] = useState<SortField>(null)
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [page, setPage] = useState(1)
+  const [eventDropdownOpen, setEventDropdownOpen] = useState(false)
+  const [eventSearch, setEventSearch] = useState('')
+  const dropdownRef = useRef<HTMLDivElement>(null)
   const perPage = 5
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setEventDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Extract unique events for filter
   const events = useMemo(() => {
     const unique = [...new Set(dummyOrders.map((o) => o.event))]
     return unique.sort()
   }, [])
+
+  const filteredEvents = useMemo(() => {
+    if (!eventSearch) return events
+    return events.filter((e) => e.toLowerCase().includes(eventSearch.toLowerCase()))
+  }, [events, eventSearch])
 
   const filtered = useMemo(() => {
     let data = dummyOrders.filter((order) => {
@@ -232,21 +252,77 @@ export default function OrdersPage() {
         </div>
 
         {/* Event filter */}
-        <select
-          value={event}
-          onChange={(e) => {
-            setEvent(e.target.value)
-            setPage(1)
-          }}
-          className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-[#5151eb]"
-        >
-          <option value="All">All Events</option>
-          {events.map((ev) => (
-            <option key={ev} value={ev}>
-              {ev}
-            </option>
-          ))}
-        </select>
+        <div className="relative" ref={dropdownRef}>
+          <button
+            type="button"
+            onClick={() => setEventDropdownOpen(!eventDropdownOpen)}
+            className="flex h-9 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none transition hover:border-zinc-300 focus:border-[#5151eb]"
+          >
+            <span className="max-w-[140px] truncate">{event === 'All' ? 'All Events' : event}</span>
+            <ChevronDown
+              size={14}
+              className={`text-zinc-400 transition ${eventDropdownOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
+
+          {eventDropdownOpen && (
+            <div className="absolute left-0 top-full z-20 mt-1 w-64 rounded-lg border border-zinc-200 bg-white p-1.5 shadow-lg">
+              {/* Search */}
+              <div className="px-2 pb-2">
+                <input
+                  type="text"
+                  value={eventSearch}
+                  onChange={(e) => setEventSearch(e.target.value)}
+                  placeholder="Search events..."
+                  className="h-8 w-full rounded-md border border-zinc-200 px-3 text-xs outline-none placeholder:text-zinc-400 focus:border-[#5151eb]"
+                  autoFocus
+                />
+              </div>
+              <div className="max-h-48 overflow-y-auto">
+                {/* All Events option */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEvent('All')
+                    setEventDropdownOpen(false)
+                    setEventSearch('')
+                    setPage(1)
+                  }}
+                  className={`flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-xs transition ${
+                    event === 'All'
+                      ? 'bg-[#5151eb]/5 font-medium text-[#5151eb]'
+                      : 'text-zinc-600 hover:bg-zinc-50'
+                  }`}
+                >
+                  All Events
+                </button>
+                {filteredEvents.length === 0 ? (
+                  <p className="px-3 py-4 text-center text-xs text-zinc-400">No events found</p>
+                ) : (
+                  filteredEvents.map((ev) => (
+                    <button
+                      key={ev}
+                      type="button"
+                      onClick={() => {
+                        setEvent(ev)
+                        setEventDropdownOpen(false)
+                        setEventSearch('')
+                        setPage(1)
+                      }}
+                      className={`flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-xs transition ${
+                        event === ev
+                          ? 'bg-[#5151eb]/5 font-medium text-[#5151eb]'
+                          : 'text-zinc-600 hover:bg-zinc-50'
+                      }`}
+                    >
+                      {ev}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         <div className="ml-auto">
           <button className="flex h-9 items-center rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50">

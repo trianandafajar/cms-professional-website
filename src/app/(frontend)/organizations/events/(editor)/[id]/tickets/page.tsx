@@ -38,6 +38,25 @@ interface TicketType {
 // ─── Initial dummy data ───
 const initialTickets: TicketType[] = [
   {
+    id: 'ticket-0',
+    name: 'Free Entry',
+    description: 'Free access to the event main stage and exhibition area',
+    price: 0,
+    currency: 'IDR',
+    quantity: 1000,
+    maxPerOrder: 5,
+    perks: [
+      { id: 'p0a', perk: 'Access to main stage' },
+      { id: 'p0b', perk: 'Exhibition area access' },
+    ],
+    salesStart: '',
+    salesEnd: '',
+    isHidden: false,
+    sortOrder: 0,
+    designId: 'ocean',
+    designSource: 'preset',
+  },
+  {
     id: 'ticket-1',
     name: 'General Admission',
     description: 'Standard entry to the event with access to all main sessions',
@@ -53,7 +72,7 @@ const initialTickets: TicketType[] = [
     salesStart: '',
     salesEnd: '',
     isHidden: false,
-    sortOrder: 0,
+    sortOrder: 1,
     designId: 'general-admission',
     designSource: 'designer',
   },
@@ -75,7 +94,7 @@ const initialTickets: TicketType[] = [
     salesStart: '',
     salesEnd: '',
     isHidden: false,
-    sortOrder: 1,
+    sortOrder: 2,
     designId: 'vip',
     designSource: 'designer',
   },

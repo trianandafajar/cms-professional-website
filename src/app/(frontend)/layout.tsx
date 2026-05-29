@@ -26,17 +26,22 @@ export const metadata = {
 export default async function RootLayout(props: { children: React.ReactNode }) {
   const { children } = props
 
-  // Check auth status for the LikesProvider
-  const headers = await getHeaders()
-  const payloadConfig = await config
-  const payload = await getPayload({ config: payloadConfig })
-  const { user } = await payload.auth({ headers })
+  let isLoggedIn = false
+  try {
+    const headers = await getHeaders()
+    const payloadConfig = await config
+    const payload = await getPayload({ config: payloadConfig })
+    const { user } = await payload.auth({ headers })
+    isLoggedIn = Boolean(user)
+  } catch {
+    // Auth check failed - treat as not logged in
+  }
 
   return (
     <html lang="en" className={inter.variable}>
       <body className={inter.className}>
         <TooltipProvider>
-          <LikesProvider isLoggedIn={Boolean(user)} />
+          <LikesProvider isLoggedIn={isLoggedIn} />
           <main>{children}</main>
         </TooltipProvider>
       </body>

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
+import { useParams } from 'next/navigation'
 import { Calendar, MapPin, Ticket, Upload, X, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
 import {
   Select,
@@ -13,6 +14,8 @@ import { TagsInput } from '@/components/ui/tags-input'
 import { useEventEditorStore } from '@/stores/eventEditorStore'
 
 export default function PreviewPublishPage() {
+  const params = useParams()
+  const eventId = params.id as string
   const [tags, setTags] = useState<string[]>(['testevent', 'test2024', 'test_session'])
   const [visibility, setVisibility] = useState<'public' | 'private'>('public')
 
@@ -29,7 +32,53 @@ export default function PreviewPublishPage() {
     setBannerZoom: setZoom,
     setBannerPosition,
     resetBanner,
+    setEventData,
   } = useEventEditorStore()
+
+  // Load event data if store is empty (direct navigation / refresh)
+  useEffect(() => {
+    if (eventTitle || !eventId) return
+
+    async function loadEvent() {
+      try {
+        const res = await fetch(`/api/events/${eventId}?depth=1`, { credentials: 'include' })
+        if (!res.ok) return
+        const data = await res.json()
+
+        const coverUrl =
+          typeof data.coverImage === 'object' && data.coverImage?.url
+            ? data.coverImage.url
+            : typeof data.bannerImage === 'object' && data.bannerImage?.url
+              ? data.bannerImage.url
+              : ''
+
+        const startDate = data.startDate
+          ? new Date(data.startDate).toLocaleDateString('en-US', {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+            })
+          : ''
+
+        const location = data.venue || data.address || (typeof data.location === 'object' && data.location?.name) || (typeof data.location === 'string' ? '' : '')
+
+        setEventData({
+          eventTitle: data.title || '',
+          eventDate: startDate,
+          eventStatus: data.status || 'draft',
+          eventLocation: typeof location === 'string' ? location : '',
+          bannerImage: coverUrl,
+        })
+      } catch {
+        // ignore
+      }
+    }
+
+    loadEvent()
+  }, [eventId, eventTitle, setEventData])
 
   const [isDragging, setIsDragging] = useState(false)
   const dragStart = useRef({ x: 0, y: 0, posX: 50, posY: 50 })
@@ -260,13 +309,15 @@ export default function PreviewPublishPage() {
                     <Calendar size={15} className="shrink-0 text-[#5151eb]" />
                     <span>{eventDate || 'No date set'}</span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-zinc-600">
-                    <MapPin size={15} className="shrink-0 text-[#5151eb]" />
-                    <span>{eventLocation || 'No location set'}</span>
-                  </div>
+                  {eventLocation && (
+                    <div className="flex items-center gap-3 text-sm text-zinc-600">
+                      <MapPin size={15} className="shrink-0 text-[#5151eb]" />
+                      <span>{eventLocation}</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-3 text-sm text-zinc-600">
                     <Ticket size={15} className="shrink-0 text-[#5151eb]" />
-                    <span>Tickets available</span>
+                    <span>Free & paid tickets available</span>
                   </div>
                 </div>
 

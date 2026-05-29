@@ -81,7 +81,6 @@ function mapPayloadTicketTypes(rawTickets: NonNullable<Event['ticketTypes']>): T
     .filter((t) => !t.isHidden)
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
     .filter((t) => {
-      // Filter by sales window if set
       if (t.salesStart && new Date(t.salesStart) > now) return false
       if (t.salesEnd && new Date(t.salesEnd) < now) return false
       return true

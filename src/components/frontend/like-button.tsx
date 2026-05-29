@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Heart } from 'lucide-react'
 import { useLikesStore } from '@/stores/likesStore'
 
@@ -14,8 +15,22 @@ type Props = {
 }
 
 export function LikeButton({ eventId, onToggle, variant = 'card', className = '' }: Props) {
-  const isLiked = useLikesStore((s) => s.isLiked(eventId))
+  const isLikedFromStore = useLikesStore((s) => s.isLiked(eventId))
   const toggleLike = useLikesStore((s) => s.toggleLike)
+
+  // Prevent hydration mismatch: start with false on server, sync on client
+  const [isLiked, setIsLiked] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (mounted) {
+      setIsLiked(isLikedFromStore)
+    }
+  }, [mounted, isLikedFromStore])
 
   const handleClick = async (e: React.MouseEvent) => {
     e.preventDefault()

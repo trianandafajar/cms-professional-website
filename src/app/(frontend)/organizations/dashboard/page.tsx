@@ -548,10 +548,15 @@ function EventComparisonChart() {
   const [selectedEvents, setSelectedEvents] = useState<string[]>(['ev1', 'ev2'])
   const [metric, setMetric] = useState<CompareMetric>('revenue')
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const toggleEvent = (id: string) => {
     setSelectedEvents((prev) => (prev.includes(id) ? prev.filter((e) => e !== id) : [...prev, id]))
   }
+
+  const filteredCompareEvents = eventCompareData.filter((e) =>
+    e.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  )
 
   const visibleEvents = eventCompareData.filter((e) => selectedEvents.includes(e.id))
   const maxValue = Math.max(...visibleEvents.map((e) => e.metrics[metric]), 1)
@@ -614,6 +619,17 @@ function EventComparisonChart() {
 
         {dropdownOpen && (
           <div className="absolute left-0 top-full z-20 mt-1 w-72 rounded-lg border border-zinc-200 bg-white p-1.5 shadow-lg">
+            {/* Search */}
+            <div className="px-2 pb-2">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search events..."
+                className="h-8 w-full rounded-md border border-zinc-200 px-3 text-xs outline-none placeholder:text-zinc-400 focus:border-[#5151eb]"
+                autoFocus
+              />
+            </div>
             <div className="mb-1 flex items-center justify-between px-2 py-1">
               <span className="text-[10px] font-medium text-zinc-400 uppercase">
                 Select events to compare
@@ -632,41 +648,52 @@ function EventComparisonChart() {
                 {selectedEvents.length === eventCompareData.length ? 'Deselect all' : 'Select all'}
               </button>
             </div>
-            {eventCompareData.map((event) => {
-              const isSelected = selectedEvents.includes(event.id)
-              return (
-                <button
-                  key={event.id}
-                  type="button"
-                  onClick={() => toggleEvent(event.id)}
-                  className={`flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-xs transition ${
-                    isSelected ? 'bg-[#5151eb]/5 text-[#12192f]' : 'text-zinc-500 hover:bg-zinc-50'
-                  }`}
-                >
-                  <span
-                    className={`flex size-4 items-center justify-center rounded border transition ${
-                      isSelected ? 'border-[#5151eb] bg-[#5151eb]' : 'border-zinc-300'
-                    }`}
-                  >
-                    {isSelected && (
-                      <svg
-                        className="size-2.5 text-white"
-                        viewBox="0 0 12 12"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+            <div className="max-h-48 overflow-y-auto">
+              {filteredCompareEvents.length === 0 ? (
+                <p className="px-3 py-4 text-center text-xs text-zinc-400">No events found</p>
+              ) : (
+                filteredCompareEvents.map((event) => {
+                  const isSelected = selectedEvents.includes(event.id)
+                  return (
+                    <button
+                      key={event.id}
+                      type="button"
+                      onClick={() => toggleEvent(event.id)}
+                      className={`flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-xs transition ${
+                        isSelected
+                          ? 'bg-[#5151eb]/5 text-[#12192f]'
+                          : 'text-zinc-500 hover:bg-zinc-50'
+                      }`}
+                    >
+                      <span
+                        className={`flex size-4 items-center justify-center rounded border transition ${
+                          isSelected ? 'border-[#5151eb] bg-[#5151eb]' : 'border-zinc-300'
+                        }`}
                       >
-                        <path d="M2 6l3 3 5-5" />
-                      </svg>
-                    )}
-                  </span>
-                  <span className="size-2 rounded-full" style={{ backgroundColor: event.color }} />
-                  <span className="font-medium">{event.name}</span>
-                </button>
-              )
-            })}
+                        {isSelected && (
+                          <svg
+                            className="size-2.5 text-white"
+                            viewBox="0 0 12 12"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M2 6l3 3 5-5" />
+                          </svg>
+                        )}
+                      </span>
+                      <span
+                        className="size-2 rounded-full"
+                        style={{ backgroundColor: event.color }}
+                      />
+                      <span className="font-medium">{event.name}</span>
+                    </button>
+                  )
+                })
+              )}
+            </div>
             <div className="mt-1 border-t border-zinc-100 pt-1">
               <button
                 type="button"
@@ -739,6 +766,404 @@ function EventComparisonChart() {
   )
 }
 
+// ─── Revenue Chart Component ───────────────────────────────────────────────────
+
+const revenueData: Record<
+  string,
+  { labels: string[]; values: number[]; total: string; change: string }
+> = {
+  all: {
+    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
+    values: [2.1, 3.2, 4.5, 5.8, 7.2, 9.1, 11.5, 14.2],
+    total: 'Rp 14.2M',
+    change: '+12.5%',
+  },
+  ev1: {
+    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'],
+    values: [0.8, 1.5, 2.0, 2.8, 3.5, 4.0, 4.5, 5.0],
+    total: 'Rp 5.0M',
+    change: '+15.2%',
+  },
+  ev2: {
+    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    values: [0.3, 0.6, 1.0, 1.5, 2.0, 2.5],
+    total: 'Rp 2.5M',
+    change: '+8.3%',
+  },
+  ev3: { labels: ['Mar', 'Apr', 'May'], values: [0, 0, 0], total: 'Rp 0', change: '—' },
+}
+
+function RevenueChart({
+  chartEvent,
+  chartEventOptions,
+}: {
+  chartEvent: string
+  chartEventOptions: { id: string; name: string }[]
+}) {
+  const [period, setPeriod] = useState<'monthly' | 'weekly' | 'daily'>('monthly')
+  const [eventFilter, setEventFilter] = useState(chartEvent)
+  const [filterOpen, setFilterOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
+
+  const data = revenueData[eventFilter] || revenueData['all']
+  const maxVal = Math.max(...data.values, 1)
+
+  const filteredOptions = chartEventOptions.filter((e) =>
+    e.name.toLowerCase().includes(search.toLowerCase()),
+  )
+
+  // Generate SVG path from values
+  const points = data.values.map((v, i) => {
+    const x = data.values.length > 1 ? (i / (data.values.length - 1)) * 400 : 200
+    const y = 160 - (v / maxVal) * 140
+    return [x, y]
+  })
+  const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0]},${p[1]}`).join(' ')
+  const areaPath = `${linePath} L400,180 L0,180 Z`
+
+  return (
+    <div className="rounded-xl border border-zinc-200 bg-white p-6">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-base font-bold text-[#12192f]">Revenue</h2>
+          <p className="mt-0.5 text-xs text-zinc-400">Revenue from ticket sales</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Period filter */}
+          <div className="flex rounded-lg border border-zinc-200 p-0.5">
+            {(['monthly', 'weekly', 'daily'] as const).map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPeriod(p)}
+                className={`rounded-md px-2.5 py-1 text-[11px] font-medium capitalize transition ${
+                  period === p ? 'bg-[#5151eb] text-white' : 'text-zinc-500 hover:text-[#12192f]'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Event filter dropdown */}
+      <div className="relative mb-4">
+        <button
+          type="button"
+          onClick={() => setFilterOpen(!filterOpen)}
+          className="flex items-center gap-1.5 rounded-md border border-zinc-200 px-2.5 py-1.5 text-[11px] font-medium text-zinc-600 transition hover:border-zinc-300"
+        >
+          {chartEventOptions.find((e) => e.id === eventFilter)?.name ?? 'All Events'}
+          <svg
+            className={`size-2.5 text-zinc-400 transition ${filterOpen ? 'rotate-180' : ''}`}
+            viewBox="0 0 12 12"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M3 4.5l3 3 3-3" />
+          </svg>
+        </button>
+        {filterOpen && (
+          <div className="absolute left-0 top-full z-20 mt-1 w-64 rounded-lg border border-zinc-200 bg-white p-1.5 shadow-lg">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search events..."
+              className="mb-1.5 h-8 w-full rounded-md border border-zinc-200 px-3 text-xs outline-none placeholder:text-zinc-400 focus:border-[#5151eb]"
+              autoFocus
+            />
+            <div className="max-h-40 overflow-y-auto">
+              {filteredOptions.map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => {
+                    setEventFilter(opt.id)
+                    setFilterOpen(false)
+                    setSearch('')
+                  }}
+                  className={`flex w-full items-center rounded-md px-3 py-2 text-left text-xs transition ${
+                    eventFilter === opt.id
+                      ? 'bg-[#5151eb]/5 font-medium text-[#5151eb]'
+                      : 'text-zinc-600 hover:bg-zinc-50'
+                  }`}
+                >
+                  {opt.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Stats */}
+      <div className="flex items-center gap-4 mb-4">
+        <p className="text-2xl font-bold text-[#12192f]">{data.total}</p>
+        <span className="text-xs font-medium text-emerald-600">{data.change}</span>
+      </div>
+
+      {/* Chart */}
+      <div className="relative h-[160px]" onMouseLeave={() => setHoveredIdx(null)}>
+        <svg viewBox="0 0 400 180" className="w-full h-full" preserveAspectRatio="none">
+          {[0, 45, 90, 135].map((y) => (
+            <line key={y} x1="0" y1={y} x2="400" y2={y} stroke="#f4f4f5" strokeWidth="1" />
+          ))}
+          <path d={areaPath} fill="url(#revGrad)" />
+          <path
+            d={linePath}
+            fill="none"
+            stroke="#5151eb"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {/* Hover vertical line */}
+          {hoveredIdx !== null && points[hoveredIdx] && (
+            <line
+              x1={points[hoveredIdx][0]}
+              y1={0}
+              x2={points[hoveredIdx][0]}
+              y2={180}
+              stroke="#5151eb"
+              strokeWidth="1"
+              strokeDasharray="4 3"
+              opacity="0.4"
+            />
+          )}
+          {/* Data points */}
+          {points.map(([x, y], i) => (
+            <circle
+              key={i}
+              cx={x}
+              cy={y}
+              r={hoveredIdx === i ? 6 : 3.5}
+              fill={hoveredIdx === i ? '#5151eb' : '#5151eb'}
+              stroke="white"
+              strokeWidth={hoveredIdx === i ? 3 : 2}
+              className="transition-all cursor-pointer"
+              onMouseEnter={() => setHoveredIdx(i)}
+            />
+          ))}
+          {/* Invisible hit areas for better hover */}
+          {points.map(([x], i) => (
+            <rect
+              key={`hit-${i}`}
+              x={x - 20}
+              y={0}
+              width={40}
+              height={180}
+              fill="transparent"
+              onMouseEnter={() => setHoveredIdx(i)}
+            />
+          ))}
+          <defs>
+            <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#5151eb" stopOpacity="0.15" />
+              <stop offset="100%" stopColor="#5151eb" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+        </svg>
+        {/* Tooltip */}
+        {hoveredIdx !== null && points[hoveredIdx] && (
+          <div
+            className="pointer-events-none absolute -top-2 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-center transition-all"
+            style={{
+              left: `${(points[hoveredIdx][0] / 400) * 100}%`,
+              transform: 'translateX(-50%)',
+            }}
+          >
+            <p className="text-xs font-bold text-[#12192f]">Rp {data.values[hoveredIdx]}M</p>
+            <p className="text-[10px] text-zinc-400">{data.labels[hoveredIdx]}</p>
+          </div>
+        )}
+      </div>
+      <div className="mt-2 flex justify-between text-[10px] text-zinc-400">
+        {data.labels.map((l, i) => (
+          <span
+            key={l}
+            className={`transition ${hoveredIdx === i ? 'text-[#5151eb] font-semibold' : ''}`}
+          >
+            {l}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Sales Overview Component ──────────────────────────────────────────────────
+
+const salesData: Record<
+  string,
+  {
+    sold: number
+    remaining: number
+    events: { event: string; sold: number; total: number; revenue: string }[]
+  }
+> = {
+  all: {
+    sold: 1248,
+    remaining: 580,
+    events: [
+      { event: 'React Conference 2026', sold: 156, total: 200, revenue: 'Rp 5.0M' },
+      { event: 'Laravel Meetup Jakarta', sold: 45, total: 80, revenue: 'Rp 2.5M' },
+      { event: 'Vue.js Workshop', sold: 89, total: 150, revenue: 'Rp 3.2M' },
+      { event: 'Next.js Summit', sold: 0, total: 300, revenue: 'Rp 0' },
+    ],
+  },
+  ev1: {
+    sold: 156,
+    remaining: 44,
+    events: [{ event: 'React Conference 2026', sold: 156, total: 200, revenue: 'Rp 5.0M' }],
+  },
+  ev2: {
+    sold: 45,
+    remaining: 35,
+    events: [{ event: 'Laravel Meetup Jakarta', sold: 45, total: 80, revenue: 'Rp 2.5M' }],
+  },
+  ev3: {
+    sold: 0,
+    remaining: 300,
+    events: [{ event: 'Next.js Summit', sold: 0, total: 300, revenue: 'Rp 0' }],
+  },
+}
+
+function SalesOverviewChart({
+  chartEvent,
+  chartEventOptions,
+}: {
+  chartEvent: string
+  chartEventOptions: { id: string; name: string }[]
+}) {
+  const [eventFilter, setEventFilter] = useState(chartEvent)
+  const [filterOpen, setFilterOpen] = useState(false)
+  const [search, setSearch] = useState('')
+
+  const data = salesData[eventFilter] || salesData['all']
+  const soldRate =
+    data.sold + data.remaining > 0
+      ? Math.round((data.sold / (data.sold + data.remaining)) * 100)
+      : 0
+
+  const filteredOptions = chartEventOptions.filter((e) =>
+    e.name.toLowerCase().includes(search.toLowerCase()),
+  )
+
+  return (
+    <div className="rounded-xl border border-zinc-200 bg-white p-6">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-base font-bold text-[#12192f]">Sales Overview</h2>
+          <p className="mt-0.5 text-xs text-zinc-400">Ticket sales breakdown</p>
+        </div>
+      </div>
+
+      {/* Event filter */}
+      <div className="relative mb-4">
+        <button
+          type="button"
+          onClick={() => setFilterOpen(!filterOpen)}
+          className="flex items-center gap-1.5 rounded-md border border-zinc-200 px-2.5 py-1.5 text-[11px] font-medium text-zinc-600 transition hover:border-zinc-300"
+        >
+          {chartEventOptions.find((e) => e.id === eventFilter)?.name ?? 'All Events'}
+          <svg
+            className={`size-2.5 text-zinc-400 transition ${filterOpen ? 'rotate-180' : ''}`}
+            viewBox="0 0 12 12"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M3 4.5l3 3 3-3" />
+          </svg>
+        </button>
+        {filterOpen && (
+          <div className="absolute left-0 top-full z-20 mt-1 w-64 rounded-lg border border-zinc-200 bg-white p-1.5 shadow-lg">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search events..."
+              className="mb-1.5 h-8 w-full rounded-md border border-zinc-200 px-3 text-xs outline-none placeholder:text-zinc-400 focus:border-[#5151eb]"
+              autoFocus
+            />
+            <div className="max-h-40 overflow-y-auto">
+              {filteredOptions.map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => {
+                    setEventFilter(opt.id)
+                    setFilterOpen(false)
+                    setSearch('')
+                  }}
+                  className={`flex w-full items-center rounded-md px-3 py-2 text-left text-xs transition ${
+                    eventFilter === opt.id
+                      ? 'bg-[#5151eb]/5 font-medium text-[#5151eb]'
+                      : 'text-zinc-600 hover:bg-zinc-50'
+                  }`}
+                >
+                  {opt.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3 mb-5">
+        <div className="rounded-lg bg-zinc-50 p-3 text-center">
+          <p className="text-lg font-bold text-[#12192f]">{data.sold.toLocaleString()}</p>
+          <p className="text-[10px] text-zinc-400">Tickets Sold</p>
+        </div>
+        <div className="rounded-lg bg-zinc-50 p-3 text-center">
+          <p className="text-lg font-bold text-[#12192f]">{data.remaining.toLocaleString()}</p>
+          <p className="text-[10px] text-zinc-400">Remaining</p>
+        </div>
+        <div className="rounded-lg bg-zinc-50 p-3 text-center">
+          <p className="text-lg font-bold text-[#5151eb]">{soldRate}%</p>
+          <p className="text-[10px] text-zinc-400">Sold Rate</p>
+        </div>
+      </div>
+
+      {/* Sales by Event */}
+      <h3 className="text-xs font-semibold text-zinc-700 mb-3">Sales by Event</h3>
+      <div className="space-y-3">
+        {data.events.map((item) => {
+          const pct = item.total > 0 ? Math.round((item.sold / item.total) * 100) : 0
+          return (
+            <div key={item.event}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-zinc-600 truncate max-w-[160px]">{item.event}</span>
+                <span className="text-[11px] font-medium text-zinc-700">{item.revenue}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-2 rounded-full bg-zinc-100 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-[#5151eb] transition-all"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <span className="w-16 text-right text-[10px] text-zinc-400">
+                  {item.sold}/{item.total}
+                </span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -746,9 +1171,14 @@ export default function DashboardPage() {
   const [donutActive, setDonutActive] = useState<number | null>(null)
   const [chartEvent, setChartEvent] = useState('all')
   const [chartEventOpen, setChartEventOpen] = useState(false)
+  const [chartEventSearch, setChartEventSearch] = useState('')
   const currentChartData = chartData[chartEvent]?.[chartPeriod] ?? chartData['all'][chartPeriod]
   const currentDonutData = donutDataByEvent[chartEvent] ?? donutDataByEvent['all']
   const maxChartValue = Math.max(...currentChartData.map((d) => d.value))
+
+  const filteredChartEventOptions = chartEventOptions.filter((e) =>
+    e.name.toLowerCase().includes(chartEventSearch.toLowerCase()),
+  )
 
   const { user } = useAuthStore()
   const firstName = user?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'there'
@@ -756,24 +1186,13 @@ export default function DashboardPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-7 px-2">
       {/* ─── Header ─── */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-[#12192f]">
-            Welcome back, {firstName} 👋
-          </h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            Here&apos;s what&apos;s happening with your events today.
-          </p>
-        </div>
-        <Button
-          asChild
-          className="flex items-center gap-2 rounded-lg bg-[#5151eb] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#3d3dcc]"
-        >
-          <Link href="/organizations/events/create">
-            <PlusCircle size={16} />
-            Create Event
-          </Link>
-        </Button>
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight text-[#12192f]">
+          Welcome back, {firstName} 👋
+        </h1>
+        <p className="mt-1 text-sm text-zinc-500">
+          Here&apos;s what&apos;s happening with your events today.
+        </p>
       </div>
 
       {/* ─── Stats Grid ─── */}
@@ -828,25 +1247,42 @@ export default function DashboardPage() {
                   </svg>
                 </button>
                 {chartEventOpen && (
-                  <div className="absolute left-0 top-full z-20 mt-1 w-56 rounded-lg border border-zinc-200 bg-white p-1 shadow-lg">
-                    {chartEventOptions.map((opt) => (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        onClick={() => {
-                          setChartEvent(opt.id)
-                          setChartEventOpen(false)
-                          setDonutActive(null)
-                        }}
-                        className={`flex w-full items-center rounded-md px-3 py-2 text-left text-xs transition ${
-                          chartEvent === opt.id
-                            ? 'bg-[#5151eb]/5 font-medium text-[#5151eb]'
-                            : 'text-zinc-600 hover:bg-zinc-50'
-                        }`}
-                      >
-                        {opt.name}
-                      </button>
-                    ))}
+                  <div className="absolute left-0 top-full z-20 mt-1 w-64 rounded-lg border border-zinc-200 bg-white p-1.5 shadow-lg">
+                    <input
+                      type="text"
+                      value={chartEventSearch}
+                      onChange={(e) => setChartEventSearch(e.target.value)}
+                      placeholder="Search events..."
+                      className="mb-1.5 h-8 w-full rounded-md border border-zinc-200 px-3 text-xs outline-none placeholder:text-zinc-400 focus:border-[#5151eb]"
+                      autoFocus
+                    />
+                    <div className="max-h-40 overflow-y-auto">
+                      {filteredChartEventOptions.length === 0 ? (
+                        <p className="px-3 py-3 text-center text-xs text-zinc-400">
+                          No events found
+                        </p>
+                      ) : (
+                        filteredChartEventOptions.map((opt) => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => {
+                              setChartEvent(opt.id)
+                              setChartEventOpen(false)
+                              setChartEventSearch('')
+                              setDonutActive(null)
+                            }}
+                            className={`flex w-full items-center rounded-md px-3 py-2 text-left text-xs transition ${
+                              chartEvent === opt.id
+                                ? 'bg-[#5151eb]/5 font-medium text-[#5151eb]'
+                                : 'text-zinc-600 hover:bg-zinc-50'
+                            }`}
+                          >
+                            {opt.name}
+                          </button>
+                        ))
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -884,6 +1320,15 @@ export default function DashboardPage() {
 
       {/* ─── Event Comparison Chart ─── */}
       <EventComparisonChart />
+
+      {/* ─── Revenue & Sales Overview ─── */}
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        {/* Revenue Chart */}
+        <RevenueChart chartEvent={chartEvent} chartEventOptions={chartEventOptions} />
+
+        {/* Sales Overview */}
+        <SalesOverviewChart chartEvent={chartEvent} chartEventOptions={chartEventOptions} />
+      </div>
 
       {/* ─── Upcoming Events & Recent Orders ─── */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">

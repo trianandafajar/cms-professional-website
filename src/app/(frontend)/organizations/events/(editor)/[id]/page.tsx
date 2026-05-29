@@ -49,7 +49,7 @@ export default function EditEventPage() {
           : ''
 
         const location =
-          data.venue || (typeof data.location === 'object' && data.location?.name) || ''
+          data.venue || data.address || (typeof data.location === 'object' && data.location?.name) || ''
 
         setEventData({
           eventTitle: data.title || '',

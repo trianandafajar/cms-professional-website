@@ -48,7 +48,7 @@ export default function MediaSection() {
     >
       {/* COLLAPSED */}
       {!expanded && (
-        <button onClick={() => setExpanded(true)} className="relative w-full">
+        <div onClick={() => setExpanded(true)} className="relative w-full cursor-pointer">
           <div className="relative h-[320px]">
             {/* Image */}
             {images.length > 0 ? (
@@ -59,27 +59,12 @@ export default function MediaSection() {
               />
             ) : (
               <div className="flex h-full items-center justify-center bg-zinc-50">
-                <div className="flex flex-col items-center">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50">
-                    <ImageIcon size={24} className="text-[#5151eb]" />
-                  </div>
-                  <p className="mt-3 text-sm font-medium text-zinc-500">Upload event cover image</p>
-                </div>
+                <p className="text-sm font-medium text-zinc-400">Click to upload event cover image</p>
               </div>
             )}
 
             {/* Overlay */}
             {images.length > 0 && <div className="absolute inset-0 bg-black/10" />}
-
-            {/* Upload Center */}
-            {images.length === 0 && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="flex h-24 w-24 flex-col items-center justify-center rounded-xl bg-white/90 shadow-sm border border-zinc-100">
-                  <Upload size={18} className="text-[#5151eb]" />
-                  <span className="mt-2 text-xs font-medium text-[#5151eb]">Upload</span>
-                </div>
-              </div>
-            )}
 
             {/* Status */}
             <div className="absolute right-4 top-4">
@@ -106,14 +91,13 @@ export default function MediaSection() {
             {images.length > 1 && (
               <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1.5">
                 {images.map((_, idx) => (
-                  <button
+                  <span
                     key={idx}
                     onClick={(e) => {
-                      e.preventDefault()
                       e.stopPropagation()
                       setCurrentImage(idx)
                     }}
-                    className={`h-1.5 rounded-full transition ${
+                    className={`h-1.5 rounded-full transition cursor-pointer ${
                       currentImage === idx ? 'w-6 bg-white' : 'w-1.5 bg-white/50'
                     }`}
                   />
@@ -121,7 +105,7 @@ export default function MediaSection() {
               </div>
             )}
           </div>
-        </button>
+        </div>
       )}
 
       {/* EXPANDED */}
