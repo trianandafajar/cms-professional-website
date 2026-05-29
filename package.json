@@ -56,6 +56,8 @@
     "react": "19.2.6",
     "react-big-calendar": "^1.19.4",
     "react-dom": "19.2.6",
+    "@react-email/components": "^0.0.33",
+    "@react-email/render": "^1.0.4",
     "react-hook-form": "^7.76.0",
     "react-leaflet": "^5.0.0",
     "recharts": "^3.8.1",
