@@ -11,10 +11,11 @@ const tabs = [
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const isEmailTemplatesRoute = pathname.startsWith('/organizations/marketing/email-templates/')
+  const isEmailTemplatesRoute = pathname.startsWith('/organizations/marketing/email-templates')
+  const isPromotionsWorkspaceRoute = pathname.startsWith('/organizations/marketing/promotions/')
 
-  if (isEmailTemplatesRoute) {
-    return <div className="mx-auto max-w-7xl">{children}</div>
+  if (isEmailTemplatesRoute || isPromotionsWorkspaceRoute) {
+    return <div className="w-full">{children}</div>
   }
 
   return (
