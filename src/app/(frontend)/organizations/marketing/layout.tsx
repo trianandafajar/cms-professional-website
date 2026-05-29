@@ -11,6 +11,11 @@ const tabs = [
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const isEmailTemplatesRoute = pathname.startsWith('/organizations/marketing/email-templates/')
+
+  if (isEmailTemplatesRoute) {
+    return <div className="mx-auto max-w-7xl">{children}</div>
+  }
 
   return (
     <div className="mx-auto max-w-6xl">

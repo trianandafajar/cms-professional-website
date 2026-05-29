@@ -18,7 +18,7 @@ export default async function EmailTemplateDetailPage({
   }
 
   return (
-    <div>
+    <div className="px-1 py-2">
       <Link
         href="/organizations/marketing/email-templates"
         className="mb-4 inline-flex items-center gap-1 text-sm font-medium text-zinc-600 transition hover:text-zinc-900"
