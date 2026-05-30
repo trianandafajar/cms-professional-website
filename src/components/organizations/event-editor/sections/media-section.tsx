@@ -1,23 +1,28 @@
-// src/components/organizations/editor/sections/media-section.tsx
-
 'use client'
 
-import { ImageIcon, Plus, Sparkles, Upload, X } from 'lucide-react'
-
+import { ImageIcon, Plus, Sparkles, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { useEventEditorStore } from '@/stores/eventEditorStore'
 
 export default function MediaSection() {
   const [expanded, setExpanded] = useState(false)
-
-  const [images, setImages] = useState<string[]>([])
-
   const [currentImage, setCurrentImage] = useState(0)
 
   const sectionRef = useRef<HTMLDivElement>(null)
 
+  const {
+    bannerImages,
+    uploadBanner,
+    removeBannerImage,
+    isUploadingBanner,
+  } = useEventEditorStore()
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (sectionRef.current && !sectionRef.current.contains(event.target as Node)) {
+      if (
+        sectionRef.current &&
+        !sectionRef.current.contains(event.target as Node)
+      ) {
         setExpanded(false)
       }
     }
@@ -29,44 +34,63 @@ export default function MediaSection() {
     }
   }, [])
 
-  function handleUpload(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleUpload(
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) {
     const files = Array.from(event.target.files || [])
 
-    const imageFiles = files.filter((file) => file.type.startsWith('image/'))
+    if (!files.length) return
 
-    const imageUrls = imageFiles.map((file) => URL.createObjectURL(file))
+    try {
+      for (const file of files) {
+        await uploadBanner(file)
+      }
+    } catch (error) {
+      console.error('Upload failed:', error)
+    }
 
-    setImages((prev) => [...prev, ...imageUrls])
+    event.target.value = ''
   }
 
-  const completed = images.length > 0
+  function handleDelete(id: number) {
+    removeBannerImage(id)
+
+    if (currentImage > 0) {
+      setCurrentImage((prev) => prev - 1)
+    }
+  }
+
+  const completed = bannerImages.length > 0
 
   return (
     <div
       ref={sectionRef}
       className="overflow-hidden rounded-xl border border-zinc-200 bg-white transition"
     >
-      {/* COLLAPSED */}
       {!expanded && (
-        <div onClick={() => setExpanded(true)} className="relative w-full cursor-pointer">
+        <div
+          onClick={() => setExpanded(true)}
+          className="relative w-full cursor-pointer"
+        >
           <div className="relative h-[320px]">
-            {/* Image */}
-            {images.length > 0 ? (
+            {bannerImages.length > 0 ? (
               <img
-                src={images[currentImage]}
+                src={bannerImages[currentImage]?.url}
                 alt="Event cover"
                 className="h-full w-full object-cover"
               />
             ) : (
               <div className="flex h-full items-center justify-center bg-zinc-50">
-                <p className="text-sm font-medium text-zinc-400">Click to upload event cover image</p>
+                <p className="text-sm font-medium text-zinc-400">
+                  Click to upload event cover image
+                </p>
               </div>
             )}
 
-            {/* Overlay */}
-            {images.length > 0 && <div className="absolute inset-0 bg-black/10" />}
+            {bannerImages.length > 0 && (
+              <div className="absolute inset-0 bg-black/10" />
+            )}
 
-            {/* Status */}
             <div className="absolute right-4 top-4">
               {completed ? (
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500">
@@ -81,24 +105,25 @@ export default function MediaSection() {
                   </svg>
                 </div>
               ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white border border-zinc-200">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-white">
                   <Plus size={16} className="text-[#5151eb]" />
                 </div>
               )}
             </div>
 
-            {/* Slider Dots */}
-            {images.length > 1 && (
+            {bannerImages.length > 1 && (
               <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1.5">
-                {images.map((_, idx) => (
+                {bannerImages.map((_, idx) => (
                   <span
                     key={idx}
                     onClick={(e) => {
                       e.stopPropagation()
                       setCurrentImage(idx)
                     }}
-                    className={`h-1.5 rounded-full transition cursor-pointer ${
-                      currentImage === idx ? 'w-6 bg-white' : 'w-1.5 bg-white/50'
+                    className={`h-1.5 cursor-pointer rounded-full transition ${
+                      currentImage === idx
+                        ? 'w-6 bg-white'
+                        : 'w-1.5 bg-white/50'
                     }`}
                   />
                 ))}
@@ -108,14 +133,16 @@ export default function MediaSection() {
         </div>
       )}
 
-      {/* EXPANDED */}
       {expanded && (
         <div className="p-6">
-          {/* Header */}
           <div className="flex items-start justify-between">
             <div>
-              <h2 className="text-xl font-bold text-zinc-900">Add images</h2>
-              <p className="mt-1 text-sm text-zinc-500">Upload cover image for your event</p>
+              <h2 className="text-xl font-bold text-zinc-900">
+                Add images
+              </h2>
+              <p className="mt-1 text-sm text-zinc-500">
+                Upload cover image for your event
+              </p>
             </div>
 
             <button
@@ -126,23 +153,29 @@ export default function MediaSection() {
             </button>
           </div>
 
-          {/* Content */}
           <div className="mt-6">
             <div className="flex items-start gap-2 text-sm text-zinc-600">
-              <Sparkles size={14} className="mt-[2px] text-[#5151eb]" />
+              <Sparkles
+                size={14}
+                className="mt-[2px] text-[#5151eb]"
+              />
               <p>
-                <span className="font-medium text-zinc-800">Pro tip:</span> Use photos that set the
-                mood, and avoid distracting text overlays.
+                <span className="font-medium text-zinc-800">
+                  Pro tip:
+                </span>{' '}
+                Use photos that set the mood and avoid
+                distracting text overlays.
               </p>
             </div>
 
-            {/* Upload Box */}
             <div className="mt-5 overflow-hidden rounded-xl border border-dashed border-zinc-300 bg-zinc-50">
-              {/* Empty State */}
-              {images.length === 0 && (
+              {bannerImages.length === 0 && (
                 <label className="flex h-[300px] cursor-pointer flex-col items-center justify-center transition hover:bg-indigo-50/30">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white border border-zinc-200">
-                    <ImageIcon size={22} className="text-zinc-400" />
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full border border-zinc-200 bg-white">
+                    <ImageIcon
+                      size={22}
+                      className="text-zinc-400"
+                    />
                   </div>
 
                   <h4 className="mt-4 text-base font-semibold text-zinc-900">
@@ -150,7 +183,9 @@ export default function MediaSection() {
                   </h4>
 
                   <div className="mt-4 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700">
-                    Upload Image
+                    {isUploadingBanner
+                      ? 'Uploading...'
+                      : 'Upload Image'}
                   </div>
 
                   <input
@@ -163,23 +198,23 @@ export default function MediaSection() {
                 </label>
               )}
 
-              {/* Images */}
-              {images.length > 0 && (
+              {bannerImages.length > 0 && (
                 <div className="flex h-[400px] flex-col">
-                  {/* Main Preview */}
                   <div className="relative flex-1 overflow-hidden bg-zinc-900">
                     <img
-                      src={images[currentImage]}
+                      src={bannerImages[currentImage]?.url}
                       alt="Preview"
                       className="h-full w-full object-contain"
                     />
                   </div>
 
-                  {/* Thumbnail Gallery */}
                   <div className="flex items-center gap-2 overflow-x-auto border-t border-zinc-200 bg-white p-3">
-                    {/* Add More */}
                     <label className="flex h-16 min-w-16 cursor-pointer items-center justify-center rounded-lg border border-dashed border-zinc-300 bg-zinc-50 transition hover:border-[#5151eb] hover:bg-indigo-50">
-                      <Plus size={18} className="text-[#5151eb]" />
+                      <Plus
+                        size={18}
+                        className="text-[#5151eb]"
+                      />
+
                       <input
                         type="file"
                         accept="image/*"
@@ -189,29 +224,41 @@ export default function MediaSection() {
                       />
                     </label>
 
-                    {/* Thumbnails */}
-                    {images.map((image, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setCurrentImage(idx)}
+                    {bannerImages.map((image, idx) => (
+                      <div
+                        key={image.id}
                         className={`relative h-16 min-w-16 overflow-hidden rounded-lg border-2 transition ${
-                          currentImage === idx ? 'border-[#5151eb]' : 'border-transparent'
+                          currentImage === idx
+                            ? 'border-[#5151eb]'
+                            : 'border-transparent'
                         }`}
                       >
-                        <img
-                          src={image}
-                          alt={`Preview ${idx}`}
-                          className="h-full w-full object-cover"
-                        />
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentImage(idx)}
+                          className="h-full w-full"
+                        >
+                          <img
+                            src={image.url}
+                            alt={`Preview ${idx + 1}`}
+                            className="h-full w-full object-cover"
+                          />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(image.id)}
+                          className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white"
+                        >
+                          <X size={10} />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Footer */}
             <div className="mt-4 flex flex-wrap gap-4 text-xs text-zinc-400">
               <span>Recommended: 1880×940px</span>
               <span>Max: 10MB</span>

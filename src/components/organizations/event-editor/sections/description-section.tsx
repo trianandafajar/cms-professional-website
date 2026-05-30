@@ -1,5 +1,3 @@
-// src/components/organizations/editor/sections/description-section.tsx
-
 'use client'
 
 import {
@@ -27,20 +25,20 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { EditorContent, useEditor } from '@tiptap/react'
-
 import StarterKit from '@tiptap/starter-kit'
-
 import LinkExtension from '@tiptap/extension-link'
-
 import Heading from '@tiptap/extension-heading'
+
+import { useEventEditorStore } from '@/stores/eventEditorStore'
 
 export default function DescriptionSection() {
   const [expanded, setExpanded] = useState(false)
-  const [html, setHtml] = useState('')
   const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor')
+
   const sectionRef = useRef<HTMLDivElement>(null)
 
-  // close outside
+  const { eventDescription, setEventDescription } = useEventEditorStore()
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (sectionRef.current && !sectionRef.current.contains(event.target as Node)) {
@@ -72,7 +70,7 @@ export default function DescriptionSection() {
       }),
     ],
 
-    content: '',
+    content: eventDescription,
 
     editorProps: {
       attributes: {
@@ -82,22 +80,24 @@ export default function DescriptionSection() {
     },
 
     onUpdate({ editor }) {
-      setHtml(editor.getHTML())
+      setEventDescription(editor.getHTML())
     },
   })
 
   const completed = useMemo(() => {
-    return html.replace(/<[^>]*>/g, '').trim().length > 0
-  }, [html])
+    return eventDescription.replace(/<[^>]*>/g, '').trim().length > 0
+  }, [eventDescription])
 
   function handleSetLink() {
     const previousUrl = editor?.getAttributes('link').href || ''
+
     const url = window.prompt('Enter URL', previousUrl)
 
     if (url === null) return
 
     if (url === '') {
       editor?.chain().focus().extendMarkRange('link').unsetLink().run()
+
       return
     }
 
@@ -109,26 +109,26 @@ export default function DescriptionSection() {
       ref={sectionRef}
       className="overflow-hidden rounded-xl border border-zinc-200 bg-white transition"
     >
-      {/* COLLAPSED */}
       {!expanded && (
         <button onClick={() => setExpanded(true)} className="w-full">
           <div className="relative p-5">
             <div>
-              <h2 className="text-lg font-bold text-zinc-900 text-start">Description</h2>
+              <h2 className="text-start text-lg font-bold text-zinc-900">Description</h2>
 
-              {/* CONTENT PREVIEW */}
               <div className="relative mt-3">
                 {completed ? (
                   <>
                     <div
                       className="prose prose-sm line-clamp-4 max-w-none text-start [&_h1]:text-xl [&_h1]:font-bold [&_h1]:text-zinc-900 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-zinc-900 [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-zinc-900 [&_p]:text-sm [&_p]:text-zinc-600 [&_p]:leading-relaxed [&_strong]:text-zinc-900 [&_em]:italic [&_a]:text-[#5151eb] [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:text-sm [&_li]:text-zinc-600 [&_blockquote]:border-l-2 [&_blockquote]:border-[#5151eb] [&_blockquote]:pl-3 [&_blockquote]:text-zinc-500 [&_blockquote]:italic [&_code]:text-[#5151eb] [&_code]:bg-indigo-50 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs"
-                      dangerouslySetInnerHTML={{ __html: html }}
+                      dangerouslySetInnerHTML={{
+                        __html: eventDescription,
+                      }}
                     />
-                    {/* GRADIENT */}
+
                     <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-linear-to-t from-white via-white/90 to-transparent" />
                   </>
                 ) : (
-                  <p className="text-sm text-zinc-500 text-start">
+                  <p className="text-start text-sm text-zinc-500">
                     Add more details about your event and include what people can expect if they
                     attend.
                   </p>
@@ -136,7 +136,6 @@ export default function DescriptionSection() {
               </div>
             </div>
 
-            {/* STATUS */}
             <div className="absolute right-5 top-5">
               {completed ? (
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500">
@@ -152,13 +151,12 @@ export default function DescriptionSection() {
         </button>
       )}
 
-      {/* EXPANDED */}
       {expanded && (
         <div className="p-6">
-          {/* HEADER */}
           <div className="flex items-start justify-between">
             <div>
-              <h2 className="text-xl font-bold text-zinc-900 text-start">Description</h2>
+              <h2 className="text-start text-xl font-bold text-zinc-900">Description</h2>
+
               <p className="mt-1 text-sm text-zinc-500">
                 Add more details about your event and include what people can expect if they attend.
               </p>
@@ -172,7 +170,6 @@ export default function DescriptionSection() {
             </button>
           </div>
 
-          {/* TABS: Editor / Preview */}
           <div className="mt-5 flex items-center gap-1 border-b border-zinc-200">
             <button
               type="button"
@@ -186,6 +183,7 @@ export default function DescriptionSection() {
               <Pencil size={14} />
               Editor
             </button>
+
             <button
               type="button"
               onClick={() => setActiveTab('preview')}
@@ -200,12 +198,9 @@ export default function DescriptionSection() {
             </button>
           </div>
 
-          {/* EDITOR TAB */}
           {activeTab === 'editor' && (
             <div className="mt-4 overflow-hidden rounded-lg border border-zinc-200">
-              {/* TOOLBAR */}
               <div className="flex flex-wrap items-center gap-0.5 border-b border-zinc-100 bg-zinc-50/80 px-2 py-1.5">
-                {/* Text Type Group */}
                 <ToolbarButton
                   onClick={() => editor?.chain().focus().setParagraph().run()}
                   isActive={editor?.isActive('paragraph') && !editor?.isActive('heading')}
@@ -240,7 +235,6 @@ export default function DescriptionSection() {
 
                 <ToolbarDivider />
 
-                {/* Inline Format Group */}
                 <ToolbarButton
                   onClick={() => editor?.chain().focus().toggleBold().run()}
                   isActive={editor?.isActive('bold')}
@@ -275,7 +269,6 @@ export default function DescriptionSection() {
 
                 <ToolbarDivider />
 
-                {/* Block Group */}
                 <ToolbarButton
                   onClick={() => editor?.chain().focus().toggleBulletList().run()}
                   isActive={editor?.isActive('bulletList')}
@@ -287,7 +280,7 @@ export default function DescriptionSection() {
                 <ToolbarButton
                   onClick={() => editor?.chain().focus().toggleOrderedList().run()}
                   isActive={editor?.isActive('orderedList')}
-                  title="Numbered list"
+                  title="Ordered list"
                 >
                   <ListOrdered size={14} />
                 </ToolbarButton>
@@ -302,7 +295,6 @@ export default function DescriptionSection() {
 
                 <ToolbarDivider />
 
-                {/* Link */}
                 <ToolbarButton
                   onClick={handleSetLink}
                   isActive={editor?.isActive('link')}
@@ -313,7 +305,6 @@ export default function DescriptionSection() {
 
                 <ToolbarDivider />
 
-                {/* History */}
                 <ToolbarButton
                   onClick={() => editor?.chain().focus().undo().run()}
                   isActive={false}
@@ -333,19 +324,19 @@ export default function DescriptionSection() {
                 </ToolbarButton>
               </div>
 
-              {/* EDITOR CONTENT */}
               <EditorContent editor={editor} />
             </div>
           )}
 
-          {/* PREVIEW TAB */}
           {activeTab === 'preview' && (
             <div className="mt-4 overflow-hidden rounded-lg border border-zinc-200">
               <div className="min-h-[280px] px-5 py-4">
                 {completed ? (
                   <div
-                    className="prose prose-sm max-w-none [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:text-zinc-900 [&_h1]:mb-3 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-zinc-900 [&_h2]:mb-2 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-zinc-900 [&_h3]:mb-2 [&_p]:text-sm [&_p]:text-zinc-700 [&_p]:leading-relaxed [&_p]:mb-3 [&_strong]:text-zinc-900 [&_em]:italic [&_s]:line-through [&_a]:text-[#5151eb] [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-3 [&_li]:text-sm [&_li]:text-zinc-700 [&_li]:mb-1 [&_blockquote]:border-l-2 [&_blockquote]:border-[#5151eb] [&_blockquote]:pl-4 [&_blockquote]:py-1 [&_blockquote]:text-zinc-500 [&_blockquote]:italic [&_blockquote]:my-3 [&_code]:text-[#5151eb] [&_code]:bg-indigo-50 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_code]:font-mono"
-                    dangerouslySetInnerHTML={{ __html: html }}
+                    className="prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{
+                      __html: eventDescription,
+                    }}
                   />
                 ) : (
                   <div className="flex h-[240px] items-center justify-center">
@@ -363,7 +354,6 @@ export default function DescriptionSection() {
   )
 }
 
-// Toolbar Button Component
 function ToolbarButton({
   onClick,
   isActive,
@@ -387,7 +377,7 @@ function ToolbarButton({
         isActive
           ? 'bg-[#5151eb] text-white'
           : disabled
-            ? 'text-zinc-300 cursor-not-allowed'
+            ? 'cursor-not-allowed text-zinc-300'
             : 'text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900'
       }`}
     >
@@ -396,7 +386,6 @@ function ToolbarButton({
   )
 }
 
-// Toolbar Divider Component
 function ToolbarDivider() {
   return <div className="mx-1 h-4 w-px bg-zinc-200" />
 }

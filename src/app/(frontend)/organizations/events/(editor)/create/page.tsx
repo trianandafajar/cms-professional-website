@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
+import { useEventEditorStore } from '@/stores/eventEditorStore'
 
 import MediaSection from '@/components/organizations/event-editor/sections/media-section'
 import OverviewSection from '@/components/organizations/event-editor/sections/overview-section'
@@ -15,6 +16,7 @@ export default function CreateEventsPage() {
   const router = useRouter()
   const { user } = useAuthStore()
   const [saving, setSaving] = useState(false)
+  const { eventTitle, bannerId } = useEventEditorStore()
 
   useEffect(() => {
     function handleSave() {
@@ -31,8 +33,7 @@ export default function CreateEventsPage() {
     window.dispatchEvent(new CustomEvent('event-editor-saving'))
 
     try {
-      const titleInput = document.querySelector<HTMLInputElement>('input[placeholder*="title"], input[placeholder*="Title"], input[placeholder*="name"], input[placeholder*="Name"]')
-      const title = titleInput?.value || 'Untitled Event'
+      const title = eventTitle || 'Untitled Event'
 
       const res = await fetch('/api/events', {
         method: 'POST',
@@ -42,6 +43,7 @@ export default function CreateEventsPage() {
           title,
           status: 'draft',
           organizer: user?.id ? Number(user.id) : undefined,
+          bannerImage: bannerId || undefined,
           startDate: new Date().toISOString(),
         }),
       })

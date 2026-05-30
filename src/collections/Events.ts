@@ -14,6 +14,20 @@ export const Events: CollectionConfig = {
     update: ({ req }) => Boolean(req.user),
     delete: ({ req }) => Boolean(req.user),
   },
+  hooks: {
+    beforeValidate: [
+      ({ data, req, operation }) => {
+        if (
+          operation === 'create' &&
+          req.user
+        ) {
+          data.organizer = req.user.id
+        }
+
+        return data
+      },
+    ]
+  },
   fields: [
     {
       name: 'title',

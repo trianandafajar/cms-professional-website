@@ -298,7 +298,7 @@ export default function SettingsPage() {
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <Mail className="size-4 text-zinc-300" />
-                <div className="min-w-0">
+                <div className="min-w-0"> 
                   <p className="text-xs text-zinc-400">Email</p>
                   <p className="text-sm text-zinc-700 truncate">{user?.email || 'Not available'}</p>
                 </div>
@@ -321,7 +321,7 @@ export default function SettingsPage() {
                 <User className="size-4 text-zinc-300" />
                 <div className="min-w-0">
                   <p className="text-xs text-zinc-400">Role</p>
-                  <p className="text-sm text-zinc-700 capitalize">{user?.role || 'Organizer'}</p>
+                  <p className="text-sm text-zinc-700 capitalize">{user?.role?.name || 'Organizer'}</p>
                 </div>
               </div>
             </div>
