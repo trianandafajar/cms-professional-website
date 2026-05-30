@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
+import type { ElementType } from 'react'
 
 type RichTextContent = {
   root: {
@@ -51,7 +52,7 @@ function renderNode(node: Record<string, unknown>, idx: number): React.ReactNode
 
   if (type === 'heading') {
     const tag = (node.tag as string) ?? 'h3'
-    const Tag = tag as keyof JSX.IntrinsicElements
+    const Tag = tag as ElementType
     return (
       <Tag key={idx} className="mt-5 mb-2 font-bold text-[#12192f]">
         {children.map((c, i) => renderNode(c, i))}

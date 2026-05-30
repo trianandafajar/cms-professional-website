@@ -308,8 +308,8 @@ export default function SettingsPage() {
                 <div className="min-w-0">
                   <p className="text-xs text-zinc-400">Member since</p>
                   <p className="text-sm text-zinc-700">
-                    {user?.createdAt
-                      ? new Date(user.createdAt).toLocaleDateString('id-ID', {
+                    {(user as any)?.createdAt
+                      ? new Date((user as any).createdAt).toLocaleDateString('id-ID', {
                           month: 'long',
                           year: 'numeric',
                         })
