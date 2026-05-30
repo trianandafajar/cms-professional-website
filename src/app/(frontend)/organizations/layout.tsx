@@ -1,6 +1,8 @@
 'use client'
 
-import React, { useState } from 'react'
+import { DashboardSkeleton } from '@/components/ui/skeleton'
+
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -10,15 +12,17 @@ import {
   Megaphone,
   BarChart3,
   Settings,
-  HelpCircle,
   PlusCircle,
   Search,
   ChevronDown,
   LogOut,
   LayoutDashboard,
-  CircleHelp,
   User as UserIcon,
   Palette,
+  QrCode,
+  Ticket,
+  Heart,
+  CircleHelp,
 } from 'lucide-react'
 import Image from 'next/image'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -28,9 +32,48 @@ import NotificationDrawer from '@/components/organizations/layouts/notification'
 import { useAuthStore } from '@/stores/authStore'
 
 const profileMenu = [
-  { label: 'My Profile', href: '/organizers/me', icon: UserIcon },
-  { label: 'Dashboard', href: '/organizations/dashboard', icon: LayoutDashboard },
-  { label: 'Help Center', href: '/organizations/help', icon: CircleHelp },
+  {
+    label: 'My Profile',
+    href: '/organizers/me',
+    icon: UserIcon,
+    organizerOnly: true,
+  },
+  {
+    label: 'Dashboard',
+    href: '/organizations/dashboard',
+    icon: LayoutDashboard,
+    organizerOnly: true,
+  },
+  {
+    label: 'My Events',
+    href: '/organizations/events',
+    icon: Calendar,
+    organizerOnly: true,
+  },
+  {
+    label: 'My Tickets',
+    href: '/my/tickets',
+    icon: Ticket,
+    attendeeOnly: true,
+  },
+  {
+    label: 'My Orders',
+    href: '/my/orders',
+    icon: FileText,
+    attendeeOnly: true,
+  },
+  {
+    label: 'Liked Events',
+    href: '/my/likes',
+    icon: Heart,
+    attendeeOnly: true,
+  },
+  {
+    label: 'Help Center',
+    href: '/organizations/help',
+    icon: CircleHelp,
+    organizerOnly: true,
+  },
 ]
 
 function getInitials(value?: string | null) {
@@ -46,7 +89,61 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
   const pathname = usePathname()
   const router = useRouter()
   const { user, logout } = useAuthStore()
+  const hasHydrated = useAuthStore((s) => s._hasHydrated)
   const [loggingOut, setLoggingOut] = useState(false)
+
+  // Revalidate session on mount — if cookie expired, clear store & redirect
+  useEffect(() => {
+    console.log('[OrgLayout] Auth effect triggered')
+    console.log('[OrgLayout] hasHydrated:', hasHydrated, 'user:', user?.email)
+
+    if (!hasHydrated) {
+      console.log('[OrgLayout] Waiting for hydration...')
+      return
+    }
+    if (!user) {
+      console.log('[OrgLayout] No user, redirecting to /auth/signin')
+      router.push('/auth/signin')
+      return
+    }
+
+    async function revalidateSession() {
+      try {
+        const res = await fetch('/api/users/me', { credentials: 'include' })
+        console.log('[OrgLayout] /api/users/me response:', res.status, res.ok)
+        if (!res.ok) {
+          useAuthStore.getState().setUser(null)
+          router.push('/auth/signin')
+          return
+        }
+        const data = await res.json()
+        if (!data?.user) {
+          useAuthStore.getState().setUser(null)
+          router.push('/auth/signin')
+        }
+      } catch (err) {
+        console.log('[OrgLayout] Revalidation error:', err)
+        // Network error — don't logout
+      }
+    }
+
+    revalidateSession()
+  }, [user, hasHydrated, router])
+
+  // Show loading while hydrating
+  if (!hasHydrated) {
+    console.log('[OrgLayout] Showing skeleton during hydration')
+    return (
+      <div className="min-h-screen bg-white">
+        <DashboardSkeleton />
+      </div>
+    )
+  }
+
+  if (!user) {
+    console.log('[OrgLayout] No user, returning null')
+    return null
+  }
 
   const displayName = user?.name || user?.email || ''
   const displayEmail = user?.email || ''
@@ -62,10 +159,10 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
       label: 'Ticket Designer',
       isBottom: false,
     },
+    { icon: QrCode, href: '/organizations/check-in', label: 'Check-In', isBottom: false },
     { icon: Megaphone, href: '/organizations/marketing', label: 'Marketing', isBottom: false },
     { icon: BarChart3, href: '/organizations/finance', label: 'Finance', isBottom: false },
     { icon: Settings, href: '/organizations/settings', label: 'Settings', isBottom: true },
-    { icon: HelpCircle, href: '/organizations/help', label: 'Help', isBottom: true },
   ]
 
   const topItems = sidebarItems.filter((item) => !item.isBottom)
@@ -183,16 +280,27 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
 
                 {/* Menu */}
                 <div className="p-1.5">
-                  {profileMenu.map(({ label, href, icon: Icon }) => (
-                    <Link
-                      key={href}
-                      href={href}
-                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-indigo-50 hover:text-[#5151eb]"
-                    >
-                      <Icon className="size-4 text-zinc-500" />
-                      {label}
-                    </Link>
-                  ))}
+                  {profileMenu.map(({ label, href, icon: Icon, organizerOnly, attendeeOnly }) => {
+                    // Filter menu items based on user role
+                    if (organizerOnly && !user?.isOrganizer) return null
+                    if (attendeeOnly && user?.isOrganizer) return null
+
+                    const isActive = pathname.startsWith(href)
+                    return (
+                      <Link
+                        key={href}
+                        href={href}
+                        className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                          isActive
+                            ? 'bg-indigo-50 text-[#5151eb]'
+                            : 'text-zinc-700 hover:bg-indigo-50 hover:text-[#5151eb]'
+                        }`}
+                      >
+                        <Icon className="size-4 text-zinc-500" />
+                        {label}
+                      </Link>
+                    )
+                  })}
 
                   <div className="my-1 border-t border-zinc-100" />
 

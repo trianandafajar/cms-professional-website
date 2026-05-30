@@ -74,6 +74,7 @@ export interface Config {
     categories: Category;
     locations: Location;
     events: Event;
+    tickets: Ticket;
     posts: Post;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
@@ -89,6 +90,7 @@ export interface Config {
     categories: CategoriesSelect<false> | CategoriesSelect<true>;
     locations: LocationsSelect<false> | LocationsSelect<true>;
     events: EventsSelect<false> | EventsSelect<true>;
+    tickets: TicketsSelect<false> | TicketsSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -411,6 +413,25 @@ export interface Event {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tickets".
+ */
+export interface Ticket {
+  id: number;
+  event: number | Event;
+  order: string;
+  purchaserName: string;
+  purchaserEmail: string;
+  purchaserPhone?: string | null;
+  ticketType: string;
+  price: number;
+  status: 'active' | 'checked_in' | 'cancelled' | 'refunded';
+  checkedInAt?: string | null;
+  checkedInBy?: (number | null) | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "posts".
  */
 export interface Post {
@@ -474,6 +495,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'events';
         value: number | Event;
+      } | null)
+    | ({
+        relationTo: 'tickets';
+        value: number | Ticket;
       } | null)
     | ({
         relationTo: 'posts';
@@ -679,6 +704,24 @@ export interface EventsSelect<T extends boolean = true> {
         sortOrder?: T;
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tickets_select".
+ */
+export interface TicketsSelect<T extends boolean = true> {
+  event?: T;
+  order?: T;
+  purchaserName?: T;
+  purchaserEmail?: T;
+  purchaserPhone?: T;
+  ticketType?: T;
+  price?: T;
+  status?: T;
+  checkedInAt?: T;
+  checkedInBy?: T;
   updatedAt?: T;
   createdAt?: T;
 }

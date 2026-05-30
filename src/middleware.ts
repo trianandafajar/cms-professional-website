@@ -45,6 +45,34 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // /my/* requires attendee role (not organizer)
+  if (pathname.startsWith('/my') && token) {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 3000)
+
+      const meUrl = new URL('/api/users/me', request.url)
+      const meRes = await fetch(meUrl.toString(), {
+        headers: { Cookie: `payload-token=${token}` },
+        signal: controller.signal,
+        cache: 'no-store',
+      })
+
+      clearTimeout(timeoutId)
+
+      if (meRes.ok) {
+        const data = await meRes.json()
+        const user = data?.user
+        if (user && user.isOrganizer) {
+          // Organizer trying to access attendee routes — redirect to dashboard
+          return NextResponse.redirect(new URL('/organizations/dashboard', request.url))
+        }
+      }
+    } catch {
+      // Timeout or network error — allow through (fail-open)
+    }
+  }
+
   return NextResponse.next()
 }
 

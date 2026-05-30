@@ -23,6 +23,7 @@ interface AuthState {
   user: User | null
   isLoading: boolean
   error: string | null
+  _hasHydrated: boolean
   login: (email: string, password: string) => Promise<User>
   register: (name: string, email: string, password: string) => Promise<User>
   logout: () => Promise<void>
@@ -32,10 +33,11 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       isLoading: false,
       error: null,
+      _hasHydrated: false,
       login: async (email, password) => {
         set({ isLoading: true, error: null })
         try {
@@ -93,6 +95,31 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       partialize: (state) => ({ user: state.user }),
+      onRehydrateStorage: () => {
+        console.log('[AuthStore] onRehydrateStorage called')
+        return () => {
+          console.log('[AuthStore] Rehydration callback executed')
+          useAuthStore.setState({ _hasHydrated: true })
+        }
+      },
     },
   ),
 )
+
+// Client-side hydration check (for Next.js SSR)
+if (typeof window !== 'undefined') {
+  // Force hydration check after store creation
+  const unsub = useAuthStore.persist.onFinishHydration(() => {
+    console.log('[AuthStore] onFinishHydration triggered')
+    useAuthStore.setState({ _hasHydrated: true })
+    unsub()
+  })
+
+  // Fallback: if hydration hasn't completed in 2s, force it
+  setTimeout(() => {
+    if (!useAuthStore.getState()._hasHydrated) {
+      console.warn('[AuthStore] Fallback: forcing _hasHydrated=true after 2s')
+      useAuthStore.setState({ _hasHydrated: true })
+    }
+  }, 2000)
+}

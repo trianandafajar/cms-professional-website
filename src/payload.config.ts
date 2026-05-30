@@ -12,7 +12,11 @@ import { Permissions } from './collections/Permissions'
 import { Categories } from './collections/Categories'
 import { Locations } from './collections/Locations'
 import { Events } from './collections/Events'
+import { Tickets } from './collections/Tickets'
 import { Posts } from './collections/Posts'
+import { checkinValidateEndpoint } from './endpoints/checkin-validate'
+import { checkinConfirmEndpoint } from './endpoints/checkin-confirm'
+import { checkinStatsEndpoint } from './endpoints/checkin-stats'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -24,7 +28,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Permissions, Roles, Categories, Locations, Events, Posts],
+  collections: [Users, Media, Permissions, Roles, Categories, Locations, Events, Tickets, Posts],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
@@ -38,6 +42,12 @@ export default buildConfig({
   sharp,
   plugins: [],
   endpoints: [
+    // Check-in: validate ticket
+    checkinValidateEndpoint,
+    // Check-in: confirm check-in
+    checkinConfirmEndpoint,
+    // Check-in: statistics
+    checkinStatsEndpoint,
     // Toggle like/unlike an event for the authenticated user
     {
       path: '/likes/toggle/:eventId',

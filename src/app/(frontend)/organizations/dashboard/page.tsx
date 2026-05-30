@@ -1,10 +1,12 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowUpRight, ArrowDownRight, PlusCircle, ChevronRight, Clock, MapPin } from 'lucide-react'
+import { DashboardSkeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/stores/authStore'
+import { useRouter } from 'next/navigation'
 
 // ─── Custom SVG Icons ──────────────────────────────────────────────────────────
 
@@ -1167,6 +1169,7 @@ function SalesOverviewChart({
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
+  const router = useRouter()
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>('7d')
   const [donutActive, setDonutActive] = useState<number | null>(null)
   const [chartEvent, setChartEvent] = useState('all')
@@ -1180,8 +1183,55 @@ export default function DashboardPage() {
     e.name.toLowerCase().includes(chartEventSearch.toLowerCase()),
   )
 
-  const { user } = useAuthStore()
-  const firstName = user?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'there'
+  const user = useAuthStore((s) => s.user)
+  const hasHydrated = useAuthStore((s) => s._hasHydrated)
+
+  // Debug logging
+  useEffect(() => {
+    console.log('[DashboardPage] user:', user?.email, 'isOrganizer:', user?.isOrganizer)
+    console.log('[DashboardPage] hasHydrated:', hasHydrated)
+  }, [user, hasHydrated])
+
+  // Auth guard: wait for hydration then check auth
+  useEffect(() => {
+    if (!hasHydrated) {
+      console.log('[DashboardPage] Waiting for hydration...')
+      return
+    }
+
+    console.log('[DashboardPage] Hydration complete, checking auth...')
+    if (!user) {
+      console.log('[DashboardPage] No user, redirecting to /auth/signin')
+      router.replace('/auth/signin')
+      return
+    }
+    if (!user.isOrganizer) {
+      console.log('[DashboardPage] Not an organizer, redirecting to /')
+      router.replace('/')
+      return
+    }
+    console.log('[DashboardPage] Auth check passed!')
+  }, [hasHydrated, user, router])
+
+  // Show skeleton while hydrating
+  if (!hasHydrated) {
+    return (
+      <div className="min-h-screen bg-[#fdfdfd] py-7">
+        <DashboardSkeleton />
+      </div>
+    )
+  }
+
+  // Show skeleton if user not loaded yet
+  if (!user || !user.isOrganizer) {
+    return (
+      <div className="min-h-screen bg-[#fdfdfd] py-7">
+        <DashboardSkeleton />
+      </div>
+    )
+  }
+
+  const firstName = user.name?.split(' ')[0] || user.email?.split('@')[0] || 'there'
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-7 px-2">
