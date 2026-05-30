@@ -10,7 +10,7 @@ interface Step1RoleProps {
 export default function Step1Role({ onNext }: Step1RoleProps) {
   const { role, setRole } = useOnboardingStore();
 
-  const handleSelect = (selectedRole: 'visitor' | 'event-organizer') => {
+  const handleSelect = (selectedRole: 'visitor' | 'organizer') => {
     setRole(selectedRole);
     onNext();
   };
@@ -29,7 +29,7 @@ export default function Step1Role({ onNext }: Step1RoleProps) {
           <span className="text-sm text-gray-500">Discover events near you</span>
         </button>
         <button
-          onClick={() => handleSelect('event-organizer')}
+          onClick={() => handleSelect('organizer')}
           className="flex flex-col items-center p-6 border rounded-lg hover:border-blue-500 hover:shadow transition"
         >
           <span className="text-4xl mb-3">📅</span>

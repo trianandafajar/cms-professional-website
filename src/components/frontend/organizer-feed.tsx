@@ -58,7 +58,7 @@ function PostCard({
 }: {
   post: Post
   organizerName: string
-  avatarUrl: string | null
+  avatarUrl?: string | null
   isOwner: boolean
   onDelete: (id: number) => void
   onEdit: (post: Post) => void
