@@ -137,6 +137,7 @@ export function CommentsModal({
       try {
         const data = await apiClient.get<CommentsResponse>(
           `/api/post-comments/${postId}?page=${pageNum}&limit=20`,
+          { timeout: 60000 },
         )
         if (append) {
           setComments((prev) => [...prev, ...data.docs])
@@ -192,9 +193,11 @@ export function CommentsModal({
 
     setSubmitting(true)
     try {
-      const result = await apiClient.post<{ doc: Comment }>(`/api/post-comments/${postId}`, {
-        content: newComment.trim(),
-      })
+      const result = await apiClient.post<{ doc: Comment }>(
+        `/api/post-comments/${postId}`,
+        { content: newComment.trim() },
+        { timeout: 60000 },
+      )
       setComments((prev) => [result.doc, ...prev])
       setNewComment('')
       setShowMentions(false)

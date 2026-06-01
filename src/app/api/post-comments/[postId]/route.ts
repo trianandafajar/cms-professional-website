@@ -2,6 +2,16 @@ import { getPayload } from 'payload'
 import config from '@payload-config'
 import { headers as getHeaders } from 'next/headers'
 
+// Cache payload instance to avoid re-initialization on every request
+let cachedPayload: Awaited<ReturnType<typeof getPayload>> | null = null
+
+async function getPayloadInstance() {
+  if (!cachedPayload) {
+    cachedPayload = await getPayload({ config })
+  }
+  return cachedPayload
+}
+
 export async function GET(request: Request, { params }: { params: Promise<{ postId: string }> }) {
   const { postId: postIdStr } = await params
   const postId = Number(postIdStr)
@@ -14,7 +24,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ post
   const page = parseInt(url.searchParams.get('page') || '1', 10)
   const limit = parseInt(url.searchParams.get('limit') || '20', 10)
 
-  const payload = await getPayload({ config })
+  const payload = await getPayloadInstance()
 
   const comments = await payload.find({
     collection: 'comments',
@@ -51,7 +61,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pos
     return Response.json({ error: 'Content is required' }, { status: 400 })
   }
 
-  const payload = await getPayload({ config })
+  const payload = await getPayloadInstance()
 
   // Authenticate user from cookie
   const headersList = await getHeaders()
@@ -61,14 +71,40 @@ export async function POST(request: Request, { params }: { params: Promise<{ pos
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Extract mentions from content (@username patterns)
-  const mentionRegex = /@(\w+)/g
-  const mentions: { user: number }[] = []
-  const matches = content.match(mentionRegex) || []
+  // Create comment immediately WITHOUT resolving mentions to avoid timeout.
+  // Mentions will be resolved in the afterChange hook or can be added later.
+  const comment = await payload.create({
+    collection: 'comments',
+    data: {
+      post: postId,
+      author: user.id,
+      content,
+    },
+    depth: 1,
+  })
 
-  // Resolve all mentions in parallel to avoid sequential DB queries
-  if (matches.length > 0) {
-    const uniqueUsernames = [...new Set(matches.map((m: string) => m.slice(1)))]
+  // Resolve mentions in background (fire-and-forget) so the response is fast
+  const mentionMatches = content.match(/@(\w+)/g)
+  if (mentionMatches && mentionMatches.length > 0) {
+    resolveMentionsInBackground(payload, comment.id, mentionMatches)
+  }
+
+  return Response.json({ doc: comment }, { status: 201 })
+}
+
+/**
+ * Resolve @mentions and update the comment in the background.
+ * This runs after the response is sent so the user doesn't wait.
+ */
+async function resolveMentionsInBackground(
+  payload: Awaited<ReturnType<typeof getPayload>>,
+  commentId: number,
+  matches: string[],
+) {
+  try {
+    const uniqueUsernames = [...new Set(matches.map((m) => m.slice(1)))]
+    const mentions: { user: number }[] = []
+
     const mentionResults = await Promise.all(
       uniqueUsernames.map((username) =>
         payload.find({
@@ -88,24 +124,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ pos
 
     for (const result of mentionResults) {
       if (result.docs.length > 0) {
-        const mentionedUserId = result.docs[0].id
-        if (!mentions.some((m) => m.user === mentionedUserId)) {
-          mentions.push({ user: mentionedUserId })
-        }
+        mentions.push({ user: result.docs[0].id })
       }
     }
+
+    if (mentions.length > 0) {
+      await payload.update({
+        collection: 'comments',
+        id: commentId,
+        data: { mentions },
+        depth: 0,
+      })
+    }
+  } catch (err) {
+    console.error('Failed to resolve mentions for comment', commentId, err)
   }
-
-  const comment = await payload.create({
-    collection: 'comments',
-    data: {
-      post: postId,
-      author: user.id,
-      content,
-      mentions: mentions.length > 0 ? mentions : undefined,
-    },
-    depth: 1,
-  })
-
-  return Response.json({ doc: comment }, { status: 201 })
 }

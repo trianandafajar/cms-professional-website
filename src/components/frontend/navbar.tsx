@@ -19,11 +19,21 @@ import {
   User as UserIcon,
   Heart,
 } from 'lucide-react'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useAuthStore } from '@/stores/authStore'
+
+type SearchSuggestion = {
+  id: string
+  title: string
+  type: 'event'
+  venue: string | null
+  startDate: string
+  slug: string
+  city: string
+}
 
 type NavbarUser = {
   name?: string | null
@@ -139,6 +149,9 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
   const [selectedLocation, setSelectedLocation] = useState('All Locations')
   const [locationSearch, setLocationSearch] = useState('')
   const [loggingOut, setLoggingOut] = useState(false)
+  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([])
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLFormElement>(null)
 
@@ -173,6 +186,39 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
     loc.toLowerCase().includes(locationSearch.toLowerCase()),
   )
 
+  const fetchSuggestions = useCallback(async (q: string) => {
+    if (!q.trim() || q.trim().length < 2) {
+      setSuggestions([])
+      return
+    }
+    setLoadingSuggestions(true)
+    try {
+      const res = await fetch(`/api/search-suggestions?q=${encodeURIComponent(q.trim())}`)
+      if (res.ok) {
+        const data = await res.json()
+        setSuggestions(data.suggestions || [])
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setLoadingSuggestions(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (searchQuery.trim().length >= 2) {
+      debounceRef.current = setTimeout(() => {
+        fetchSuggestions(searchQuery)
+      }, 300)
+    } else {
+      setSuggestions([])
+    }
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [searchQuery, fetchSuggestions])
+
   async function handleLogout() {
     if (loggingOut) return
     setLoggingOut(true)
@@ -205,7 +251,19 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
         </Link>
 
         {/* Search Bar with Location & Trending */}
-        <form action="#" className="relative hidden flex-1 max-w-[560px] lg:flex" ref={searchRef}>
+        <form
+          action="/search"
+          method="get"
+          className="relative hidden flex-1 max-w-[560px] lg:flex"
+          ref={searchRef}
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (searchQuery.trim()) {
+              setSearchFocused(false)
+              router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}&type=events`)
+            }
+          }}
+        >
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
             <input
@@ -233,6 +291,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                       onClick={() => {
                         setSearchQuery(term)
                         setSearchFocused(false)
+                        router.push(`/search?q=${encodeURIComponent(term)}&type=events`)
                       }}
                       className="rounded-full border border-zinc-200 px-3 py-1 text-xs font-medium text-zinc-600 transition hover:border-[#5151eb] hover:text-[#5151eb]"
                     >
@@ -242,6 +301,68 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                 </div>
               </div>
             )}
+
+            {/* Live Search Suggestions */}
+            {searchFocused &&
+              searchQuery.trim().length >= 2 &&
+              (suggestions.length > 0 || loadingSuggestions) && (
+                <div className="absolute left-0 top-full z-50 mt-2 w-full rounded-lg border border-zinc-200 bg-white shadow-lg">
+                  {loadingSuggestions && suggestions.length === 0 && (
+                    <div className="flex items-center gap-2 px-4 py-3 text-sm text-zinc-400">
+                      <div className="size-4 animate-spin rounded-full border-2 border-zinc-300 border-t-[#5151eb]" />
+                      Mencari...
+                    </div>
+                  )}
+                  {suggestions.length > 0 && (
+                    <div className="py-1">
+                      {suggestions.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            setSearchFocused(false)
+                            setSearchQuery(item.title)
+                            const cityPath = item.city
+                              ? encodeURIComponent(item.city.toLowerCase())
+                              : 'event'
+                            router.push(`/events/${cityPath}/${item.slug}`)
+                          }}
+                          className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-zinc-50"
+                        >
+                          <CalendarDays className="size-4 shrink-0 text-[#5151eb]" />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-zinc-800">
+                              {item.title}
+                            </p>
+                            <p className="truncate text-xs text-zinc-400">
+                              {item.venue && `${item.venue} · `}
+                              {new Date(item.startDate).toLocaleDateString('id-ID', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric',
+                              })}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                      <div className="border-t border-zinc-100 px-4 py-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSearchFocused(false)
+                            router.push(
+                              `/search?q=${encodeURIComponent(searchQuery.trim())}&type=events`,
+                            )
+                          }}
+                          className="text-xs font-medium text-[#5151eb] hover:underline"
+                        >
+                          Lihat semua hasil untuk &ldquo;{searchQuery.trim()}&rdquo;
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
           </div>
 
           {/* Location Selector */}
@@ -313,7 +434,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
             size="sm"
             variant="ghost"
           >
-            <Link href="#">Find Events</Link>
+            <Link href="/search">Find Events</Link>
           </Button>
           <Button
             asChild
@@ -473,19 +594,31 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
       {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div className="border-t border-zinc-100 bg-white px-4 py-4 lg:hidden">
-          <form action="#" className="relative mb-4">
+          <form
+            action="/search"
+            className="relative mb-4"
+            onSubmit={(e) => {
+              e.preventDefault()
+              const formData = new FormData(e.currentTarget)
+              const q = (formData.get('q') as string)?.trim()
+              if (q) {
+                setMobileMenuOpen(false)
+                router.push(`/search?q=${encodeURIComponent(q)}&type=events`)
+              }
+            }}
+          >
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
             <input
               className="h-10 w-full rounded-lg border border-zinc-200 bg-[#fdfdfd] pl-9 pr-4 text-sm outline-none"
               name="q"
-              placeholder="Search events"
+              placeholder="Cari event, organizer, user..."
               type="search"
             />
           </form>
           <nav className="flex flex-col gap-2">
             <Link
               className="rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-              href="#"
+              href="/search"
             >
               Find Events
             </Link>

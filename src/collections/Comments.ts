@@ -39,43 +39,61 @@ export const Comments: CollectionConfig = {
     afterChange: [
       async ({ doc, operation, req }) => {
         if (operation === 'create') {
-          // Increment commentsCount on the post
+          // Increment commentsCount on the post.
+          // Run outside the current transaction to avoid deadlock — the parent
+          // transaction already holds a lock on the posts row.
           const postId = typeof doc.post === 'object' ? doc.post.id : doc.post
-          const post = await req.payload.findByID({
-            collection: 'posts',
-            id: postId,
-            depth: 0,
+
+          // Fire-and-forget: update count after the transaction commits
+          setImmediate(async () => {
+            try {
+              const post = await req.payload.findByID({
+                collection: 'posts',
+                id: postId,
+                depth: 0,
+              })
+              if (post) {
+                await req.payload.update({
+                  collection: 'posts',
+                  id: postId,
+                  data: {
+                    commentsCount: (post.commentsCount ?? 0) + 1,
+                  },
+                })
+              }
+            } catch (err) {
+              console.error('Failed to increment commentsCount for post', postId, err)
+            }
           })
-          if (post) {
-            await req.payload.update({
-              collection: 'posts',
-              id: postId,
-              data: {
-                commentsCount: (post.commentsCount ?? 0) + 1,
-              },
-            })
-          }
         }
       },
     ],
     afterDelete: [
       async ({ doc, req }) => {
-        // Decrement commentsCount on the post
+        // Decrement commentsCount on the post.
+        // Run outside the current transaction to avoid deadlock.
         const postId = typeof doc.post === 'object' ? doc.post.id : doc.post
-        const post = await req.payload.findByID({
-          collection: 'posts',
-          id: postId,
-          depth: 0,
+
+        setImmediate(async () => {
+          try {
+            const post = await req.payload.findByID({
+              collection: 'posts',
+              id: postId,
+              depth: 0,
+            })
+            if (post) {
+              await req.payload.update({
+                collection: 'posts',
+                id: postId,
+                data: {
+                  commentsCount: Math.max(0, (post.commentsCount ?? 0) - 1),
+                },
+              })
+            }
+          } catch (err) {
+            console.error('Failed to decrement commentsCount for post', postId, err)
+          }
         })
-        if (post) {
-          await req.payload.update({
-            collection: 'posts',
-            id: postId,
-            data: {
-              commentsCount: Math.max(0, (post.commentsCount ?? 0) - 1),
-            },
-          })
-        }
       },
     ],
   },
