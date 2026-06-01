@@ -13,6 +13,7 @@ import { Categories } from './collections/Categories'
 import { Locations } from './collections/Locations'
 import { Events } from './collections/Events'
 import { Tickets } from './collections/Tickets'
+import { Promotions } from './collections/Promotions'
 import { Posts } from './collections/Posts'
 import { Comments } from './collections/Comments'
 import { checkinValidateEndpoint } from './endpoints/checkin-validate'
@@ -40,6 +41,7 @@ export default buildConfig({
     Locations,
     Events,
     Tickets,
+    Promotions,
     Posts,
     Comments,
   ],

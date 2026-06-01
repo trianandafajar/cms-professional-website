@@ -28,12 +28,13 @@ export const Comments: CollectionConfig = {
   },
   hooks: {
     beforeValidate: [
-      ({ data, req }) => {
+      async({ data, req }) => {
+        const commandData = data ?? {}
         // Auto-set author from logged-in user on create
         if (req.user) {
-          data.author = req.user.id
+          commandData.author = req.user.id
         }
-        return data
+        return commandData
       },
     ],
     afterChange: [

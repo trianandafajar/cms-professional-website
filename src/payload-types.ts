@@ -75,6 +75,7 @@ export interface Config {
     locations: Location;
     events: Event;
     tickets: Ticket;
+    promotions: Promotion;
     posts: Post;
     comments: Comment;
     'payload-kv': PayloadKv;
@@ -92,6 +93,7 @@ export interface Config {
     locations: LocationsSelect<false> | LocationsSelect<true>;
     events: EventsSelect<false> | EventsSelect<true>;
     tickets: TicketsSelect<false> | TicketsSelect<true>;
+    promotions: PromotionsSelect<false> | PromotionsSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
     comments: CommentsSelect<false> | CommentsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
@@ -431,6 +433,43 @@ export interface Ticket {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "promotions".
+ */
+export interface Promotion {
+  id: number;
+  name: string;
+  /**
+   * Auto-generated from the name and used in URLs
+   */
+  slug?: string | null;
+  /**
+   * Code attendees enter at checkout
+   */
+  code?: string | null;
+  type: 'code' | 'access';
+  discountType: 'percent' | 'flat';
+  discountValue: number;
+  usageCount?: number | null;
+  /**
+   * Leave empty for unlimited usage
+   */
+  usageLimit?: number | null;
+  scopeType: 'all' | 'events';
+  /**
+   * Shown only when the scope is set to specific events
+   */
+  events?: (number | Event)[] | null;
+  status: 'draft' | 'active' | 'scheduled' | 'ended';
+  startsAtMode: 'now' | 'custom';
+  startsAt?: string | null;
+  endsAtMode: 'sales_end' | 'custom';
+  endsAt?: string | null;
+  organizer: number | User;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "posts".
  */
 export interface Post {
@@ -533,6 +572,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'tickets';
         value: number | Ticket;
+      } | null)
+    | ({
+        relationTo: 'promotions';
+        value: number | Promotion;
       } | null)
     | ({
         relationTo: 'posts';
@@ -762,6 +805,30 @@ export interface TicketsSelect<T extends boolean = true> {
   status?: T;
   checkedInAt?: T;
   checkedInBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "promotions_select".
+ */
+export interface PromotionsSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  code?: T;
+  type?: T;
+  discountType?: T;
+  discountValue?: T;
+  usageCount?: T;
+  usageLimit?: T;
+  scopeType?: T;
+  events?: T;
+  status?: T;
+  startsAtMode?: T;
+  startsAt?: T;
+  endsAtMode?: T;
+  endsAt?: T;
+  organizer?: T;
   updatedAt?: T;
   createdAt?: T;
 }

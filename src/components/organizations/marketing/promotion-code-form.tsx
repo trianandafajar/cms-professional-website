@@ -1,43 +1,51 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import type { RefObject } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
+import { Button } from '@/components/ui/button'
+import { generatePromotionCode, toDatetimeLocal, toIsoDate } from '@/lib/marketing/promotions'
 import {
-  createMockPromotionId,
   type DiscountType,
   type EndMode,
   type PromotionRecord,
   type StartMode,
-} from '@/lib/marketing/promotions'
-import { Button } from '@/components/ui/button'
+  usePromotionsStore,
+} from '@/stores/promotionsStore'
 
 type Props = {
   mode: 'create' | 'edit'
-  type: string
-  initial?: PromotionRecord
+  type: 'code' | 'access'
+  slug?: string
 }
 
-export function PromotionCodeForm({ mode, type, initial }: Props) {
+export function PromotionCodeForm({ mode, type, slug }: Props) {
   const router = useRouter()
+  const isEdit = mode === 'edit'
   const label = type === 'access' ? 'access code' : 'promo code'
+  const {
+    fetchPromotionBySlug,
+    createPromotion,
+    updatePromotionBySlug,
+    error: storeError,
+  } = usePromotionsStore()
 
-  const [name, setName] = useState(initial?.name ?? '')
-  const [discountType, setDiscountType] = useState<DiscountType>(initial?.discountType ?? 'percent')
-  const [discountValue, setDiscountValue] = useState(String(initial?.discountValue ?? 10))
-
-  const [limitMode, setLimitMode] = useState<'unlimited' | 'limited'>(
-    initial?.usageLimit === null ? 'unlimited' : 'limited',
-  )
-  const [usageLimit, setUsageLimit] = useState(initial?.usageLimit ? String(initial.usageLimit) : '')
-
-  const [startsAtMode, setStartsAtMode] = useState<StartMode>(initial?.startsAtMode ?? 'now')
-  const [startsAt, setStartsAt] = useState(initial?.startsAt ?? '')
-
-  const [endsAtMode, setEndsAtMode] = useState<EndMode>(initial?.endsAtMode ?? 'sales_end')
-  const [endsAt, setEndsAt] = useState(initial?.endsAt ?? '')
-
+  const [name, setName] = useState('')
+  const [code, setCode] = useState(() => (mode === 'create' ? generatePromotionCode() : ''))
+  const [codeLocked, setCodeLocked] = useState(true)
+  const [discountType, setDiscountType] = useState<DiscountType>('percent')
+  const [discountValue, setDiscountValue] = useState('10')
+  const [limitMode, setLimitMode] = useState<'unlimited' | 'limited'>('unlimited')
+  const [usageLimit, setUsageLimit] = useState('')
+  const [startsAtMode, setStartsAtMode] = useState<StartMode>('now')
+  const [startsAt, setStartsAt] = useState('')
+  const [endsAtMode, setEndsAtMode] = useState<EndMode>('sales_end')
+  const [endsAt, setEndsAt] = useState('')
+  const [status, setStatus] = useState<PromotionRecord['status']>('draft')
+  const [loading, setLoading] = useState(isEdit)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const usageLimitRef = useRef<HTMLInputElement>(null)
 
@@ -45,27 +53,118 @@ export function PromotionCodeForm({ mode, type, initial }: Props) {
     if (limitMode === 'limited') usageLimitRef.current?.focus()
   }, [limitMode])
 
-  const discountLabel = useMemo(() => (discountType === 'percent' ? '%' : '$'), [discountType])
+  useEffect(() => {
+    if (!isEdit || !slug) {
+      if (isEdit && !slug) {
+        setError('Promotion slug is missing.')
+        setLoading(false)
+      }
+      return
+    }
 
-  function submit() {
+    const promotionSlug = slug
+    let mounted = true
+
+    async function load() {
+      setLoading(true)
+      const promotion = await fetchPromotionBySlug(promotionSlug)
+      if (!mounted) return
+
+      if (!promotion) {
+        setError('Promotion not found.')
+        setLoading(false)
+        return
+      }
+
+      if (promotion.type !== type) {
+        setError('Promotion type does not match the route.')
+        setLoading(false)
+        return
+      }
+
+      setName(promotion.name ?? '')
+      setCode(promotion.code ?? '')
+      setDiscountType(promotion.discountType ?? 'percent')
+      setDiscountValue(String(promotion.discountValue ?? 10))
+      setLimitMode(promotion.usageLimit === null ? 'unlimited' : 'limited')
+      setUsageLimit(promotion.usageLimit === null ? '' : String(promotion.usageLimit))
+      setStartsAtMode(promotion.startsAtMode ?? 'now')
+      setStartsAt(toDatetimeLocal(promotion.startsAt))
+      setEndsAtMode(promotion.endsAtMode ?? 'sales_end')
+      setEndsAt(toDatetimeLocal(promotion.endsAt))
+      setStatus(promotion.status ?? 'draft')
+      setLoading(false)
+    }
+
+    load()
+
+    return () => {
+      mounted = false
+    }
+  }, [fetchPromotionBySlug, isEdit, slug, type])
+
+  const discountLabel = useMemo(() => (discountType === 'percent' ? '%' : 'Rp'), [discountType])
+
+  async function submit() {
     setError(null)
 
-    if (!name.trim()) return setError('Name is required.')
+    const trimmedName = name.trim()
+    const trimmedCode = code.trim()
+
+    if (!trimmedName) return setError('Name is required.')
+    if (!trimmedCode) return setError('Code is required.')
 
     const discount = Number(discountValue)
-    if (!Number.isFinite(discount) || discount <= 0) return setError('Discount must be greater than 0.')
-    if (discountType === 'percent' && discount > 100) return setError('Percent discount cannot exceed 100.')
+    if (!Number.isFinite(discount) || discount < 0) return setError('Discount cannot be negative.')
+    if (discountType === 'percent' && discount > 100) {
+      return setError('Percent discount cannot exceed 100.')
+    }
 
     if (limitMode === 'limited') {
       const parsedLimit = Number(usageLimit)
-      if (!Number.isFinite(parsedLimit) || parsedLimit <= 0) return setError('Limit must be greater than 0 when limited.')
+      if (!Number.isFinite(parsedLimit) || parsedLimit <= 0) {
+        return setError('Limit must be greater than 0 when limited.')
+      }
     }
 
     if (startsAtMode === 'custom' && !startsAt) return setError('Please set scheduled start date.')
     if (endsAtMode === 'custom' && !endsAt) return setError('Please set scheduled end date.')
 
-    const id = initial?.id ?? createMockPromotionId()
-    router.push(`/organizations/marketing/promotions/${type}/${id}/scope`)
+    setSaving(true)
+
+    const payload = {
+      name: trimmedName,
+      code: trimmedCode,
+      type,
+      discountType,
+      discountValue: discount,
+      usageLimit: limitMode === 'limited' ? Number(usageLimit) : null,
+      startsAtMode,
+      startsAt: startsAtMode === 'custom' ? toIsoDate(startsAt) : null,
+      endsAtMode,
+      endsAt: endsAtMode === 'custom' ? toIsoDate(endsAt) : null,
+      status,
+    }
+
+    try {
+      const saved = isEdit && slug
+        ? await updatePromotionBySlug(slug, payload)
+        : await createPromotion(payload)
+
+      router.push(`/organizations/marketing/promotions/${type}/${saved.slug}/scope`)
+    } catch (err: any) {
+      setError(err.message || 'Failed to save promotion.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-[calc(100vh-88px)] items-center justify-center">
+        <p className="text-sm text-zinc-500">Loading promotion...</p>
+      </div>
+    )
   }
 
   return (
@@ -73,18 +172,41 @@ export function PromotionCodeForm({ mode, type, initial }: Props) {
       <div className="flex-1 overflow-auto px-8 py-6 pb-28">
         <div className="mx-auto w-full max-w-4xl">
           <h2 className="text-4xl font-bold tracking-tight text-zinc-900">
-            {mode === 'create' ? `Create ${label}` : `Edit ${label}`}
+            {isEdit ? `Edit ${label}` : `Create ${label}`}
           </h2>
 
           <div className="mt-5 rounded-xl border border-zinc-200 bg-white p-5">
             <div className="space-y-4">
               <Field label="Name" value={name} onChange={setName} placeholder="Early Bird Launch" />
 
+              <Field
+                label="Code"
+                value={code}
+                onChange={(value) => setCode(value)}
+                readOnly={codeLocked}
+                placeholder="EARLY2026"
+              />
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-xs text-zinc-500">
+                  {codeLocked ? 'System only (default)' : 'Manual edit enabled'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCodeLocked((value) => !value)}
+                  className="rounded-md border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
+                >
+                  {codeLocked ? 'Edit code' : 'Lock code'}
+                </button>
+              </div>
+
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-zinc-500">Discount</label>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  Discount
+                </label>
                 <div className="flex items-center gap-2 rounded-lg border border-zinc-200 p-1">
                   <input
                     type="number"
+                    min="0"
                     value={discountValue}
                     onChange={(e) => setDiscountValue(e.target.value)}
                     className="h-9 w-full rounded-md border border-zinc-200 px-3 text-sm outline-none focus:border-[#5151eb]"
@@ -93,14 +215,22 @@ export function PromotionCodeForm({ mode, type, initial }: Props) {
                   <button
                     type="button"
                     onClick={() => setDiscountType('flat')}
-                    className={`cursor-pointer rounded-md px-3 py-2 text-xs font-semibold ${discountType === 'flat' ? 'bg-[#5151eb] text-white' : 'text-zinc-600 hover:bg-zinc-50'}`}
+                    className={`rounded-md px-3 py-2 text-xs font-semibold ${
+                      discountType === 'flat'
+                        ? 'bg-[#5151eb] text-white'
+                        : 'text-zinc-600 hover:bg-zinc-50'
+                    }`}
                   >
                     Amount
                   </button>
                   <button
                     type="button"
                     onClick={() => setDiscountType('percent')}
-                    className={`cursor-pointer rounded-md px-3 py-2 text-xs font-semibold ${discountType === 'percent' ? 'bg-[#5151eb] text-white' : 'text-zinc-600 hover:bg-zinc-50'}`}
+                    className={`rounded-md px-3 py-2 text-xs font-semibold ${
+                      discountType === 'percent'
+                        ? 'bg-[#5151eb] text-white'
+                        : 'text-zinc-600 hover:bg-zinc-50'
+                    }`}
                   >
                     Percentage
                   </button>
@@ -108,10 +238,20 @@ export function PromotionCodeForm({ mode, type, initial }: Props) {
               </div>
 
               <section>
-                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-zinc-500">Promotion limit</label>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  Promotion limit
+                </label>
                 <div className="space-y-2">
-                  <Radio active={limitMode === 'unlimited'} onClick={() => setLimitMode('unlimited')} label="Unlimited" />
-                  <Radio active={limitMode === 'limited'} onClick={() => setLimitMode('limited')} label="Limited to" />
+                  <Radio
+                    active={limitMode === 'unlimited'}
+                    onClick={() => setLimitMode('unlimited')}
+                    label="Unlimited"
+                  />
+                  <Radio
+                    active={limitMode === 'limited'}
+                    onClick={() => setLimitMode('limited')}
+                    label="Limited to"
+                  />
                 </div>
                 {limitMode === 'limited' ? (
                   <div className="mt-3 max-w-sm">
@@ -128,10 +268,16 @@ export function PromotionCodeForm({ mode, type, initial }: Props) {
               </section>
 
               <section>
-                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-zinc-500">Promotion starts</label>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  Promotion starts
+                </label>
                 <div className="space-y-1">
                   <Radio active={startsAtMode === 'now'} onClick={() => setStartsAtMode('now')} label="Now" />
-                  <Radio active={startsAtMode === 'custom'} onClick={() => setStartsAtMode('custom')} label="Scheduled time" />
+                  <Radio
+                    active={startsAtMode === 'custom'}
+                    onClick={() => setStartsAtMode('custom')}
+                    label="Scheduled time"
+                  />
                 </div>
                 {startsAtMode === 'custom' ? (
                   <div className="mt-3 max-w-sm">
@@ -141,10 +287,20 @@ export function PromotionCodeForm({ mode, type, initial }: Props) {
               </section>
 
               <section>
-                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-zinc-500">Promotion ends</label>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                  Promotion ends
+                </label>
                 <div className="space-y-1">
-                  <Radio active={endsAtMode === 'sales_end'} onClick={() => setEndsAtMode('sales_end')} label="When ticket sales end" />
-                  <Radio active={endsAtMode === 'custom'} onClick={() => setEndsAtMode('custom')} label="Scheduled time" />
+                  <Radio
+                    active={endsAtMode === 'sales_end'}
+                    onClick={() => setEndsAtMode('sales_end')}
+                    label="When ticket sales end"
+                  />
+                  <Radio
+                    active={endsAtMode === 'custom'}
+                    onClick={() => setEndsAtMode('custom')}
+                    label="Scheduled time"
+                  />
                 </div>
                 {endsAtMode === 'custom' ? (
                   <div className="mt-3 max-w-sm">
@@ -154,15 +310,27 @@ export function PromotionCodeForm({ mode, type, initial }: Props) {
               </section>
             </div>
 
-            {error ? <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{error}</p> : null}
+            {(error || storeError) ? (
+              <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">
+                {error ?? storeError}
+              </p>
+            ) : null}
           </div>
         </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 px-8 ml-23 py-4 backdrop-blur supports-[backdrop-filter]:bg-white/80 xl:left-[380px]">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 px-8 py-4 backdrop-blur supports-[backdrop-filter]:bg-white/80 xl:left-[380px]">
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between">
-          <Link href="/organizations/marketing/promotions" className="text-sm font-medium text-zinc-600 hover:text-zinc-900">Cancel</Link>
-          <Button onClick={submit} className="inline-flex h-10 cursor-pointer items-center rounded-lg bg-[#5151eb] px-5 text-sm font-semibold text-white hover:bg-[#4040d9]">Next</Button>
+          <Link href="/organizations/marketing/promotions" className="text-sm font-medium text-zinc-600 hover:text-zinc-900">
+            Cancel
+          </Link>
+          <Button
+            onClick={submit}
+            disabled={saving}
+            className="inline-flex h-10 cursor-pointer items-center rounded-lg bg-[#5151eb] px-5 text-sm font-semibold text-white hover:bg-[#4040d9] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {saving ? 'Saving...' : 'Next'}
+          </Button>
         </div>
       </div>
     </div>
@@ -176,32 +344,39 @@ function Field({
   type = 'text',
   placeholder,
   inputRef,
+  readOnly = false,
 }: {
   label: string
   value: string
   onChange: (value: string) => void
   type?: string
   placeholder?: string
-  inputRef?: React.RefObject<HTMLInputElement | null>
+  inputRef?: RefObject<HTMLInputElement | null>
+  readOnly?: boolean
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-zinc-500">{label}</span>
+      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-zinc-500">
+        {label}
+      </span>
       <input
         ref={inputRef}
         type={type}
         value={value}
         placeholder={placeholder}
+        readOnly={readOnly}
         onChange={(e) => onChange(e.target.value)}
-        className="h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none transition focus:border-[#5151eb]"
+        className={`h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none transition ${
+          readOnly ? 'bg-zinc-50 text-zinc-500 focus:border-zinc-200' : 'focus:border-[#5151eb]'
+        }`}
       />
-    </label>
+  </label>
   )
 }
 
 function Radio({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
   return (
-    <button type="button" onClick={onClick} className="cursor-pointer flex items-center gap-2 text-sm text-zinc-700">
+    <button type="button" onClick={onClick} className="flex cursor-pointer items-center gap-2 text-sm text-zinc-700">
       <span className={`inline-flex h-4 w-4 rounded-full border ${active ? 'border-[#5151eb]' : 'border-zinc-300'}`}>
         <span className={`m-auto h-2 w-2 rounded-full ${active ? 'bg-[#5151eb]' : 'bg-transparent'}`} />
       </span>

@@ -1,23 +1,59 @@
 'use client'
 
 import Link from 'next/link'
-import { use, useMemo, useState } from 'react'
+import { use, useEffect, useMemo, useState } from 'react'
 import { Copy, MessageCircle, Share2 } from 'lucide-react'
 
-import { getPromotionById } from '@/lib/marketing/promotions'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { formatPromotionLink } from '@/lib/marketing/promotions'
+import type { PromotionRecord } from '@/stores/promotionsStore'
+import { usePromotionsStore } from '@/stores/promotionsStore'
 
 export default function PromotionSharePage({
   params,
 }: {
   params: Promise<{ type: string; id: string }>
 }) {
-  const { type, id } = use(params)
+  const { type, id: slug } = use(params)
   const [copied, setCopied] = useState(false)
-  const promo = getPromotionById(id)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const { fetchPromotionBySlug } = usePromotionsStore()
+  const [promotion, setPromotion] = useState<PromotionRecord | null>(null)
 
-  const link = useMemo(() => `https://eventbro.com/promotions/${id}?code=${promo?.code ?? 'PROMO'}`, [id, promo?.code])
-  const message = useMemo(() => `Use code ${promo?.code ?? 'PROMO'} to get your promo. Apply here: ${link}`, [promo?.code, link])
+  useEffect(() => {
+    let mounted = true
+
+    async function load() {
+      setLoading(true)
+      const promo = await fetchPromotionBySlug(slug)
+      if (!mounted) return
+
+      if (!promo || promo.type !== type) {
+        setError('Promotion not found.')
+        setLoading(false)
+        return
+      }
+
+      setPromotion(promo)
+      setLoading(false)
+    }
+
+    load()
+
+    return () => {
+      mounted = false
+    }
+  }, [fetchPromotionBySlug, slug, type])
+
+  const link = useMemo(
+    () => formatPromotionLink(slug, promotion?.code ?? 'PROMO'),
+    [promotion?.code, slug],
+  )
+  const message = useMemo(
+    () => `Use code ${promotion?.code ?? 'PROMO'} to get your promo. Apply here: ${link}`,
+    [promotion?.code, link],
+  )
   const waLink = useMemo(() => `https://wa.me/?text=${encodeURIComponent(message)}`, [message])
 
   async function copyLink() {
@@ -28,6 +64,18 @@ export default function PromotionSharePage({
     } catch {
       setCopied(false)
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[calc(100vh-88px)] items-center justify-center">
+        <p className="text-sm text-zinc-500">Loading promotion share...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return <div className="rounded-xl border border-zinc-200 bg-white p-6 text-sm text-zinc-600">{error}</div>
   }
 
   return (
@@ -50,15 +98,18 @@ export default function PromotionSharePage({
                 <p className="text-sm text-zinc-800">{message}</p>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button className="ml-4 inline-flex items-center gap-1 text-sm font-semibold text-[#5151eb] hover:text-[#3d3dcc] cursor-pointer">
+                    <button className="ml-4 inline-flex cursor-pointer items-center gap-1 text-sm font-semibold text-[#5151eb] hover:text-[#3d3dcc]">
                       <Share2 size={14} />
                       Share
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent align="end" className="w-48 rounded-lg border border-zinc-200 bg-white p-1.5 shadow-lg">
+                  <PopoverContent
+                    align="end"
+                    className="w-48 rounded-lg border border-zinc-200 bg-white p-1.5 shadow-lg"
+                  >
                     <button
                       onClick={copyLink}
-                      className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-zinc-700 transition hover:bg-zinc-50 cursor-pointer"
+                      className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-zinc-700 transition hover:bg-zinc-50"
                     >
                       <Copy size={14} />
                       {copied ? 'Copied' : 'Copy code'}
@@ -67,7 +118,7 @@ export default function PromotionSharePage({
                       href={waLink}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50 cursor-pointer"
+                      className="flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
                     >
                       <MessageCircle size={14} />
                       Share via WhatsApp
@@ -86,15 +137,24 @@ export default function PromotionSharePage({
                 {link}
               </div>
             </section>
-
           </div>
         </div>
       </div>
 
       <div className="border-t border-zinc-200 bg-white px-8 py-4">
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between">
-          <Link href={`/organizations/marketing/promotions/${type}/${id}/scope`} className="text-sm font-medium text-zinc-600 hover:text-zinc-900">Back</Link>
-          <Link href="/organizations/marketing/promotions" className="inline-flex h-10 items-center rounded-lg bg-[#5151eb] px-5 text-sm font-semibold text-white hover:bg-[#4040d9]">Done</Link>
+          <Link
+            href={`/organizations/marketing/promotions/${type}/${slug}/scope`}
+            className="text-sm font-medium text-zinc-600 hover:text-zinc-900"
+          >
+            Back
+          </Link>
+          <Link
+            href="/organizations/marketing/promotions"
+            className="inline-flex h-10 items-center rounded-lg bg-[#5151eb] px-5 text-sm font-semibold text-white hover:bg-[#4040d9]"
+          >
+            Done
+          </Link>
         </div>
       </div>
     </div>
