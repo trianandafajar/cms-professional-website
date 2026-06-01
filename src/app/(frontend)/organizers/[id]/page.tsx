@@ -474,30 +474,27 @@ export default async function OrganizerProfilePage({ params, searchParams }: Pro
   let pastEvents: Event[] = []
   let pastTotal = 0
 
+  const now = new Date()
+
   try {
-    const upcomingResult = await payload.find({
+    // Get all published events for this organizer
+    const allEventsResult = await payload.find({
       collection: 'events',
       where: {
         and: [{ organizer: { equals: organizer.id } }, { status: { equals: 'published' } }],
       },
       depth: 1,
-      limit: 12,
+      limit: 100,
       sort: 'startDate',
     })
-    upcomingEvents = upcomingResult.docs as Event[]
-    upcomingTotal = upcomingResult.totalDocs
 
-    const pastResult = await payload.find({
-      collection: 'events',
-      where: {
-        and: [{ organizer: { equals: organizer.id } }, { status: { equals: 'completed' } }],
-      },
-      depth: 1,
-      limit: 12,
-      sort: '-startDate',
-    })
-    pastEvents = pastResult.docs as Event[]
-    pastTotal = pastResult.totalDocs
+    // Split into upcoming and past based on startDate
+    const allEvents = allEventsResult.docs as Event[]
+    upcomingEvents = allEvents.filter((e) => new Date(e.startDate) >= now)
+    pastEvents = allEvents.filter((e) => new Date(e.startDate) < now)
+
+    upcomingTotal = upcomingEvents.length
+    pastTotal = pastEvents.length
   } catch {
     // events table may not exist yet — show empty tabs
   }

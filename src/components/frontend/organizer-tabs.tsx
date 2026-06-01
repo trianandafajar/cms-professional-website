@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Calendar, CheckCircle2, Rss, MapPin, Clock, Heart, Share2, Plus } from 'lucide-react'
 import { OrganizerFeed } from './organizer-feed'
+import { LikeButton } from './like-button'
 import type { Event, Media, Location, Category } from '@/payload-types'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -153,14 +154,7 @@ function EventCard({ event, isPast = false }: { event: Event; isPast?: boolean }
             >
               <Share2 className="size-3.5" />
             </button>
-            <button
-              type="button"
-              aria-label="Save"
-              onClick={(e) => e.preventDefault()}
-              className="flex size-8 items-center justify-center rounded-full border border-zinc-200 text-zinc-400 transition hover:border-[#5151eb] hover:text-[#5151eb]"
-            >
-              <Heart className="size-3.5" />
-            </button>
+            <LikeButton eventId={event.id} variant="icon-only" className="relative" />
           </div>
         </div>
       </div>

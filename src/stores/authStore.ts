@@ -28,6 +28,7 @@ interface AuthState {
   register: (name: string, email: string, password: string) => Promise<User>
   logout: () => Promise<void>
   setUser: (user: User | null) => void
+  refreshUser: () => Promise<void>
   clearError: () => void
 }
 
@@ -47,6 +48,9 @@ export const useAuthStore = create<AuthState>()(
           })
           set({ user: response.user, isLoading: false })
           useLikesStore.getState().fetchLikes()
+          // Refresh user data to ensure avatar is populated with full URL
+          // This is needed because /api/users/login doesn't support depth parameter
+          get().refreshUser()
           return response.user
         } catch (err: any) {
           set({ error: err.message || 'Login failed', isLoading: false })
@@ -71,6 +75,8 @@ export const useAuthStore = create<AuthState>()(
           set({ user: loginResponse.user, isLoading: false })
           // Fetch user's likes after successful registration/login
           useLikesStore.getState().fetchLikes()
+          // Refresh user data to ensure avatar is populated with full URL
+          get().refreshUser()
           return loginResponse.user
         } catch (err: any) {
           set({ error: err.message || 'Registration failed', isLoading: false })
@@ -90,6 +96,15 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       setUser: (user) => set({ user }),
+      refreshUser: async () => {
+        try {
+          // Use custom /api/me endpoint that ensures avatar is populated with depth=1
+          const response = await apiClient.get<{ user: User }>('/api/me')
+          set({ user: response.user })
+        } catch {
+          // If fetching user fails, keep existing user data
+        }
+      },
       clearError: () => set({ error: null }),
     }),
     {

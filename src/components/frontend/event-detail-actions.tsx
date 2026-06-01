@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Heart, Share2, Ticket, Calendar, MapPin, Clock, Check } from 'lucide-react'
+import { useAuthGate } from '@/hooks/useAuthGate'
 
 type Props = {
   eventTitle: string
@@ -52,6 +54,8 @@ export function EventDetailActions({
 }: Props) {
   const [interested, setInterested] = useState(false)
   const [copied, setCopied] = useState(false)
+  const router = useRouter()
+  const { gate, isAuthenticated } = useAuthGate()
 
   function handleShare() {
     if (navigator.share) {
@@ -62,6 +66,15 @@ export function EventDetailActions({
         setTimeout(() => setCopied(false), 2000)
       })
     }
+  }
+
+  function handleGetTickets() {
+    const ticketsPath = `/events/${citySlug}/${eventSlug}/tickets`
+    if (!isAuthenticated()) {
+      router.push(`/auth/signin?redirect=${encodeURIComponent(ticketsPath)}`)
+      return
+    }
+    router.push(ticketsPath)
   }
 
   return (
@@ -113,20 +126,21 @@ export function EventDetailActions({
             <p className="text-sm font-bold text-zinc-500">This event has ended</p>
           </div>
         ) : (
-          <Link
-            href={`/events/${citySlug}/${eventSlug}/tickets`}
+          <button
+            type="button"
+            onClick={handleGetTickets}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#5151eb] py-3.5 text-sm font-bold text-white transition hover:bg-[#4040d0] active:scale-[0.98]"
           >
             <Ticket className="size-4" />
             Get Tickets
-          </Link>
+          </button>
         )}
 
         {/* Secondary actions */}
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setInterested((v) => !v)}
+            onClick={gate(() => setInterested((v) => !v))}
             className={`flex flex-1 items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-semibold transition ${
               interested
                 ? 'border-[#5151eb] bg-indigo-50 text-[#5151eb]'

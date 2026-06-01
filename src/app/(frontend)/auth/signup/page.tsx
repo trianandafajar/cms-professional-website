@@ -33,8 +33,30 @@ export default function SignUpPage() {
     setFormError(null)
     clearError()
     try {
-      await registerUser(data.name, data.email, data.password)
-      router.push('/onboarding')
+      const user = await registerUser(data.name, data.email, data.password)
+      const isOnboardingDone = Boolean(user.isOnboarded) || (user.onboardingStep ?? 0) >= 4
+
+      if (!isOnboardingDone) {
+        // Check for redirect param to pass along to onboarding completion
+        const params = new URLSearchParams(window.location.search)
+        const redirect = params.get('redirect')
+        if (redirect) {
+          // Store redirect for after onboarding
+          sessionStorage.setItem('postOnboardingRedirect', redirect)
+        }
+        router.push('/onboarding')
+        return
+      }
+
+      // Check for redirect param
+      const params = new URLSearchParams(window.location.search)
+      const redirect = params.get('redirect')
+      if (redirect) {
+        router.push(decodeURIComponent(redirect))
+        return
+      }
+
+      router.push(user.isOrganizer ? '/organizations/dashboard' : '/my/tickets')
     } catch (err: any) {
       setFormError(err.message || 'Sign up failed')
     }

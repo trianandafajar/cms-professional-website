@@ -14,6 +14,7 @@ import { Locations } from './collections/Locations'
 import { Events } from './collections/Events'
 import { Tickets } from './collections/Tickets'
 import { Posts } from './collections/Posts'
+import { Comments } from './collections/Comments'
 import { checkinValidateEndpoint } from './endpoints/checkin-validate'
 import { checkinConfirmEndpoint } from './endpoints/checkin-confirm'
 import { checkinStatsEndpoint } from './endpoints/checkin-stats'
@@ -22,13 +23,25 @@ const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
 export default buildConfig({
+  serverURL: process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000',
   admin: {
     user: Users.slug,
     importMap: {
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Permissions, Roles, Categories, Locations, Events, Tickets, Posts],
+  collections: [
+    Users,
+    Media,
+    Permissions,
+    Roles,
+    Categories,
+    Locations,
+    Events,
+    Tickets,
+    Posts,
+    Comments,
+  ],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
@@ -193,7 +206,12 @@ export default buildConfig({
             author: user.id,
             content: body.content,
             image: body.image || undefined,
+            link: body.link || undefined,
+            linkTitle: body.linkTitle || undefined,
           },
+          depth: 1,
+          req,
+          draft: false,
         })
 
         return Response.json({ doc: post })
@@ -297,6 +315,146 @@ export default buildConfig({
         await payload.delete({
           collection: 'posts',
           id: postId,
+        })
+
+        return Response.json({ success: true })
+      },
+    },
+    // ─── FEED ENDPOINTS ────────────────────────────────────────────────────────
+    // Get all posts (public feed)
+    {
+      path: '/feed',
+      method: 'get',
+      handler: async (req) => {
+        const { payload } = req
+        const url = new URL(req.url || '', 'http://localhost')
+        const page = parseInt(url.searchParams.get('page') || '1', 10)
+        const limit = parseInt(url.searchParams.get('limit') || '10', 10)
+
+        const posts = await payload.find({
+          collection: 'posts',
+          sort: '-createdAt',
+          page,
+          limit,
+          depth: 1,
+        })
+
+        return Response.json(posts)
+      },
+    },
+    // Create a post with link support (organizer only)
+    {
+      path: '/posts',
+      method: 'post',
+      handler: async (req) => {
+        const { payload, user } = req
+
+        if (!user) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        if (!user.isOrganizer) {
+          return Response.json({ error: 'Not an organizer' }, { status: 403 })
+        }
+
+        const body = await (req.json as () => Promise<any>)()
+
+        const post = await payload.create({
+          collection: 'posts',
+          data: {
+            author: user.id,
+            content: body.content,
+            image: body.image || undefined,
+            link: body.link || undefined,
+            linkTitle: body.linkTitle || undefined,
+          },
+          depth: 1,
+          req,
+          draft: false,
+        })
+
+        return Response.json({ doc: post })
+      },
+    },
+    // Update a post with link support
+    {
+      path: '/posts/:postId',
+      method: 'patch',
+      handler: async (req) => {
+        const { payload, user } = req
+
+        if (!user) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        const postId = Number(req.routeParams?.postId)
+        if (!postId || isNaN(postId)) {
+          return Response.json({ error: 'Invalid post ID' }, { status: 400 })
+        }
+
+        const existingPost = await payload.findByID({
+          collection: 'posts',
+          id: postId,
+          depth: 0,
+        })
+
+        const authorId =
+          typeof existingPost.author === 'object' ? existingPost.author.id : existingPost.author
+        if (authorId !== user.id) {
+          return Response.json({ error: 'Forbidden' }, { status: 403 })
+        }
+
+        const body = await (req.json as () => Promise<any>)()
+        const updated = await payload.update({
+          collection: 'posts',
+          id: postId,
+          data: {
+            content: body.content,
+            image: body.image !== undefined ? body.image : undefined,
+            link: body.link !== undefined ? body.link : undefined,
+            linkTitle: body.linkTitle !== undefined ? body.linkTitle : undefined,
+          },
+          depth: 1,
+        })
+
+        return Response.json({ doc: updated })
+      },
+    },
+    // ─── COMMENT ENDPOINTS ──────────────────────────────────────────────────────
+    // Delete a comment (owner or admin)
+    {
+      path: '/comments/:commentId',
+      method: 'delete',
+      handler: async (req) => {
+        const { payload, user } = req
+
+        if (!user) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        const commentId = Number(req.routeParams?.commentId)
+        if (!commentId || isNaN(commentId)) {
+          return Response.json({ error: 'Invalid comment ID' }, { status: 400 })
+        }
+
+        const comment = await payload.findByID({
+          collection: 'comments',
+          id: commentId,
+          depth: 0,
+        })
+
+        if (!comment) {
+          return Response.json({ error: 'Comment not found' }, { status: 404 })
+        }
+
+        const authorId = typeof comment.author === 'object' ? comment.author.id : comment.author
+        if (authorId !== user.id && user.roleName !== 'admin') {
+          return Response.json({ error: 'Forbidden' }, { status: 403 })
+        }
+
+        await payload.delete({
+          collection: 'comments',
+          id: commentId,
         })
 
         return Response.json({ success: true })

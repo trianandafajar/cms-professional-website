@@ -1,15 +1,41 @@
 'use client'
 
-import { useState } from 'react'
-import { User, Mail, MapPin, Save, CheckCircle2 } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { User, Mail, Save, CheckCircle2, Camera } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 
+function getAvatarUrl(avatar: unknown): string | null {
+  if (avatar && typeof avatar === 'object' && 'url' in avatar) {
+    return (avatar as { url?: string }).url ?? null
+  }
+  return null
+}
+
 export default function MyProfilePage() {
-  const { user } = useAuthStore()
+  const { user, refreshUser } = useAuthStore()
   const [name, setName] = useState(user?.name ?? '')
   const [bio, setBio] = useState(user?.bio ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(getAvatarUrl(user?.avatar))
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Update form when user data changes
+  useEffect(() => {
+    if (user) {
+      setName(user.name ?? '')
+      setBio(user.bio ?? '')
+      setAvatarPreview(getAvatarUrl(user.avatar))
+    }
+  }, [user])
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAvatarFile(file)
+    setAvatarPreview(URL.createObjectURL(file))
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -17,14 +43,36 @@ export default function MyProfilePage() {
     setSaved(false)
 
     try {
+      let avatarId: number | undefined
+
+      // Upload avatar if changed
+      if (avatarFile) {
+        const formData = new FormData()
+        formData.append('file', avatarFile)
+        const res = await fetch('/api/media', {
+          method: 'POST',
+          credentials: 'include',
+          body: formData,
+        })
+        if (!res.ok) throw new Error('Failed to upload avatar')
+        const data = await res.json()
+        avatarId = data.doc.id
+      }
+
+      const updateData: Record<string, any> = { name, bio }
+      if (avatarId) updateData.avatar = avatarId
+
       const res = await fetch(`/api/users/${user?.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, bio }),
+        body: JSON.stringify(updateData),
         credentials: 'include',
       })
 
       if (res.ok) {
+        // Refresh user data in auth store so navbar updates
+        await refreshUser()
+        setAvatarFile(null)
         setSaved(true)
         setTimeout(() => setSaved(false), 3000)
       }
@@ -34,6 +82,8 @@ export default function MyProfilePage() {
       setSaving(false)
     }
   }
+
+  const avatarUrl = getAvatarUrl(user?.avatar)
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -47,8 +97,32 @@ export default function MyProfilePage() {
         <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
           {/* Avatar */}
           <div className="flex items-center gap-4 mb-6">
-            <div className="flex size-16 items-center justify-center rounded-full bg-[#5151eb] text-xl font-bold text-white">
-              {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
+            <div className="relative">
+              {avatarPreview ? (
+                <img
+                  src={avatarPreview}
+                  alt={user?.name || 'User'}
+                  className="size-16 rounded-full object-cover ring-2 ring-zinc-200"
+                />
+              ) : (
+                <div className="flex size-16 items-center justify-center rounded-full bg-[#5151eb] text-xl font-bold text-white">
+                  {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full bg-[#5151eb] text-white shadow-md hover:bg-[#4040d0] transition"
+              >
+                <Camera className="size-3.5" />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                className="hidden"
+              />
             </div>
             <div>
               <p className="text-base font-semibold text-zinc-900">{user?.name || 'User'}</p>

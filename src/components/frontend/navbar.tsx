@@ -122,6 +122,13 @@ function getInitials(value?: string | null) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
+function getAvatarUrl(avatar: unknown): string | null {
+  if (avatar && typeof avatar === 'object' && 'url' in avatar) {
+    return (avatar as { url?: string }).url ?? null
+  }
+  return null
+}
+
 export function FrontendNavbar({ user, userName }: NavbarProps) {
   const router = useRouter()
   const { logout, user: authUser } = useAuthStore()
@@ -135,10 +142,12 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
   const dropdownRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLFormElement>(null)
 
-  const resolvedUser: NavbarUser | null = user ?? (userName ? { name: userName } : null)
+  // Always prefer authUser from store for real-time updates
+  const resolvedUser: NavbarUser | null = authUser ?? user ?? (userName ? { name: userName } : null)
   const displayName = resolvedUser?.name || resolvedUser?.email || ''
   const displayEmail = resolvedUser?.email || ''
   const initials = getInitials(resolvedUser?.name || resolvedUser?.email)
+  const avatarUrl = getAvatarUrl((authUser as any)?.avatar)
   const isAuthed = Boolean(resolvedUser)
   const isOrganizer = Boolean(authUser?.isOrganizer)
 
@@ -357,9 +366,17 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                   className="flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 py-1 pl-1 pr-3 text-sm font-medium text-[#5151eb] transition hover:bg-indigo-100"
                   aria-label="Open profile menu"
                 >
-                  <span className="flex size-8 items-center justify-center rounded-full bg-[#5151eb] text-xs font-semibold text-white">
-                    {initials}
-                  </span>
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={displayName || 'User'}
+                      className="size-8 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="flex size-8 items-center justify-center rounded-full bg-[#5151eb] text-xs font-semibold text-white">
+                      {initials}
+                    </span>
+                  )}
                   <span className="max-w-[140px] truncate">{displayName}</span>
                   <ChevronDown className="size-3.5 text-[#5151eb]" />
                 </button>
@@ -372,9 +389,17 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                 {/* Header */}
                 <div className="border-b border-zinc-100 px-4 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex size-11 items-center justify-center rounded-full bg-[#5151eb] text-base font-semibold text-white">
-                      {initials}
-                    </div>
+                    {avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt={displayName || 'User'}
+                        className="size-11 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-11 items-center justify-center rounded-full bg-[#5151eb] text-base font-semibold text-white">
+                        {initials}
+                      </div>
+                    )}
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-zinc-900">
                         {displayName || 'User'}
@@ -492,9 +517,17 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
             {isAuthed ? (
               <>
                 <div className="flex items-center gap-3 rounded-lg bg-indigo-50 px-3 py-3">
-                  <div className="flex size-10 items-center justify-center rounded-full bg-[#5151eb] text-sm font-semibold text-white">
-                    {initials}
-                  </div>
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={displayName || 'User'}
+                      className="size-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex size-10 items-center justify-center rounded-full bg-[#5151eb] text-sm font-semibold text-white">
+                      {initials}
+                    </div>
+                  )}
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-[#12192f]">
                       {displayName || 'User'}

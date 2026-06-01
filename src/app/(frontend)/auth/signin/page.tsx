@@ -30,7 +30,20 @@ export default function SignInPage() {
     try {
       const user = await login(data.email, data.password)
       const isOnboardingDone = Boolean(user.isOnboarded) || (user.onboardingStep ?? 0) >= 4
-      router.push(isOnboardingDone ? '/' : '/onboarding')
+      if (!isOnboardingDone) {
+        router.push('/onboarding')
+        return
+      }
+
+      // Check for redirect param
+      const params = new URLSearchParams(window.location.search)
+      const redirect = params.get('redirect')
+      if (redirect) {
+        router.push(decodeURIComponent(redirect))
+        return
+      }
+
+      router.push(user.isOrganizer ? '/organizations/dashboard' : '/my/tickets')
     } catch (err: any) {
       setFormError(err.message || 'Sign in failed')
     }

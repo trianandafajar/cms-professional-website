@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Heart,
   MessageCircle,
@@ -10,12 +10,13 @@ import {
   Edit3,
   Loader2,
   ExternalLink,
+  ImageIcon,
 } from 'lucide-react'
+import Link from 'next/link'
 import { apiClient } from '@/lib/apiClient'
-import { OrganizerCreatePost } from './organizer-create-post'
-import { CommentsModal } from './comments-modal'
 import { useAuthGate } from '@/hooks/useAuthGate'
 import { useAuthStore } from '@/stores/authStore'
+import { CommentsModal } from './comments-modal'
 import type { Media, User } from '@/payload-types'
 
 interface Post {
@@ -24,7 +25,7 @@ interface Post {
   image?: Media | number | null
   link?: string | null
   linkTitle?: string | null
-  author: { id: number; name: string; avatar?: Media | null } | number
+  author: User | number
   likesCount: number
   commentsCount: number
   likedBy?: { user: number | User }[] | null
@@ -32,11 +33,12 @@ interface Post {
   updatedAt: string
 }
 
-type Props = {
-  organizerId: number
-  isOwner: boolean
-  avatarUrl?: string | null
-  organizerName: string
+interface PostsResponse {
+  docs: Post[]
+  totalDocs: number
+  totalPages: number
+  page: number
+  hasNextPage: boolean
 }
 
 function getMediaUrl(media: unknown): string | null {
@@ -65,17 +67,11 @@ function timeAgo(dateStr: string): string {
 
 function PostCard({
   post,
-  organizerName,
-  avatarUrl,
-  isOwner,
   onDelete,
   onEdit,
   onLike,
 }: {
   post: Post
-  organizerName: string
-  avatarUrl?: string | null
-  isOwner: boolean
   onDelete: (id: number) => void
   onEdit: (post: Post) => void
   onLike: (postId: number, liked: boolean) => void
@@ -86,6 +82,11 @@ function PostCard({
   const user = useAuthStore((s) => s.user)
   const postImageUrl = getMediaUrl(post.image)
 
+  const author = typeof post.author === 'object' ? post.author : null
+  const authorName = author?.name || 'Unknown'
+  const authorAvatar = getMediaUrl(author?.avatar)
+  const authorId = author?.id
+
   // Check if current user liked this post
   const isLiked =
     post.likedBy?.some((l) => {
@@ -93,7 +94,10 @@ function PostCard({
       return likeUserId === Number(user?.id)
     }) || false
 
-  const initials = organizerName
+  // Check if current user owns this post
+  const isOwner = authorId === Number(user?.id)
+
+  const initials = authorName
     .split(' ')
     .map((w) => w[0])
     .join('')
@@ -105,11 +109,14 @@ function PostCard({
       <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {avatarUrl ? (
+          <Link
+            href={authorId ? `/organizers/${authorId}` : '#'}
+            className="flex items-center gap-3 hover:opacity-80 transition"
+          >
+            {authorAvatar ? (
               <img
-                src={avatarUrl}
-                alt={organizerName}
+                src={authorAvatar}
+                alt={authorName}
                 className="size-10 rounded-full object-cover shrink-0"
               />
             ) : (
@@ -118,10 +125,10 @@ function PostCard({
               </div>
             )}
             <div>
-              <p className="text-sm font-semibold text-[#12192f]">{organizerName}</p>
+              <p className="text-sm font-semibold text-[#12192f]">{authorName}</p>
               <p className="text-xs text-zinc-400">{timeAgo(post.createdAt)}</p>
             </div>
-          </div>
+          </Link>
 
           {isOwner && (
             <div className="relative">
@@ -233,106 +240,82 @@ function PostCard({
       </div>
 
       {/* Comments Modal */}
-      {showComments && <CommentsModal postId={post.id} onClose={() => setShowComments(false)} />}
+      {showComments && (
+        <CommentsModal
+          postId={post.id}
+          onClose={() => setShowComments(false)}
+          onCommentAdded={() => {
+            // Refresh will happen via the modal's internal state
+          }}
+        />
+      )}
     </>
   )
 }
 
-// Edit Post Modal
-function EditPostModal({
-  post,
-  onClose,
-  onSaved,
-}: {
-  post: Post
-  onClose: () => void
-  onSaved: () => void
-}) {
-  const [content, setContent] = useState(post.content)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault()
-    if (!content.trim()) return
-    setSaving(true)
-    setError(null)
-
-    try {
-      await apiClient.patch(`/api/posts/${post.id}`, { content: content.trim() })
-      onSaved()
-      onClose()
-    } catch (err: any) {
-      setError(err.message || 'Failed to update post')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between border-b border-zinc-100 px-6 py-4">
-          <h2 className="text-lg font-bold text-[#12192f]">Edit Post</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex size-8 items-center justify-center rounded-full hover:bg-zinc-100 transition"
-          >
-            <span className="text-zinc-500 text-xl">&times;</span>
-          </button>
-        </div>
-        <form onSubmit={handleSave} className="p-6 space-y-4">
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={5}
-            maxLength={2000}
-            className="w-full resize-none rounded-xl border border-zinc-200 px-4 py-3 text-sm text-[#12192f] placeholder:text-zinc-400 focus:border-[#5151eb] focus:ring-2 focus:ring-[#5151eb]/20 outline-none transition"
-          />
-          {error && <p className="text-sm text-red-500">{error}</p>}
-          <div className="flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-xl px-5 py-2.5 text-sm font-semibold text-zinc-600 hover:bg-zinc-100 transition"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving || !content.trim()}
-              className="flex items-center gap-2 rounded-xl bg-[#5151eb] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#4040d0] transition disabled:opacity-50"
-            >
-              {saving && <Loader2 className="size-4 animate-spin" />}
-              {saving ? 'Saving...' : 'Save'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
-}
-
-export function OrganizerFeed({ organizerId, isOwner, avatarUrl, organizerName }: Props) {
+export function FeedSection() {
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
-  const [editingPost, setEditingPost] = useState<Post | null>(null)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [page, setPage] = useState(1)
+  const [hasNextPage, setHasNextPage] = useState(false)
+  const observerRef = useRef<IntersectionObserver | null>(null)
+  const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
-  const fetchPosts = useCallback(async () => {
+  const fetchPosts = useCallback(async (pageNum: number, append: boolean = false) => {
+    if (pageNum === 1) {
+      setLoading(true)
+    } else {
+      setLoadingMore(true)
+    }
+
     try {
-      const data = await apiClient.get<{ docs: Post[] }>(`/api/organizer/${organizerId}/posts`)
-      setPosts(data.docs)
+      const data = await apiClient.get<PostsResponse>(`/api/feed?page=${pageNum}&limit=10`)
+      if (append) {
+        setPosts((prev) => [...prev, ...data.docs])
+      } else {
+        setPosts(data.docs)
+      }
+      setHasNextPage(data.hasNextPage)
+      setPage(pageNum)
     } catch {
       // silently fail
     } finally {
       setLoading(false)
+      setLoadingMore(false)
     }
-  }, [organizerId])
+  }, [])
 
   useEffect(() => {
-    fetchPosts()
+    fetchPosts(1)
   }, [fetchPosts])
+
+  // Infinite scroll
+  useEffect(() => {
+    if (!hasNextPage || loadingMore) return
+
+    const options = {
+      root: null,
+      rootMargin: '100px',
+      threshold: 0.1,
+    }
+
+    observerRef.current = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        fetchPosts(page + 1, true)
+      }
+    }, options)
+
+    if (loadMoreRef.current) {
+      observerRef.current.observe(loadMoreRef.current)
+    }
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect()
+      }
+    }
+  }, [hasNextPage, loadingMore, page, fetchPosts])
 
   async function handleDelete(postId: number) {
     if (!confirm('Are you sure you want to delete this post?')) return
@@ -369,54 +352,35 @@ export function OrganizerFeed({ organizerId, isOwner, avatarUrl, organizerName }
     )
   }
 
+  if (posts.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 py-16 text-center">
+        <ImageIcon className="size-10 text-zinc-300 mb-3" />
+        <p className="text-base font-semibold text-zinc-400">No posts yet</p>
+        <p className="text-sm text-zinc-400 mt-1">Check back later for updates from organizers</p>
+      </div>
+    )
+  }
+
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
-      {/* Create post form (only for owner) */}
-      {isOwner && (
-        <OrganizerCreatePost
-          onPostCreated={fetchPosts}
-          avatarUrl={avatarUrl}
-          organizerName={organizerName}
-        />
-      )}
-
-      {/* Posts list */}
-      {posts.length === 0 && !isOwner && (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 py-16 text-center">
-          <MessageCircle className="size-10 text-zinc-300 mb-3" />
-          <p className="text-base font-semibold text-zinc-400">No posts yet</p>
-        </div>
-      )}
-
-      {posts.length === 0 && isOwner && (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 py-12 text-center">
-          <MessageCircle className="size-10 text-zinc-300 mb-3" />
-          <p className="text-base font-semibold text-zinc-400">
-            Share your first update with followers
-          </p>
-        </div>
-      )}
-
+    <div className="space-y-4">
       {posts.map((post) => (
         <PostCard
           key={post.id}
           post={post}
-          organizerName={organizerName}
-          avatarUrl={avatarUrl}
-          isOwner={isOwner}
           onDelete={handleDelete}
-          onEdit={setEditingPost}
+          onEdit={() => {
+            // TODO: Implement edit modal
+          }}
           onLike={handleLike}
         />
       ))}
 
-      {/* Edit modal */}
-      {editingPost && (
-        <EditPostModal
-          post={editingPost}
-          onClose={() => setEditingPost(null)}
-          onSaved={fetchPosts}
-        />
+      {/* Load more trigger */}
+      {hasNextPage && (
+        <div ref={loadMoreRef} className="flex items-center justify-center py-4">
+          {loadingMore && <Loader2 className="size-5 animate-spin text-[#5151eb]" />}
+        </div>
       )}
     </div>
   )

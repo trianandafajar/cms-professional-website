@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Heart } from 'lucide-react'
 import { useLikesStore } from '@/stores/likesStore'
+import { useAuthGate } from '@/hooks/useAuthGate'
 
 type Props = {
   eventId: number
@@ -17,6 +18,7 @@ type Props = {
 export function LikeButton({ eventId, onToggle, variant = 'card', className = '' }: Props) {
   const isLikedFromStore = useLikesStore((s) => s.isLiked(eventId))
   const toggleLike = useLikesStore((s) => s.toggleLike)
+  const { gate } = useAuthGate()
 
   // Prevent hydration mismatch: start with false on server, sync on client
   const [isLiked, setIsLiked] = useState(false)
@@ -35,8 +37,11 @@ export function LikeButton({ eventId, onToggle, variant = 'card', className = ''
   const handleClick = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    const newStatus = await toggleLike(eventId)
-    onToggle?.(newStatus)
+    // Require login to like
+    gate(async () => {
+      const newStatus = await toggleLike(eventId)
+      onToggle?.(newStatus)
+    })()
   }
 
   if (variant === 'icon-only') {

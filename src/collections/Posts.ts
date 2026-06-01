@@ -23,6 +23,17 @@ export const Posts: CollectionConfig = {
       return Boolean(req.user.isOrganizer)
     },
   },
+  hooks: {
+    beforeValidate: [
+      ({ data, req }) => {
+        // Auto-set author from logged-in user on create
+        if (req.user && data && !data.author) {
+          data.author = req.user.id
+        }
+        return data
+      },
+    ],
+  },
   fields: [
     {
       name: 'author',
@@ -47,6 +58,31 @@ export const Posts: CollectionConfig = {
       label: 'Post Image (optional)',
     },
     {
+      name: 'link',
+      type: 'text',
+      label: 'Link URL (optional)',
+      admin: {
+        description: 'External link to include with the post (e.g., event registration page)',
+      },
+      validate: (value: string | string[] | null | undefined) => {
+        if (!value || Array.isArray(value) || value === null) return true
+        try {
+          new URL(value)
+          return true
+        } catch {
+          return 'Please enter a valid URL (e.g., https://example.com)'
+        }
+      },
+    },
+    {
+      name: 'linkTitle',
+      type: 'text',
+      label: 'Link Title (optional)',
+      admin: {
+        description: 'Display text for the link',
+      },
+    },
+    {
       name: 'likesCount',
       type: 'number',
       defaultValue: 0,
@@ -62,6 +98,88 @@ export const Posts: CollectionConfig = {
         readOnly: true,
       },
     },
+    {
+      name: 'likedBy',
+      type: 'array',
+      label: 'Users who liked',
+      admin: {
+        readOnly: true,
+      },
+      fields: [
+        {
+          name: 'user',
+          type: 'relationship',
+          relationTo: 'users',
+          required: true,
+        },
+      ],
+    },
   ],
   timestamps: true,
+  // Collection-level endpoints - mounted at /api/posts/{path}
+  endpoints: [
+    // Toggle like on a post
+    {
+      path: '/:postId/like',
+      method: 'post',
+      handler: async (req) => {
+        const { payload, user } = req
+
+        if (!user) {
+          return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        const postId = Number(req.routeParams?.postId)
+        if (!postId || isNaN(postId)) {
+          return Response.json({ error: 'Invalid post ID' }, { status: 400 })
+        }
+
+        const post = await payload.findByID({
+          collection: 'posts',
+          id: postId,
+          depth: 0,
+        })
+
+        if (!post) {
+          return Response.json({ error: 'Post not found' }, { status: 404 })
+        }
+
+        const likedBy = post.likedBy || []
+        const isLiked = likedBy.some((l: any) => {
+          const likeUserId = typeof l.user === 'object' ? l.user.id : l.user
+          return likeUserId === user.id
+        })
+
+        let updatedLikedBy: any[]
+        let newCount: number
+
+        if (isLiked) {
+          updatedLikedBy = likedBy.filter((l: any) => {
+            const likeUserId = typeof l.user === 'object' ? l.user.id : l.user
+            return likeUserId !== user.id
+          })
+          newCount = Math.max(0, (post.likesCount || 0) - 1)
+        } else {
+          // Like
+          updatedLikedBy = [...likedBy, { user: user.id }]
+          newCount = (post.likesCount || 0) + 1
+        }
+
+        await payload.update({
+          collection: 'posts',
+          id: postId,
+          data: {
+            likedBy: updatedLikedBy,
+            likesCount: newCount,
+          },
+        })
+
+        return Response.json({
+          liked: !isLiked,
+          postId,
+          likesCount: newCount,
+        })
+      },
+    },
+  ],
 }

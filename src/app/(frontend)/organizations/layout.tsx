@@ -85,6 +85,13 @@ function getInitials(value?: string | null) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
+function getAvatarUrl(avatar: unknown): string | null {
+  if (avatar && typeof avatar === 'object' && 'url' in avatar) {
+    return (avatar as { url?: string }).url ?? null
+  }
+  return null
+}
+
 export default function OrganizationsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -109,8 +116,8 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
 
     async function revalidateSession() {
       try {
-        const res = await fetch('/api/users/me', { credentials: 'include' })
-        console.log('[OrgLayout] /api/users/me response:', res.status, res.ok)
+        const res = await fetch('/api/me', { credentials: 'include' })
+        console.log('[OrgLayout] /api/me response:', res.status, res.ok)
         if (!res.ok) {
           useAuthStore.getState().setUser(null)
           router.push('/auth/signin')
@@ -120,6 +127,9 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
         if (!data?.user) {
           useAuthStore.getState().setUser(null)
           router.push('/auth/signin')
+        } else {
+          // Update user data in store to ensure avatar is populated
+          useAuthStore.getState().setUser(data.user)
         }
       } catch (err) {
         console.log('[OrgLayout] Revalidation error:', err)
@@ -148,6 +158,7 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
   const displayName = user?.name || user?.email || ''
   const displayEmail = user?.email || ''
   const initials = getInitials(user?.name || user?.email)
+  const avatarUrl = getAvatarUrl(user?.avatar)
 
   const sidebarItems = [
     { icon: Home, href: '/organizations/dashboard', label: 'Dashboard', isBottom: false },
@@ -247,9 +258,17 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
                   className="flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 py-1 pl-1 pr-3 text-sm font-medium text-[#5151eb] transition hover:bg-indigo-100"
                   aria-label="Open profile menu"
                 >
-                  <span className="flex size-8 items-center justify-center rounded-full bg-[#5151eb] text-xs font-semibold text-white">
-                    {initials}
-                  </span>
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={displayName || 'User'}
+                      className="size-8 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="flex size-8 items-center justify-center rounded-full bg-[#5151eb] text-xs font-semibold text-white">
+                      {initials}
+                    </span>
+                  )}
                   <span className="hidden max-w-[140px] truncate sm:inline">
                     {displayName || 'User'}
                   </span>
@@ -264,9 +283,17 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
                 {/* Header */}
                 <div className="border-b border-zinc-100 px-4 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex size-11 items-center justify-center rounded-full bg-[#5151eb] text-base font-semibold text-white">
-                      {initials}
-                    </div>
+                    {avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt={displayName || 'User'}
+                        className="size-11 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-11 items-center justify-center rounded-full bg-[#5151eb] text-base font-semibold text-white">
+                        {initials}
+                      </div>
+                    )}
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-zinc-900">
                         {displayName || 'User'}

@@ -69,6 +69,9 @@ export default function OnboardingConfirmPage() {
           payload.role = roleId
         }
         payload.roleName = ORGANIZER_ROLE_NAME
+        payload.isOrganizer = true
+      } else {
+        payload.isOrganizer = false
       }
 
       const res = await apiClient.patch<{ doc: typeof user }>(`/api/users/${user.id}`, payload)
@@ -78,7 +81,16 @@ export default function OnboardingConfirmPage() {
       }
 
       clear()
-      router.push(isOrganizer ? '/dashboard' : '/events')
+
+      // Check for stored redirect from signup
+      const storedRedirect = sessionStorage.getItem('postOnboardingRedirect')
+      if (storedRedirect) {
+        sessionStorage.removeItem('postOnboardingRedirect')
+        router.push(decodeURIComponent(storedRedirect))
+        return
+      }
+
+      router.push(isOrganizer ? '/organizations/dashboard' : '/my/tickets')
     } catch (err: any) {
       setError(err?.message || 'Failed to save preferences')
     } finally {
