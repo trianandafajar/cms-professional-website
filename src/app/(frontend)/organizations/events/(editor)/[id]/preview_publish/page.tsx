@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { useParams } from 'next/navigation'
-import { Calendar, MapPin, Ticket, Upload, X, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
+import { Calendar, MapPin, Ticket, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -14,94 +13,47 @@ import { TagsInput } from '@/components/ui/tags-input'
 import { useEventEditorStore } from '@/stores/eventEditorStore'
 
 export default function PreviewPublishPage() {
-  const params = useParams()
-  const eventId = params.id as string
-  const [tags, setTags] = useState<string[]>(['testevent', 'test2024', 'test_session'])
-  const [visibility, setVisibility] = useState<'public' | 'private'>('public')
-
   // Banner from shared store (syncs with sidebar preview)
   const {
-    bannerImage,
+    bannerImages,
+
     bannerZoom: zoom,
     bannerPosX: posX,
     bannerPosY: posY,
+
     eventTitle,
     eventDate,
-    eventLocation,
-    setBannerImage,
+
+    locationTitle,
+
+    tickets,
+
+    eventType,
+    category,
+    subcategory,
+
+    tags,
+    visibility,
+    organizerName,
+
+    setEventType,
+    setCategory,
+    setSubcategory,
+
+    setTags,
+    setVisibility,
+    setOrganizerName,
+
     setBannerZoom: setZoom,
     setBannerPosition,
     resetBanner,
-    setEventData,
   } = useEventEditorStore()
 
-  // Load event data if store is empty (direct navigation / refresh)
-  useEffect(() => {
-    if (eventTitle || !eventId) return
-
-    async function loadEvent() {
-      try {
-        const res = await fetch(`/api/events/${eventId}?depth=1`, { credentials: 'include' })
-        if (!res.ok) return
-        const data = await res.json()
-
-        const coverUrl =
-          typeof data.coverImage === 'object' && data.coverImage?.url
-            ? data.coverImage.url
-            : typeof data.bannerImage === 'object' && data.bannerImage?.url
-              ? data.bannerImage.url
-              : ''
-
-        const startDate = data.startDate
-          ? new Date(data.startDate).toLocaleDateString('en-US', {
-              weekday: 'short',
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric',
-              hour: 'numeric',
-              minute: '2-digit',
-            })
-          : ''
-
-        const location = data.venue || data.address || (typeof data.location === 'object' && data.location?.name) || (typeof data.location === 'string' ? '' : '')
-
-        setEventData({
-          eventTitle: data.title || '',
-          eventDate: startDate,
-          eventStatus: data.status || 'draft',
-          eventLocation: typeof location === 'string' ? location : '',
-          bannerImage: coverUrl,
-        })
-      } catch {
-        // ignore
-      }
-    }
-
-    loadEvent()
-  }, [eventId, eventTitle, setEventData])
+  const bannerImage = bannerImages[0]?.url ?? ''
 
   const [isDragging, setIsDragging] = useState(false)
   const dragStart = useRef({ x: 0, y: 0, posX: 50, posY: 50 })
   const editorRef = useRef<HTMLDivElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      const result = ev.target?.result
-      if (typeof result === 'string') {
-        setBannerImage(result)
-      }
-    }
-    reader.readAsDataURL(file)
-    e.target.value = ''
-  }
-
-  function removeBanner() {
-    setBannerImage('')
-  }
 
   function resetPosition() {
     resetBanner()
@@ -156,14 +108,6 @@ export default function PreviewPublishPage() {
   return (
     <div className="max-h-[calc(100vh-93px)] -mt-16 pt-10 overflow-y-auto pb-32 scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
       {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleImageUpload}
-        className="hidden"
-      />
-
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Preview & Publish</h1>
@@ -185,54 +129,10 @@ export default function PreviewPublishPage() {
                   : 'Upload an image and adjust position & zoom'}
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              {bannerImage && (
-                <>
-                  <button
-                    onClick={handleZoomOut}
-                    disabled={zoom <= 1}
-                    className="flex size-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <ZoomOut size={14} />
-                  </button>
-                  <span className="text-xs font-medium text-zinc-500 w-10 text-center">
-                    {Math.round(zoom * 100)}%
-                  </span>
-                  <button
-                    onClick={handleZoomIn}
-                    disabled={zoom >= 3}
-                    className="flex size-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <ZoomIn size={14} />
-                  </button>
-                  <button
-                    onClick={resetPosition}
-                    className="flex size-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:bg-zinc-50"
-                    title="Reset position"
-                  >
-                    <RotateCcw size={14} />
-                  </button>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="flex size-8 items-center justify-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:bg-zinc-50"
-                    title="Change image"
-                  >
-                    <Upload size={14} />
-                  </button>
-                  <button
-                    onClick={removeBanner}
-                    className="flex size-8 items-center justify-center rounded-lg border border-zinc-200 text-red-500 transition hover:bg-red-50"
-                    title="Remove image"
-                  >
-                    <X size={14} />
-                  </button>
-                </>
-              )}
-            </div>
           </div>
 
           {/* Editor area */}
-          {bannerImage ? (
+          {bannerImage && (
             <div
               ref={editorRef}
               onMouseDown={handleMouseDown}
@@ -244,38 +144,6 @@ export default function PreviewPublishPage() {
               } ${isDragging ? 'cursor-grabbing' : ''}`}
               style={bannerStyle}
             >
-              {/* Overlay hint */}
-              {zoom > 1 && !isDragging && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/10 opacity-0 transition hover:opacity-100">
-                  <span className="rounded-lg bg-black/60 px-3 py-1.5 text-xs font-medium text-white">
-                    Drag to reposition
-                  </span>
-                </div>
-              )}
-            </div>
-          ) : (
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-200 py-16 text-sm font-medium text-zinc-500 transition hover:border-[#5151eb] hover:text-[#5151eb]"
-            >
-              <Upload size={16} />
-              Upload Banner Image
-            </button>
-          )}
-
-          {/* Zoom slider */}
-          {bannerImage && (
-            <div className="mt-3 flex items-center gap-3">
-              <ZoomOut size={12} className="text-zinc-400" />
-              <input
-                type="range"
-                min={100}
-                max={300}
-                value={zoom * 100}
-                onChange={(e) => setZoom(Number(e.target.value) / 100)}
-                className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-zinc-200 accent-[#5151eb]"
-              />
-              <ZoomIn size={12} className="text-zinc-400" />
             </div>
           )}
         </div>
@@ -309,10 +177,10 @@ export default function PreviewPublishPage() {
                     <Calendar size={15} className="shrink-0 text-[#5151eb]" />
                     <span>{eventDate || 'No date set'}</span>
                   </div>
-                  {eventLocation && (
+                  {locationTitle && (
                     <div className="flex items-center gap-3 text-sm text-zinc-600">
                       <MapPin size={15} className="shrink-0 text-[#5151eb]" />
-                      <span>{eventLocation}</span>
+                      <span>{locationTitle}</span>
                     </div>
                   )}
                   <div className="flex items-center gap-3 text-sm text-zinc-600">
@@ -359,7 +227,7 @@ export default function PreviewPublishPage() {
                   <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
                     Type
                   </label>
-                  <Select defaultValue="conference">
+                  <Select value={eventType} onValueChange={setEventType}>
                     <SelectTrigger className="mt-1.5 h-10 w-full rounded-lg border-zinc-200 text-sm">
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
@@ -377,7 +245,7 @@ export default function PreviewPublishPage() {
                     <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
                       Category
                     </label>
-                    <Select defaultValue="technology">
+                    <Select value={category} onValueChange={setCategory}>
                       <SelectTrigger className="mt-1.5 h-10 w-full rounded-lg border-zinc-200 text-sm">
                         <SelectValue placeholder="Category" />
                       </SelectTrigger>
@@ -393,7 +261,7 @@ export default function PreviewPublishPage() {
                     <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
                       Subcategory
                     </label>
-                    <Select defaultValue="frontend">
+                    <Select value={subcategory} onValueChange={setSubcategory}>
                       <SelectTrigger className="mt-1.5 h-10 w-full rounded-lg border-zinc-200 text-sm">
                         <SelectValue placeholder="Subcategory" />
                       </SelectTrigger>
@@ -415,6 +283,7 @@ export default function PreviewPublishPage() {
               <div className="mt-3">
                 <TagsInput
                   value={tags}
+                  onValueChange={setTags}
                   options={[
                     'Technology',
                     'Frontend',
@@ -480,7 +349,8 @@ export default function PreviewPublishPage() {
             <div className="rounded-xl border border-zinc-200 bg-white p-5">
               <h3 className="text-sm font-semibold text-zinc-900">Organizer</h3>
               <input
-                defaultValue="Eventbro Organizer"
+                value={organizerName}
+                onChange={(e) => setOrganizerName(e.target.value)}
                 className="mt-3 h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-[#5151eb]"
               />
             </div>

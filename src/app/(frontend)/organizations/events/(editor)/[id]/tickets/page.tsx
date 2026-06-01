@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { useEventEditorStore } from '@/stores/eventEditorStore'
 import { Plus, Trash2, GripVertical, ChevronDown, ChevronUp, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import TicketPreviewCard from '@/components/organizations/ticket-preview'
@@ -12,98 +13,24 @@ import {
   getTicketBackground,
 } from '@/lib/ticket-designs'
 
-// ─── Types ───
-interface TicketPerk {
-  id: string
-  perk: string
-}
-
-interface TicketType {
-  id: string
-  name: string
-  description: string
-  price: number
-  currency: 'IDR' | 'USD'
-  quantity: number
-  maxPerOrder: number
-  perks: TicketPerk[]
-  salesStart: string
-  salesEnd: string
-  isHidden: boolean
-  sortOrder: number
-  designId: string | null
-  designSource: 'designer' | 'preset'
-}
-
-// ─── Initial dummy data ───
-const initialTickets: TicketType[] = [
-  {
-    id: 'ticket-0',
-    name: 'Free Entry',
-    description: 'Free access to the event main stage and exhibition area',
-    price: 0,
-    currency: 'IDR',
-    quantity: 1000,
-    maxPerOrder: 5,
-    perks: [
-      { id: 'p0a', perk: 'Access to main stage' },
-      { id: 'p0b', perk: 'Exhibition area access' },
-    ],
-    salesStart: '',
-    salesEnd: '',
-    isHidden: false,
-    sortOrder: 0,
-    designId: 'ocean',
-    designSource: 'preset',
-  },
-  {
-    id: 'ticket-1',
-    name: 'General Admission',
-    description: 'Standard entry to the event with access to all main sessions',
-    price: 150000,
-    currency: 'IDR',
-    quantity: 500,
-    maxPerOrder: 5,
-    perks: [
-      { id: 'p1', perk: 'Access to all main sessions' },
-      { id: 'p2', perk: 'Event swag bag' },
-      { id: 'p3', perk: 'Lunch included' },
-    ],
-    salesStart: '',
-    salesEnd: '',
-    isHidden: false,
-    sortOrder: 1,
-    designId: 'general-admission',
-    designSource: 'designer',
-  },
-  {
-    id: 'ticket-2',
-    name: 'VIP',
-    description: 'Premium experience with front-row seating and exclusive networking',
-    price: 500000,
-    currency: 'IDR',
-    quantity: 100,
-    maxPerOrder: 3,
-    perks: [
-      { id: 'p4', perk: 'Front-row seating' },
-      { id: 'p5', perk: 'Exclusive networking lounge' },
-      { id: 'p6', perk: 'Meet & greet with speakers' },
-      { id: 'p7', perk: 'Premium swag kit' },
-      { id: 'p8', perk: 'Lunch & dinner included' },
-    ],
-    salesStart: '',
-    salesEnd: '',
-    isHidden: false,
-    sortOrder: 2,
-    designId: 'vip',
-    designSource: 'designer',
-  },
-]
-
 export default function EventTicketsPage() {
-  const [tickets, setTickets] = useState<TicketType[]>(initialTickets)
+  const {
+    tickets,
+
+    addTicket,
+    removeTicket,
+    updateTicket,
+
+    addPerk,
+    updatePerk,
+    removePerk,
+
+    saveEventSettings,
+    isSavingTickets,
+  } = useEventEditorStore()
+
   const [expandedId, setExpandedId] = useState<string | null>(tickets[0]?.id || null)
-  const [saving, setSaving] = useState(false)
+
   const [saved, setSaved] = useState(false)
 
   // Drag and drop state
@@ -180,7 +107,9 @@ export default function EventTicketsPage() {
     const newTickets = [...tickets]
     const [moved] = newTickets.splice(fromIdx, 1)
     newTickets.splice(toIdx, 0, moved)
-    setTickets(newTickets)
+    useEventEditorStore.setState({
+      tickets: newTickets,
+    })
     setDraggedId(null)
   }
 
@@ -190,72 +119,16 @@ export default function EventTicketsPage() {
     dragCounter.current = 0
   }
 
-  function addTicket() {
-    const id = `ticket-${Date.now()}`
-    const newTicket: TicketType = {
-      id,
-      name: '',
-      description: '',
-      price: 0,
-      currency: 'IDR',
-      quantity: 100,
-      maxPerOrder: 10,
-      perks: [],
-      salesStart: '',
-      salesEnd: '',
-      isHidden: false,
-      sortOrder: tickets.length,
-      designId: null,
-      designSource: 'designer',
-    }
-    setTickets((prev) => [...prev, newTicket])
-    setExpandedId(id)
-  }
-
-  function removeTicket(id: string) {
-    setTickets((prev) => prev.filter((t) => t.id !== id))
-    if (expandedId === id) setExpandedId(null)
-  }
-
-  function updateTicket(id: string, updates: Partial<TicketType>) {
-    setTickets((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)))
-  }
-
-  function addPerk(ticketId: string) {
-    setTickets((prev) =>
-      prev.map((t) =>
-        t.id === ticketId
-          ? { ...t, perks: [...t.perks, { id: `perk-${Date.now()}`, perk: '' }] }
-          : t,
-      ),
-    )
-  }
-
-  function updatePerk(ticketId: string, perkId: string, value: string) {
-    setTickets((prev) =>
-      prev.map((t) =>
-        t.id === ticketId
-          ? { ...t, perks: t.perks.map((p) => (p.id === perkId ? { ...p, perk: value } : p)) }
-          : t,
-      ),
-    )
-  }
-
-  function removePerk(ticketId: string, perkId: string) {
-    setTickets((prev) =>
-      prev.map((t) =>
-        t.id === ticketId ? { ...t, perks: t.perks.filter((p) => p.id !== perkId) } : t,
-      ),
-    )
-  }
-
   async function handleSave() {
-    setSaving(true)
     setSaved(false)
-    await new Promise((r) => setTimeout(r, 1000))
-    setSaving(false)
+
+    await saveEventSettings()
+
     setSaved(true)
-    setTimeout(() => setSaved(false), 3000)
+
+    setTimeout(() => {
+      setSaved(false)
+    }, 3000)
   }
 
   return (
@@ -277,10 +150,10 @@ export default function EventTicketsPage() {
           )}
           <Button
             onClick={handleSave}
-            disabled={saving}
+            disabled={isSavingTickets}
             className="rounded-xl bg-[#5151eb] px-5 text-sm font-semibold text-white hover:bg-[#3d3dcc] disabled:opacity-60"
           >
-            {saving ? 'Saving...' : 'Save Changes'}
+            {isSavingTickets ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
       </div>

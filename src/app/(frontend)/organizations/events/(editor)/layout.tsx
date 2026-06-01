@@ -1,35 +1,62 @@
-// src/app/(frontend)/organizations/events/(editor)/layout.tsx
-
 'use client'
 
-import React from 'react'
+import React, { useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 
 import { ArrowLeft, Calendar, CheckCircle2, Circle } from 'lucide-react'
+
 import { useEventEditorStore } from '@/stores/eventEditorStore'
 
 export default function EventEditorLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
+
   const {
     bannerImages,
     bannerZoom,
     bannerPosX,
     bannerPosY,
+
     eventTitle,
     eventDate,
     eventStatus,
-    eventLocation,
+
+    locationQuery,
+
+    createDraftEvent,
+    loadEvent,
+
+    saveEventSettings,
+
+    isSavingEvent,
+    isSavingTickets,
+    publishEvent,
   } = useEventEditorStore()
 
   const bannerImage = bannerImages[0]?.url ?? ''
-  const { createDraftEvent, isSavingEvent } = useEventEditorStore()
 
   const segments = pathname.split('/')
+
   const eventsIdx = segments.indexOf('events')
+
   const eventId = eventsIdx >= 0 ? segments[eventsIdx + 1] : null
+
   const isCreatePage = eventId === 'create'
+
+  useEffect(() => {
+    if (!eventId || isCreatePage) {
+      return
+    }
+
+    const numericId = Number(eventId)
+
+    if (Number.isNaN(numericId)) {
+      return
+    }
+
+    loadEvent(numericId)
+  }, [eventId, isCreatePage, loadEvent])
 
   const currentStep = pathname.includes('/tickets')
     ? 1
@@ -57,32 +84,45 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
 
   async function handleSaveAndContinue() {
     if (isCreatePage) {
-      const eventId =
-        await createDraftEvent()
+      const createdEventId = await createDraftEvent()
 
-      if (eventId) {
-        router.push(
-          `/organizations/events/${eventId}/tickets`,
-        )
+      if (createdEventId) {
+        router.push(`/organizations/events/${createdEventId}/tickets`)
       }
 
       return
     }
 
-    if (
-      currentStep === 0 &&
-      steps[1].href
-    ) {
-      router.push(steps[1].href)
-    } else if (
-      currentStep === 1 &&
-      steps[2].href
-    ) {
-      router.push(steps[2].href)
+    if (currentStep === 0) {
+      if (steps[1].href) {
+        router.push(steps[1].href)
+      }
+
+      return
+    }
+
+    if (currentStep === 1) {
+      await saveEventSettings()
+
+      if (steps[2].href) {
+        router.push(steps[2].href)
+      }
+
+      return
+    }
+
+    if (currentStep === 2) {
+      await saveEventSettings()
+
+      await publishEvent()
+
+      router.push(
+        '/organizations/events/list',
+      )
+
+      return
     }
   }
-
-
 
   return (
     <div className="flex min-h-[calc(100vh-93px)] max-h-[calc(100vh-93px)] bg-[#fafafa] -mt-16 pt-10">
@@ -116,17 +156,22 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
                 <div className="h-full w-full bg-linear-to-br from-[#5151eb]/20 via-indigo-100 to-[#5151eb]/10" />
               )}
             </div>
+
             <div className="bg-white p-4">
-              <h2 className="text-base font-bold text-zinc-900 truncate">
+              <h2 className="truncate text-base font-bold text-zinc-900">
                 {eventTitle || (isCreatePage ? 'New Event' : 'Untitled Event')}
               </h2>
+
               <div className="mt-3 flex items-center gap-2 text-zinc-500">
                 <Calendar size={14} />
+
                 <span className="text-xs font-medium">{eventDate || 'No date set'}</span>
               </div>
-              {eventLocation && (
-                <p className="mt-1.5 text-xs text-zinc-400 truncate">{eventLocation}</p>
+
+              {locationQuery && (
+                <p className="mt-1.5 truncate text-xs text-zinc-400">{locationQuery}</p>
               )}
+
               <span
                 className={`mt-3 inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${
                   eventStatus === 'published'
@@ -147,11 +192,14 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-zinc-400">
               Steps
             </p>
+
             <div className="space-y-1">
               {steps.map((step, idx) => {
                 const isActive = idx === currentStep
+
                 const isCompleted = idx < currentStep
-                const isClickable = step.href && !isCreatePage
+
+                const isClickable = !!step.href && !isCreatePage
 
                 const content = (
                   <div className="flex w-full items-start gap-3 p-3 text-left">
@@ -164,6 +212,7 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
                         <Circle size={18} className="text-zinc-300" />
                       )}
                     </div>
+
                     <div>
                       <h3
                         className={`text-sm font-medium ${
@@ -176,6 +225,7 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
                       >
                         {step.title}
                       </h3>
+
                       <p className="mt-0.5 text-xs leading-relaxed text-zinc-500">
                         {step.description}
                       </p>
@@ -213,7 +263,10 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
             <button
               onClick={() => {
                 const prevHref = steps[currentStep - 1]?.href
-                if (prevHref) router.push(prevHref)
+
+                if (prevHref) {
+                  router.push(prevHref)
+                }
               }}
               className="rounded-lg border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
             >
@@ -222,15 +275,21 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
           ) : (
             <div />
           )}
+
           <button
             onClick={handleSaveAndContinue}
-            disabled={isSavingEvent}            
-            className="rounded-lg bg-[#5151eb] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#4040d9] disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
+            disabled={isSavingEvent || isSavingTickets}
+            className="flex items-center gap-2 rounded-lg bg-[#5151eb] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#4040d9] disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {isSavingEvent && (
+            {isSavingEvent || isSavingTickets && (
               <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
             )}
-            {isSavingEvent ? 'Saving...' : currentStep === 2 ? 'Publish Event' : 'Save and continue'}
+
+            {isSavingEvent
+              ? 'Saving...'
+              : currentStep === 2
+                ? 'Publish Event'
+                : 'Save and continue'}
           </button>
         </div>
       </div>
