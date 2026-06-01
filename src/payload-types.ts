@@ -76,6 +76,7 @@ export interface Config {
     events: Event;
     tickets: Ticket;
     posts: Post;
+    comments: Comment;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -92,6 +93,7 @@ export interface Config {
     events: EventsSelect<false> | EventsSelect<true>;
     tickets: TicketsSelect<false> | TicketsSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
+    comments: CommentsSelect<false> | CommentsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -436,8 +438,43 @@ export interface Post {
   author: number | User;
   content: string;
   image?: (number | null) | Media;
+  /**
+   * External link to include with the post (e.g., event registration page)
+   */
+  link?: string | null;
+  /**
+   * Display text for the link
+   */
+  linkTitle?: string | null;
   likesCount?: number | null;
   commentsCount?: number | null;
+  likedBy?:
+    | {
+        user: number | User;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comments".
+ */
+export interface Comment {
+  id: number;
+  post: number | Post;
+  author: number | User;
+  content: string;
+  /**
+   * Users tagged in this comment
+   */
+  mentions?:
+    | {
+        user: number | User;
+        id?: string | null;
+      }[]
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -500,6 +537,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'posts';
         value: number | Post;
+      } | null)
+    | ({
+        relationTo: 'comments';
+        value: number | Comment;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -732,8 +773,33 @@ export interface PostsSelect<T extends boolean = true> {
   author?: T;
   content?: T;
   image?: T;
+  link?: T;
+  linkTitle?: T;
   likesCount?: T;
   commentsCount?: T;
+  likedBy?:
+    | T
+    | {
+        user?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "comments_select".
+ */
+export interface CommentsSelect<T extends boolean = true> {
+  post?: T;
+  author?: T;
+  content?: T;
+  mentions?:
+    | T
+    | {
+        user?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }

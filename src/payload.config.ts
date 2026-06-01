@@ -18,6 +18,7 @@ import { Comments } from './collections/Comments'
 import { checkinValidateEndpoint } from './endpoints/checkin-validate'
 import { checkinConfirmEndpoint } from './endpoints/checkin-confirm'
 import { checkinStatsEndpoint } from './endpoints/checkin-stats'
+import { meEndpoint } from './endpoints/me'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -62,6 +63,7 @@ export default buildConfig({
     // Check-in: statistics
     checkinStatsEndpoint,
     // Toggle like/unlike an event for the authenticated user
+    meEndpoint,
     {
       path: '/likes/toggle/:eventId',
       method: 'post',
