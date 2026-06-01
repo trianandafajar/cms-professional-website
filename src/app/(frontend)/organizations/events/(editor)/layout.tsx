@@ -17,6 +17,7 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
     bannerZoom,
     bannerPosX,
     bannerPosY,
+    eventSlug,
 
     eventTitle,
     eventDate,
@@ -26,12 +27,14 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
 
     createDraftEvent,
     loadEvent,
+    saveEventDetails,
 
     saveEventSettings,
 
     isSavingEvent,
     isSavingTickets,
     publishEvent,
+    resetEvent
   } = useEventEditorStore()
 
   const bannerImage = bannerImages[0]?.url ?? ''
@@ -40,23 +43,18 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
 
   const eventsIdx = segments.indexOf('events')
 
-  const eventId = eventsIdx >= 0 ? segments[eventsIdx + 1] : null
+  const eventKey = eventsIdx >= 0 ? segments[eventsIdx + 1] : null
 
-  const isCreatePage = eventId === 'create'
+  const isCreatePage = eventKey === 'create'
+  const editorKey = eventSlug || eventKey
 
   useEffect(() => {
-    if (!eventId || isCreatePage) {
+    if (!eventKey || isCreatePage) {
       return
     }
 
-    const numericId = Number(eventId)
-
-    if (Number.isNaN(numericId)) {
-      return
-    }
-
-    loadEvent(numericId)
-  }, [eventId, isCreatePage, loadEvent])
+    loadEvent(eventKey)
+  }, [eventKey, isCreatePage, loadEvent])
 
   const currentStep = pathname.includes('/tickets')
     ? 1
@@ -68,17 +66,17 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
     {
       title: 'Build event page',
       description: 'Add details and let attendees know what to expect',
-      href: isCreatePage ? '/organizations/events/create' : `/organizations/events/${eventId}`,
+      href: isCreatePage ? '/organizations/events/create' : `/organizations/events/${editorKey}`,
     },
     {
       title: 'Add tickets',
       description: 'Create ticket types and pricing',
-      href: isCreatePage ? null : `/organizations/events/${eventId}/tickets`,
+      href: isCreatePage ? null : `/organizations/events/${editorKey}/tickets`,
     },
     {
       title: 'Publish',
       description: 'Preview and publish your event',
-      href: isCreatePage ? null : `/organizations/events/${eventId}/preview_publish`,
+      href: isCreatePage ? null : `/organizations/events/${editorKey}/preview_publish`,
     },
   ]
 
@@ -94,6 +92,8 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
     }
 
     if (currentStep === 0) {
+      await saveEventDetails()
+
       if (steps[1].href) {
         router.push(steps[1].href)
       }
@@ -130,6 +130,7 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
         <div className="border-b border-zinc-100 px-5 py-4">
           <Link
             href="/organizations/events/list"
+            onClick={resetEvent}
             className="flex items-center gap-2 text-sm font-medium text-[#5151eb] hover:text-[#4040d9]"
           >
             <ArrowLeft size={15} />

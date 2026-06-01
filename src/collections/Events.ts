@@ -1,6 +1,8 @@
 // src/collections/Events.ts
 import type { CollectionConfig } from 'payload'
 
+import { slugify } from '@/lib/slugify'
+
 export const Events: CollectionConfig = {
   slug: 'events',
   admin: {
@@ -16,15 +18,64 @@ export const Events: CollectionConfig = {
   },
   hooks: {
     beforeValidate: [
-      ({ data, req, operation }) => {
+      async ({ data, req, operation, originalDoc }) => {
+        const eventData = data ?? {}
+
         if (
           operation === 'create' &&
           req.user
         ) {
-          data.organizer = req.user.id
+          eventData.organizer = req.user.id
         }
 
-        return data
+        if (operation === 'create' && !eventData.slug) {
+          const baseSlug = slugify(String(eventData.title ?? ''))
+
+          if (baseSlug) {
+            let candidate = baseSlug
+            let index = 1
+
+            while (true) {
+              const existing = await req.payload.find({
+                collection: 'events',
+                where: {
+                  slug: {
+                    equals: candidate,
+                  },
+                },
+                limit: 1,
+                depth: 0,
+              })
+
+              const existingDoc = existing.docs[0]
+
+              if (!existingDoc || existingDoc.id === originalDoc?.id) {
+                eventData.slug = candidate
+                break
+              }
+
+              index += 1
+              candidate = `${baseSlug}-${index}`
+            }
+          }
+        }
+
+        if (!eventData.coverImage) {
+          const galleryImages = Array.isArray(eventData.galleryImages) ? eventData.galleryImages : []
+          const firstGalleryImage = galleryImages[0]?.image
+
+          if (eventData.bannerImage) {
+            eventData.coverImage = eventData.bannerImage
+          } else if (firstGalleryImage) {
+            eventData.coverImage = firstGalleryImage
+          }
+        }
+
+        if (!eventData.bannerImage && eventData.coverImage) {
+          eventData.bannerImage = eventData.coverImage
+        }
+
+        return eventData
       },
     ]
   },
@@ -36,6 +87,14 @@ export const Events: CollectionConfig = {
       label: 'Event Title',
     },
     {
+      name: 'summary',
+      type: 'text',
+      label: 'Summary',
+      admin: {
+        description: 'Short event summary shown in cards and editor previews',
+      },
+    },
+    {
       name: 'slug',
       type: 'text',
       unique: true,
@@ -45,8 +104,12 @@ export const Events: CollectionConfig = {
     },
     {
       name: 'description',
-      type: 'richText',
+      type: 'textarea',
       label: 'Description',
+      admin: {
+        rows: 10,
+        description: 'Supports the HTML produced by the description editor',
+      },
     },
     {
       name: 'coverImage',
@@ -226,8 +289,22 @@ export const Events: CollectionConfig = {
           required: true,
           label: 'Price',
           defaultValue: 0,
+          min: 0,
           admin: {
             description: 'Price in IDR. Set to 0 for free tickets.',
+          },
+        },
+        {
+          name: 'salesEndMode',
+          type: 'select',
+          label: 'Sales End Mode',
+          defaultValue: 'limited',
+          options: [
+            { label: 'Limited date', value: 'limited' },
+            { label: 'Until sold out', value: 'unlimited' },
+          ],
+          admin: {
+            description: 'Choose whether ticket sales stop on a date or when sold out',
           },
         },
         {
@@ -296,6 +373,7 @@ export const Events: CollectionConfig = {
           type: 'date',
           label: 'Sales End',
           admin: {
+            condition: (_, siblingData) => siblingData?.salesEndMode !== 'unlimited',
             date: { pickerAppearance: 'dayAndTime' },
             description: 'When sales close for this ticket (optional)',
           },

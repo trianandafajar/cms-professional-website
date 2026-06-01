@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { useEventEditorStore } from '@/stores/eventEditorStore'
+import { useEventEditorStore, type EventTicketType } from '@/stores/eventEditorStore'
 import { Plus, Trash2, GripVertical, ChevronDown, ChevronUp, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import TicketPreviewCard from '@/components/organizations/ticket-preview'
@@ -12,6 +12,17 @@ import {
   initialDesigns,
   getTicketBackground,
 } from '@/lib/ticket-designs'
+
+function toDatetimeLocalValue(date = new Date()) {
+  const offset = date.getTimezoneOffset()
+  const local = new Date(date.getTime() - offset * 60_000)
+  return local.toISOString().slice(0, 16)
+}
+
+function clampDatetime(value: string, minValue: string) {
+  if (!value) return value
+  return value < minValue ? minValue : value
+}
 
 export default function EventTicketsPage() {
   const {
@@ -38,7 +49,7 @@ export default function EventTicketsPage() {
   const [dragOverId, setDragOverId] = useState<string | null>(null)
   const dragCounter = useRef(0)
 
-  function getDesignConfig(ticket: TicketType): TicketConfig | null {
+  function getDesignConfig(ticket: EventTicketType): TicketConfig | null {
     if (!ticket.designId) return null
     if (ticket.designSource === 'designer') {
       const design = initialDesigns.find((d) => d.id === ticket.designId)
@@ -50,7 +61,7 @@ export default function EventTicketsPage() {
     }
   }
 
-  function getDesignName(ticket: TicketType): string {
+  function getDesignName(ticket: EventTicketType): string {
     if (!ticket.designId) return ''
     if (ticket.designSource === 'designer') {
       return initialDesigns.find((d) => d.id === ticket.designId)?.name || ''
@@ -217,7 +228,7 @@ export default function EventTicketsPage() {
                   <div className="mt-0.5 flex items-center gap-4 text-xs text-zinc-400">
                     <span>
                       {ticket.currency === 'IDR' ? 'Rp' : '$'}{' '}
-                      {ticket.price.toLocaleString(ticket.currency === 'IDR' ? 'id-ID' : 'en-US')}
+                      {(ticket.price ?? 0).toLocaleString(ticket.currency === 'IDR' ? 'id-ID' : 'en-US')}
                     </span>
                     <span>{ticket.quantity} available</span>
                     {ticket.designId && (
@@ -281,9 +292,15 @@ export default function EventTicketsPage() {
                         </select>
                         <input
                           type="number"
-                          value={ticket.price}
+                          min={0}
+                          value={ticket.price ?? ''}
                           onChange={(e) =>
-                            updateTicket(ticket.id, { price: Number(e.target.value) })
+                            updateTicket(ticket.id, {
+                              price:
+                                e.target.value === ''
+                                  ? null
+                                  : Math.max(0, Number(e.target.value)),
+                            })
                           }
                           placeholder="0"
                           className="h-10 flex-1 rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-[#5151eb]"
@@ -354,21 +371,59 @@ export default function EventTicketsPage() {
                       </label>
                       <input
                         type="datetime-local"
-                        value={ticket.salesStart}
-                        onChange={(e) => updateTicket(ticket.id, { salesStart: e.target.value })}
+                        min={toDatetimeLocalValue()}
+                        value={ticket.salesStart ?? ''}
+                        onChange={(e) =>
+                          updateTicket(ticket.id, {
+                            salesStart: e.target.value
+                              ? clampDatetime(e.target.value, toDatetimeLocalValue())
+                              : null,
+                          })
+                        }
                         className="mt-1.5 h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-[#5151eb]"
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-                        Sales End
-                      </label>
-                      <input
-                        type="datetime-local"
-                        value={ticket.salesEnd}
-                        onChange={(e) => updateTicket(ticket.id, { salesEnd: e.target.value })}
-                        className="mt-1.5 h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-[#5151eb]"
-                      />
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                          Sales End
+                        </label>
+                        <select
+                          value={ticket.salesEndMode}
+                          onChange={(e) =>
+                            updateTicket(ticket.id, {
+                              salesEndMode: e.target.value as 'limited' | 'unlimited',
+                              salesEnd: e.target.value === 'unlimited' ? null : ticket.salesEnd,
+                            })
+                          }
+                          className="h-8 rounded-md border border-zinc-200 px-2 text-xs outline-none focus:border-[#5151eb]"
+                        >
+                          <option value="limited">Limited date</option>
+                          <option value="unlimited">Until sold out</option>
+                        </select>
+                      </div>
+                      {ticket.salesEndMode === 'limited' ? (
+                        <input
+                          type="datetime-local"
+                          min={ticket.salesStart ?? toDatetimeLocalValue()}
+                          value={ticket.salesEnd ?? ''}
+                          onChange={(e) =>
+                            updateTicket(ticket.id, {
+                              salesEnd: e.target.value
+                                ? clampDatetime(
+                                    e.target.value,
+                                    ticket.salesStart ?? toDatetimeLocalValue(),
+                                  )
+                                : null,
+                            })
+                          }
+                          className="mt-1.5 h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-[#5151eb]"
+                        />
+                      ) : (
+                        <div className="mt-1.5 rounded-lg border border-dashed border-zinc-200 px-3 py-2 text-xs text-zinc-500">
+                          Ticket sale stays open until the quantity is sold out.
+                        </div>
+                      )}
                     </div>
                   </div>
 

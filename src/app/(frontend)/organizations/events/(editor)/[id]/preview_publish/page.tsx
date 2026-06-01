@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/select'
 import { TagsInput } from '@/components/ui/tags-input'
 import { apiClient } from '@/lib/apiClient'
-import { resolveCategoryValue } from '@/lib/eventCategories'
 import { useEventEditorStore } from '@/stores/eventEditorStore'
 
 interface CategoryDoc {
@@ -107,12 +106,26 @@ export default function PreviewPublishPage() {
       return
     }
 
-    const resolvedCategory = resolveCategoryValue(category, categories)
+    const selectedSubcategory =
+      categories.find((item) => String(item.id) === subcategory) ?? null
 
-    if (resolvedCategory && resolvedCategory !== category) {
-      setCategory(resolvedCategory)
+    if (selectedSubcategory) {
+      const groupValue = selectedSubcategory.group ?? ''
+
+      if (groupValue && groupValue !== category) {
+        setCategory(groupValue)
+      }
+
+      return
     }
-  }, [categories, category, setCategory])
+
+    const legacyCategory = categories.find((item) => String(item.id) === category)
+
+    if (legacyCategory) {
+      setCategory(legacyCategory.group ?? '')
+      setSubcategory(String(legacyCategory.id))
+    }
+  }, [categories, category, subcategory, setCategory, setSubcategory])
 
   const groupedCategories = useMemo<Array<[string, CategoryDoc[]]>>(() => {
     const groups = new Map<string, CategoryDoc[]>()
@@ -132,6 +145,16 @@ export default function PreviewPublishPage() {
         ] as [string, CategoryDoc[]],
     )
   }, [categories])
+
+  const subcategoryOptions = useMemo(() => {
+    if (!category) {
+      return []
+    }
+
+    return categories
+      .filter((item) => (item.group ?? '') === category)
+      .sort((left, right) => left.name.localeCompare(right.name))
+  }, [categories, category])
 
   function resetPosition() {
     resetBanner()
@@ -321,27 +344,26 @@ export default function PreviewPublishPage() {
                 <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-                    Category
+                    Category Group
                   </label>
                     <Select
                       value={category}
-                      onValueChange={setCategory}
+                      onValueChange={(value) => {
+                        setCategory(value)
+                        setSubcategory('')
+                      }}
                       disabled={loadingCategories}
                     >
                       <SelectTrigger className="mt-1.5 h-10 w-full rounded-lg border-zinc-200 text-sm">
                         <SelectValue
-                          placeholder={loadingCategories ? 'Loading categories...' : 'Category'}
+                          placeholder={loadingCategories ? 'Loading categories...' : 'Category group'}
                         />
                       </SelectTrigger>
                       <SelectContent>
-                        {groupedCategories.map(([groupKey, items]) => (
+                        {groupedCategories.map(([groupKey]) => (
                           <SelectGroup key={groupKey}>
                             <SelectLabel>{GROUP_LABELS[groupKey] ?? groupKey}</SelectLabel>
-                            {items.map((cat) => (
-                              <SelectItem key={cat.id} value={String(cat.id)}>
-                                {cat.name}
-                              </SelectItem>
-                            ))}
+                            <SelectItem value={groupKey}>Use this group</SelectItem>
                           </SelectGroup>
                         ))}
                       </SelectContent>
@@ -351,15 +373,32 @@ export default function PreviewPublishPage() {
                     <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
                       Subcategory
                     </label>
-                    <Select value={subcategory} onValueChange={setSubcategory}>
+                    <Select
+                      value={subcategory}
+                      onValueChange={setSubcategory}
+                      disabled={!category || loadingCategories}
+                    >
                       <SelectTrigger className="mt-1.5 h-10 w-full rounded-lg border-zinc-200 text-sm">
-                        <SelectValue placeholder="Subcategory" />
+                        <SelectValue
+                          placeholder={
+                            !category
+                              ? 'Choose category group first'
+                              : 'Subcategory'
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="general">General</SelectItem>
-                        <SelectItem value="frontend">Frontend</SelectItem>
-                        <SelectItem value="backend">Backend</SelectItem>
-                        <SelectItem value="ai">AI / ML</SelectItem>
+                        {subcategoryOptions.length > 0 ? (
+                          subcategoryOptions.map((cat) => (
+                            <SelectItem key={cat.id} value={String(cat.id)}>
+                              {cat.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="__empty" disabled>
+                            No subcategories available
+                          </SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>

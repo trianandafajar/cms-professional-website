@@ -20,6 +20,17 @@ function getMediaUrl(media: unknown): string | null {
   return null
 }
 
+function getPrimaryEventImage(event: Event): string | null {
+  const coverImage = getMediaUrl(event.coverImage)
+  if (coverImage) return coverImage
+
+  const bannerImage = getMediaUrl(event.bannerImage)
+  if (bannerImage) return bannerImage
+
+  const firstGalleryImage = event.galleryImages?.[0]?.image
+  return getMediaUrl(firstGalleryImage)
+}
+
 function getLocationName(location: unknown): string {
   if (location && typeof location === 'object' && 'name' in location)
     return (location as Location).name
@@ -172,7 +183,7 @@ export default async function EventTicketsPage({ params }: Props) {
     id: realEvent.id,
     title: realEvent.title,
     slug: realEvent.slug ?? slug,
-    coverImage: getMediaUrl(realEvent.coverImage) ?? FALLBACK_EVENT.coverImage,
+    coverImage: getPrimaryEventImage(realEvent) ?? FALLBACK_EVENT.coverImage,
     startDate: realEvent.startDate,
     endDate: realEvent.endDate ?? null,
     venue: realEvent.venue ?? '',

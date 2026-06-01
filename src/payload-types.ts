@@ -296,24 +296,17 @@ export interface Event {
   id: number;
   title: string;
   /**
+   * Short event summary shown in cards and editor previews
+   */
+  summary?: string | null;
+  /**
    * URL-friendly identifier (auto-generated if left blank)
    */
   slug?: string | null;
-  description?: {
-    root: {
-      type: string;
-      children: {
-        type: any;
-        version: number;
-        [k: string]: unknown;
-      }[];
-      direction: ('ltr' | 'rtl') | null;
-      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
-      indent: number;
-      version: number;
-    };
-    [k: string]: unknown;
-  } | null;
+  /**
+   * Supports the HTML produced by the description editor
+   */
+  description?: string | null;
   coverImage?: (number | null) | Media;
   /**
    * Wide banner shown at the top of the event detail page
@@ -367,6 +360,10 @@ export interface Event {
          * Price in IDR. Set to 0 for free tickets.
          */
         price: number;
+        /**
+         * Choose whether ticket sales stop on a date or when sold out
+         */
+        salesEndMode?: ('limited' | 'unlimited') | null;
         currency?: ('IDR' | 'USD') | null;
         /**
          * Total number of tickets available for this tier
@@ -653,6 +650,7 @@ export interface LocationsSelect<T extends boolean = true> {
  */
 export interface EventsSelect<T extends boolean = true> {
   title?: T;
+  summary?: T;
   slug?: T;
   description?: T;
   coverImage?: T;
@@ -688,6 +686,7 @@ export interface EventsSelect<T extends boolean = true> {
         name?: T;
         description?: T;
         price?: T;
+        salesEndMode?: T;
         currency?: T;
         quantity?: T;
         sold?: T;

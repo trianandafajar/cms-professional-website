@@ -21,7 +21,7 @@ type RichTextContent = {
 }
 
 type Props = {
-  content: RichTextContent
+  content: RichTextContent | string | null | undefined
 }
 
 /**
@@ -90,6 +90,19 @@ function renderNode(node: Record<string, unknown>, idx: number): React.ReactNode
 
 export function EventDetailDescription({ content }: Props) {
   const [expanded, setExpanded] = useState(false)
+  if (typeof content === 'string') {
+    return content.trim() ? (
+      <div
+        className="prose prose-sm max-w-none"
+        dangerouslySetInnerHTML={{ __html: content }}
+      />
+    ) : null
+  }
+
+  if (!content?.root?.children) {
+    return null
+  }
+
   const nodes = content.root.children
 
   const PREVIEW_COUNT = 4

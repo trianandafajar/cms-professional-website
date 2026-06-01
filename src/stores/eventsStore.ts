@@ -5,8 +5,43 @@ import type { Event } from '@/payload-types'
 
 type EventStatus = 'all' | 'draft' | 'published' | 'cancelled' | 'completed'
 
+function cloneWithoutInternalIds<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => cloneWithoutInternalIds(item)) as T
+  }
+
+  if (!value || typeof value !== 'object') {
+    return value
+  }
+
+  const cloned: Record<string, unknown> = { ...(value as Record<string, unknown>) }
+
+  delete cloned.id
+  delete cloned.createdAt
+  delete cloned.updatedAt
+
+  for (const [key, entry] of Object.entries(cloned)) {
+    if (Array.isArray(entry)) {
+      cloned[key] = entry.map((item) => {
+        if (!item || typeof item !== 'object') {
+          return item
+        }
+
+        const nested = { ...(item as Record<string, unknown>) }
+        delete nested.id
+        delete nested.createdAt
+        delete nested.updatedAt
+        return cloneWithoutInternalIds(nested)
+      })
+    }
+  }
+
+  return cloned as T
+}
+
 interface EventsState {
   events: Event[]
+  allEvents: Event[]
   totalDocs: number
   totalPages: number
   page: number
@@ -17,16 +52,18 @@ interface EventsState {
 
   // Actions
   fetchEvents: () => Promise<void>
+  fetchAllEvents: () => Promise<void>
   setSearch: (search: string) => void
   setStatusFilter: (status: EventStatus) => void
   setPage: (page: number) => void
   deleteEvent: (id: number) => Promise<void>
-  duplicateEvent: (id: number) => Promise<void>
+  duplicateEvent: (id: number) => Promise<string | null>
   updateEventStatus: (id: number, status: Event['status']) => Promise<void>
 }
 
 export const useEventsStore = create<EventsState>((set, get) => ({
   events: [],
+  allEvents: [],
   totalDocs: 0,
   totalPages: 0,
   page: 1,
@@ -109,17 +146,40 @@ export const useEventsStore = create<EventsState>((set, get) => ({
 
       // Create a copy without id, timestamps, and slug
       const { id: _id, createdAt, updatedAt, slug, ...eventData } = event as any
+      const duplicateData = cloneWithoutInternalIds(eventData)
 
-      await apiClient.post('/api/events', {
-        ...eventData,
+      const created = await apiClient.post<{ doc?: { id?: number; slug?: string | null }; id?: number; slug?: string }>('/api/events', {
+        ...duplicateData,
         title: `${event.title} (Copy)`,
         status: 'draft',
         slug: undefined,
       })
 
       get().fetchEvents()
+
+      const createdSlug = created.doc?.slug ?? created.slug ?? ''
+      const createdId = created.doc?.id ?? created.id ?? null
+
+      return createdSlug || (createdId ? String(createdId) : null)
     } catch (err: any) {
       set({ error: err.message || 'Failed to duplicate event' })
+      return null
+    }
+  },
+
+  fetchAllEvents: async () => {
+    set({ isLoading: true, error: null })
+    try {
+      const response = await apiClient.get<{
+        docs: Event[]
+      }>('/api/events?limit=1000&sort=-startDate&depth=1')
+
+      set({
+        allEvents: response.docs,
+        isLoading: false,
+      })
+    } catch (err: any) {
+      set({ error: err.message || 'Failed to fetch events', isLoading: false })
     }
   },
 

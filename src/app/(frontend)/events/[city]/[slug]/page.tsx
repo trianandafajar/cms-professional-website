@@ -37,6 +37,17 @@ function getMediaUrl(media: unknown): string | null {
   return null
 }
 
+function getPrimaryEventImage(event: Event): string | null {
+  const coverImage = getMediaUrl(event.coverImage)
+  if (coverImage) return coverImage
+
+  const bannerImage = getMediaUrl(event.bannerImage)
+  if (bannerImage) return bannerImage
+
+  const firstGalleryImage = event.galleryImages?.[0]?.image
+  return getMediaUrl(firstGalleryImage)
+}
+
 function getOrganizerData(organizer: unknown) {
   if (!organizer || typeof organizer !== 'object') return null
   const o = organizer as User
@@ -211,7 +222,7 @@ export default async function EventDetailPage({ params }: Props) {
         id: realEvent.id,
         title: realEvent.title,
         slug: realEvent.slug ?? slug,
-        coverImage: getMediaUrl(realEvent.coverImage) ?? DUMMY_EVENT.coverImage,
+        coverImage: getPrimaryEventImage(realEvent) ?? DUMMY_EVENT.coverImage,
         bannerImage: getMediaUrl(realEvent.bannerImage) ?? null,
         galleryImages: (realEvent.galleryImages ?? [])
           .map((g) => getMediaUrl(g.image))

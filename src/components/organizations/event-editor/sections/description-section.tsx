@@ -72,17 +72,28 @@ export default function DescriptionSection() {
 
     content: eventDescription,
 
-    editorProps: {
-      attributes: {
-        class:
-          'min-h-[280px] outline-none px-5 py-4 prose prose-sm max-w-none prose-headings:text-zinc-900 prose-headings:font-bold prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-p:text-zinc-700 prose-p:leading-relaxed prose-li:text-zinc-700 prose-strong:text-zinc-900 prose-a:text-[#5151eb] prose-a:underline prose-blockquote:border-l-[#5151eb] prose-blockquote:text-zinc-600 prose-code:text-[#5151eb] prose-code:bg-indigo-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded',
+      editorProps: {
+        attributes: {
+          class:
+          'min-h-[280px] outline-none px-5 py-4 prose prose-sm max-w-none prose-headings:text-zinc-900 prose-headings:font-bold prose-p:text-zinc-700 prose-p:leading-relaxed prose-li:text-zinc-700 prose-strong:text-zinc-900 prose-a:text-[#5151eb] prose-a:underline prose-blockquote:border-l-[#5151eb] prose-blockquote:text-zinc-600 [&_h1]:mb-3 [&_h1]:text-4xl [&_h1]:font-bold [&_h2]:mb-2 [&_h2]:text-3xl [&_h2]:font-bold [&_h3]:mb-2 [&_h3]:text-2xl [&_h3]:font-bold [&_p]:mb-3 [&_p]:text-zinc-700 [&_li]:mb-1 [&_li]:text-zinc-700 [&_blockquote]:border-l-4 [&_blockquote]:border-[#5151eb] [&_blockquote]:pl-4 [&_blockquote]:italic [&_code]:rounded [&_code]:bg-indigo-50 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-sm [&_code]:text-[#5151eb] [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-zinc-900 [&_pre]:px-4 [&_pre]:py-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-zinc-100',
+        },
       },
-    },
 
     onUpdate({ editor }) {
       setEventDescription(editor.getHTML())
     },
   })
+
+  useEffect(() => {
+    if (!editor) return
+
+    const currentHtml = editor.getHTML()
+    const nextHtml = eventDescription || '<p></p>'
+
+    if (currentHtml !== nextHtml) {
+      editor.commands.setContent(nextHtml)
+    }
+  }, [editor, eventDescription])
 
   const completed = useMemo(() => {
     return eventDescription.replace(/<[^>]*>/g, '').trim().length > 0
@@ -260,9 +271,9 @@ export default function DescriptionSection() {
                 </ToolbarButton>
 
                 <ToolbarButton
-                  onClick={() => editor?.chain().focus().toggleCode().run()}
-                  isActive={editor?.isActive('code')}
-                  title="Inline code"
+                  onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
+                  isActive={editor?.isActive('codeBlock')}
+                  title="Code block"
                 >
                   <Code size={14} />
                 </ToolbarButton>

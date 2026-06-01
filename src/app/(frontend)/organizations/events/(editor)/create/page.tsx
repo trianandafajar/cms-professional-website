@@ -4,7 +4,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuthStore } from '@/stores/authStore'
 import { useEventEditorStore } from '@/stores/eventEditorStore'
 
 import MediaSection from '@/components/organizations/event-editor/sections/media-section'
@@ -14,9 +13,8 @@ import DescriptionSection from '@/components/organizations/event-editor/sections
 
 export default function CreateEventsPage() {
   const router = useRouter()
-  const { user } = useAuthStore()
   const [saving, setSaving] = useState(false)
-  const { eventTitle, bannerId } = useEventEditorStore()
+  const { createDraftEvent } = useEventEditorStore()
 
   useEffect(() => {
     function handleSave() {
@@ -33,34 +31,14 @@ export default function CreateEventsPage() {
     window.dispatchEvent(new CustomEvent('event-editor-saving'))
 
     try {
-      const title = eventTitle || 'Untitled Event'
+      const slug = await createDraftEvent()
 
-      const res = await fetch('/api/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          title,
-          status: 'draft',
-          organizer: user?.id ? Number(user.id) : undefined,
-          bannerImage: bannerId || undefined,
-          startDate: new Date().toISOString(),
-        }),
-      })
+      window.dispatchEvent(new CustomEvent('event-editor-saved'))
 
-      if (res.ok) {
-        const data = await res.json()
-        const newId = data?.doc?.id
-        window.dispatchEvent(new CustomEvent('event-editor-saved'))
-        if (newId) {
-          router.push(`/organizations/events/${newId}/tickets`)
-        } else {
-          router.push('/organizations/events')
-        }
+      if (slug) {
+        router.push(`/organizations/events/${slug}/tickets`)
       } else {
-        console.error('Failed to save event')
-        window.dispatchEvent(new CustomEvent('event-editor-saved'))
-        setSaving(false)
+        router.push('/organizations/events')
       }
     } catch (err) {
       console.error('Error saving event:', err)

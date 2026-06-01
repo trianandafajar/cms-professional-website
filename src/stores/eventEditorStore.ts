@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { Event, Location } from '@/payload-types'
 import { apiClient } from '@/lib/apiClient'
 import { resolveCategoryId } from '@/lib/eventCategories'
 
@@ -18,7 +19,7 @@ export interface EventTicketType {
   name: string
   description: string
 
-  price: number
+  price: number | null
   currency: 'IDR' | 'USD'
 
   quantity: number
@@ -28,8 +29,9 @@ export interface EventTicketType {
 
   perks: EventTicketPerk[]
 
-  salesStart: string
-  salesEnd: string
+  salesStart: string | null
+  salesEnd: string | null
+  salesEndMode: 'limited' | 'unlimited'
 
   isHidden: boolean
   sortOrder: number
@@ -59,8 +61,177 @@ function normalizeTagList(tags: unknown): string[] {
     .filter((tag): tag is string => tag.trim().length > 0)
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
+}
+
+function lexicalNodeToHtml(node: any): string {
+  if (!node) {
+    return ''
+  }
+
+  if (node.type === 'text') {
+    let text = escapeHtml(String(node.text ?? ''))
+    const format = Number(node.format ?? 0)
+
+    if (format & 1) text = `<strong>${text}</strong>`
+    if (format & 2) text = `<em>${text}</em>`
+    if (format & 8) text = `<u>${text}</u>`
+
+    return text
+  }
+
+  const children = Array.isArray(node.children) ? node.children.map(lexicalNodeToHtml).join('') : ''
+
+  if (node.type === 'paragraph') {
+    return `<p>${children}</p>`
+  }
+
+  if (node.type === 'heading') {
+    const tag = ['h1', 'h2', 'h3'].includes(String(node.tag)) ? String(node.tag) : 'h3'
+    return `<${tag}>${children}</${tag}>`
+  }
+
+  if (node.type === 'list') {
+    const tag = node.listType === 'number' ? 'ol' : 'ul'
+    return `<${tag}>${children}</${tag}>`
+  }
+
+  if (node.type === 'listitem') {
+    return `<li>${children}</li>`
+  }
+
+  if (node.type === 'linebreak') {
+    return '<br />'
+  }
+
+  return children
+}
+
+function normalizeDescriptionContent(description: unknown) {
+  if (typeof description === 'string') {
+    return description
+  }
+
+  if (
+    description &&
+    typeof description === 'object' &&
+    'root' in description &&
+    Array.isArray((description as any).root?.children)
+  ) {
+    return (description as any).root.children.map(lexicalNodeToHtml).join('')
+  }
+
+  return ''
+}
+
+function toDatetimeLocalValue(value: unknown) {
+  if (!value) {
+    return null
+  }
+
+  const date = new Date(String(value))
+
+  if (Number.isNaN(date.getTime())) {
+    return null
+  }
+
+  const offset = date.getTimezoneOffset()
+  return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16)
+}
+
+function toIsoFromDatetimeLocal(value: string | null | undefined) {
+  if (!value) {
+    return null
+  }
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return null
+  }
+
+  return date.toISOString()
+}
+
+function normalizeLocationName(value: string) {
+  return value.trim()
+}
+
+function getLocationRegion(name: string): Location['region'] | undefined {
+  const normalizedName = name.toLowerCase()
+
+  if (
+    normalizedName.includes('jawa') ||
+    normalizedName.includes('jakarta') ||
+    normalizedName.includes('yogyakarta') ||
+    normalizedName.includes('banten')
+  ) {
+    return 'jawa'
+  }
+
+  if (
+    normalizedName.includes('bali') ||
+    normalizedName.includes('ntb') ||
+    normalizedName.includes('ntt') ||
+    normalizedName.includes('nusatenggara') ||
+    normalizedName.includes('nusa tenggara')
+  ) {
+    return 'bali-nusra'
+  }
+
+  if (normalizedName.includes('sumatera')) {
+    return 'sumatera'
+  }
+
+  if (normalizedName.includes('kalimantan')) {
+    return 'kalimantan'
+  }
+
+  if (normalizedName.includes('sulawesi')) {
+    return 'sulawesi'
+  }
+
+  if (normalizedName.includes('maluku') || normalizedName.includes('papua')) {
+    return 'maluku-papua'
+  }
+
+  return undefined
+}
+
+async function resolveOrCreateLocation(locationName: string) {
+  const normalizedName = normalizeLocationName(locationName)
+
+  if (!normalizedName) {
+    return null
+  }
+
+  const existing = await apiClient.get<{ docs: Location[] }>(
+    `/api/locations?where[name][equals]=${encodeURIComponent(normalizedName)}&limit=1`,
+  )
+
+  const foundLocation = existing.docs[0]
+
+  if (foundLocation) {
+    return foundLocation
+  }
+
+  const created = await apiClient.post<{ doc: Location }>('/api/locations', {
+    name: normalizedName,
+    region: getLocationRegion(normalizedName),
+  })
+
+  return created.doc ?? null
+}
+
 interface EventEditorState {
   eventId: number | null
+  eventSlug: string
 
   eventTitle: string
   eventSummary: string
@@ -75,6 +246,7 @@ interface EventEditorState {
   locationQuery: string
   locationTitle: string
   locationSubtitle: string
+  locationId: number | null
 
   locationLat: number
   locationLng: number
@@ -128,8 +300,10 @@ interface EventEditorState {
   removePerk: (ticketId: string, perkId: string) => void
 
   saveEventSettings: () => Promise<void>
+  saveEventDetails: () => Promise<void>
 
   setEventId: (id: number | null) => void
+  setEventSlug: (slug: string) => void
 
   setEventTitle: (title: string) => void
   setEventSummary: (summary: string) => void
@@ -144,6 +318,7 @@ interface EventEditorState {
   setLocationQuery: (query: string) => void
   setLocationTitle: (title: string) => void
   setLocationSubtitle: (subtitle: string) => void
+  setLocationId: (id: number | null) => void
   setLocationPosition: (lat: number, lng: number) => void
 
   setBannerImages: (images: EventImage[]) => void
@@ -153,8 +328,8 @@ interface EventEditorState {
   uploadBanner: (file: File) => Promise<void>
   removeBannerImage: (id: number) => void
 
-  createDraftEvent: () => Promise<number | null>
-  loadEvent: (eventId: number) => Promise<void>
+  createDraftEvent: () => Promise<string | null>
+  loadEvent: (eventKey: string) => Promise<void>
   publishEvent: () => Promise<void>
 
   resetBanner: () => void
@@ -172,6 +347,7 @@ interface EventEditorState {
 
 export const useEventEditorStore = create<EventEditorState>((set) => ({
   eventId: null,
+  eventSlug: '',
 
   eventTitle: '',
   eventSummary: '',
@@ -186,6 +362,7 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
   locationQuery: '',
   locationTitle: '',
   locationSubtitle: '',
+  locationId: null,
 
   locationLat: 0,
   locationLng: 0,
@@ -204,8 +381,8 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
   isSavingTickets: false,
 
   eventType: 'conference',
-  category: 'technology',
-  subcategory: 'frontend',
+  category: '',
+  subcategory: '',
 
   tags: [],
 
@@ -216,6 +393,11 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
   setEventId: (id) =>
     set({
       eventId: id,
+    }),
+
+  setEventSlug: (slug) =>
+    set({
+      eventSlug: slug,
     }),
 
   setEventTitle: (title) =>
@@ -268,6 +450,11 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
       locationSubtitle: subtitle,
     }),
 
+  setLocationId: (id) =>
+    set({
+      locationId: id,
+    }),
+
   setLocationPosition: (lat, lng) =>
     set({
       locationLat: lat,
@@ -305,7 +492,7 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
           name: '',
           description: '',
 
-          price: 0,
+          price: null,
           currency: 'IDR',
 
           quantity: 100,
@@ -315,8 +502,9 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
 
           perks: [],
 
-          salesStart: '',
-          salesEnd: '',
+          salesStart: null,
+          salesEnd: null,
+          salesEndMode: 'limited',
 
           isHidden: false,
           sortOrder: state.tickets.length,
@@ -484,6 +672,16 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
           ? new Date(`${state.eventDate}T${state.eventEndTime}`).toISOString()
           : undefined
 
+      const location = await resolveOrCreateLocation(state.locationTitle || state.locationQuery)
+      const bannerImageId = state.bannerImages[0]?.id
+      const galleryImages = state.bannerImages.slice(1).map((image) => ({
+        image: image.id,
+      }))
+      const capacity = state.tickets.reduce(
+        (total, ticket) => total + Number(ticket.quantity || 0),
+        0,
+      )
+
       const res = await fetch('/api/events', {
         method: 'POST',
         credentials: 'include',
@@ -493,17 +691,22 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
         body: JSON.stringify({
           title: state.eventTitle || 'Untitled Event',
 
+          status: state.eventStatus,
+
+          summary: state.eventSummary,
           description: state.eventDescription,
 
-          bannerImage: state.bannerImages[0]?.id,
+          coverImage: bannerImageId,
+          bannerImage: bannerImageId,
 
-          galleryImages: state.bannerImages.slice(1).map((image) => ({
-            image: image.id,
-          })),
+          galleryImages,
 
           startDate,
           endDate,
 
+          capacity,
+
+          location: location?.id ?? undefined,
           venue: state.locationTitle,
 
           address: state.locationQuery,
@@ -515,17 +718,21 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
         return null
       }
 
-      const data: { doc?: { id?: number }; id?: number } = await res.json()
+      const data: { doc?: { id?: number; slug?: string | null }; id?: number; slug?: string } =
+        await res.json()
 
       const id = data.doc?.id ?? data.id ?? null
+      const slug = data.doc?.slug ?? data.slug ?? ''
 
-      if (id) {
+      if (id || slug) {
         set({
           eventId: id,
+          eventSlug: slug,
+          locationId: location?.id ?? state.locationId,
         })
       }
 
-      return id
+      return slug || null
     } catch (error) {
       console.error(error)
       return null
@@ -548,37 +755,61 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
     })
 
     try {
-      let categoryId: number | null = null
+      let categoryId = resolveCategoryId(state.subcategory, [])
 
-      if (state.category.trim()) {
-        categoryId = resolveCategoryId(state.category, [])
+      if (categoryId === null) {
+        const categories = await apiClient.get<{
+          docs: { id: number; name: string; group?: string | null }[]
+        }>('/api/categories?limit=200')
 
-        if (categoryId === null) {
-          const categories = await apiClient.get<{
-            docs: { id: number; name: string; group?: string | null }[]
-          }>('/api/categories?limit=200')
-
-          categoryId = resolveCategoryId(state.category, categories.docs)
-        }
+        categoryId = resolveCategoryId(state.category, categories.docs)
       }
 
       const data: Record<string, unknown> = {
-        ticketTypes: state.tickets,
+        ticketTypes: state.tickets.map((ticket) => ({
+          ...ticket,
+          price: Math.max(0, Number(ticket.price ?? 0)),
+          salesStart: toIsoFromDatetimeLocal(ticket.salesStart),
+          salesEnd:
+            ticket.salesEndMode === 'unlimited'
+              ? null
+              : toIsoFromDatetimeLocal(ticket.salesEnd),
+        })),
 
         eventType: state.eventType,
 
-        subcategory: state.subcategory,
+        summary: state.eventSummary,
 
         tags: state.tags.map((tag) => ({ tag })),
 
         visibility: state.visibility,
 
         organizerName: state.organizerName,
+
+        coverImage: state.bannerImages[0]?.id ?? null,
+
+        bannerImage: state.bannerImages[0]?.id ?? null,
+
+        galleryImages: state.bannerImages.slice(1).map((image) => ({
+          image: image.id,
+        })),
       }
 
-      if (categoryId) {
+      const location = await resolveOrCreateLocation(state.locationTitle || state.locationQuery)
+      const capacity = state.tickets.reduce(
+        (total, ticket) => total + Number(ticket.quantity || 0),
+        0,
+      )
+
+      if (categoryId !== null) {
         data.category = categoryId
       }
+
+      if (location) {
+        data.location = location.id
+      }
+
+      data.capacity = capacity
 
       const res = await fetch(`/api/events/${state.eventId}`, {
         method: 'PATCH',
@@ -599,10 +830,70 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
     }
   },
 
-  loadEvent: async (eventId) => {
+  saveEventDetails: async () => {
+    const state = useEventEditorStore.getState()
+
+    if (!state.eventId) {
+      return
+    }
+
+    set({
+      isSavingEvent: true,
+    })
+
+    try {
+      const startDate = state.eventDate
+        ? new Date(`${state.eventDate}T${state.eventStartTime || '00:00'}`).toISOString()
+        : new Date().toISOString()
+
+      const endDate =
+        state.eventDate && state.eventEndTime
+          ? new Date(`${state.eventDate}T${state.eventEndTime}`).toISOString()
+          : undefined
+
+      const location = await resolveOrCreateLocation(state.locationTitle || state.locationQuery)
+      const bannerImageId = state.bannerImages[0]?.id
+
+      const payload: Record<string, unknown> = {
+        title: state.eventTitle || 'Untitled Event',
+        summary: state.eventSummary,
+        description: state.eventDescription,
+        startDate,
+        endDate,
+        status: state.eventStatus,
+        location: location?.id ?? undefined,
+        venue: state.locationTitle,
+        address: state.locationQuery,
+        coverImage: bannerImageId ?? null,
+        bannerImage: bannerImageId ?? null,
+        galleryImages: state.bannerImages.slice(1).map((image) => ({
+          image: image.id,
+        })),
+      }
+
+      const res = await fetch(`/api/events/${state.eventId}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+
+      if (!res.ok) {
+        throw new Error(await res.text())
+      }
+    } finally {
+      set({
+        isSavingEvent: false,
+      })
+    }
+  },
+
+  loadEvent: async (eventKey) => {
     const current = useEventEditorStore.getState()
 
-    if (current.eventId === eventId) {
+    if (current.eventSlug === eventKey) {
       return
     }
 
@@ -611,23 +902,36 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
     })
 
     try {
-      const res = await fetch(`/api/events/${eventId}`, {
-        credentials: 'include',
-      })
+      const doc: any = Number.isNaN(Number(eventKey))
+        ? (
+            await apiClient.get<{ docs: Event[] }>(
+              `/api/events?where[slug][equals]=${encodeURIComponent(eventKey)}&depth=1&limit=1`,
+            )
+          ).docs[0]
+        : await apiClient.get<Event>(`/api/events/${eventKey}?depth=1`)
 
-      if (!res.ok) {
-        throw new Error(await res.text())
+      if (!doc) {
+        throw new Error('Event not found')
       }
-
-      const doc = await res.json()
 
       const bannerImages: EventImage[] = []
 
-      if (doc.bannerImage) {
+      if (doc.coverImage && typeof doc.coverImage === 'object') {
         bannerImages.push({
-          id: doc.bannerImage.id,
-          url: doc.bannerImage.url,
+          id: doc.coverImage.id,
+          url: doc.coverImage.url,
         })
+      }
+
+      if (doc.bannerImage && typeof doc.bannerImage === 'object') {
+        const alreadyIncluded = bannerImages.some((image) => image.id === doc.bannerImage?.id)
+
+        if (!alreadyIncluded) {
+          bannerImages.push({
+            id: doc.bannerImage.id,
+            url: doc.bannerImage.url,
+          })
+        }
       }
 
       if (Array.isArray(doc.galleryImages)) {
@@ -635,10 +939,12 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
           const image = item.image ?? item
 
           if (image?.id && image?.url) {
-            bannerImages.push({
-              id: image.id,
-              url: image.url,
-            })
+            if (!bannerImages.some((existing) => existing.id === image.id)) {
+              bannerImages.push({
+                id: image.id,
+                url: image.url,
+              })
+            }
           }
         })
       }
@@ -664,12 +970,13 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
 
       set({
         eventId: doc.id,
+        eventSlug: doc.slug ?? eventKey,
 
         eventTitle: doc.title ?? '',
 
         eventSummary: doc.summary ?? '',
 
-        eventDescription: doc.description ?? '',
+        eventDescription: normalizeDescriptionContent(doc.description),
 
         eventDate,
         eventStartTime,
@@ -679,9 +986,22 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
 
         locationQuery: doc.address ?? '',
 
-        locationTitle: doc.venue ?? '',
+        locationTitle:
+          typeof doc.location === 'object' && doc.location
+            ? doc.location.name
+            : doc.venue ?? '',
 
-        locationSubtitle: '',
+        locationSubtitle:
+          typeof doc.location === 'object' && doc.location
+            ? doc.location.region ?? ''
+            : '',
+
+        locationId:
+          typeof doc.location === 'object' && doc.location
+            ? doc.location.id
+            : typeof doc.location === 'number'
+              ? doc.location
+              : null,
 
         locationLat: Number(doc.latitude) || 0,
 
@@ -691,13 +1011,16 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
         eventType: doc.eventType ?? 'conference',
 
         category:
+          typeof doc.category === 'object' && doc.category && 'group' in doc.category
+            ? String(doc.category.group ?? '')
+            : '',
+
+        subcategory:
           typeof doc.category === 'object' && doc.category
             ? String(doc.category.id)
             : doc.category != null
               ? String(doc.category)
-              : 'technology',
-
-        subcategory: doc.subcategory ?? 'frontend',
+              : '',
 
         tags: normalizeTagList(doc.tags),
 
@@ -712,7 +1035,7 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
 
             description: ticket.description ?? '',
 
-            price: ticket.price ?? 0,
+            price: ticket.price ?? null,
 
             currency: ticket.currency ?? 'IDR',
 
@@ -728,9 +1051,11 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
                 perk: perk.perk ?? '',
               })) ?? [],
 
-            salesStart: ticket.salesStart ?? '',
+            salesStart: toDatetimeLocalValue(ticket.salesStart),
 
-            salesEnd: ticket.salesEnd ?? '',
+            salesEnd: toDatetimeLocalValue(ticket.salesEnd),
+
+            salesEndMode: ticket.salesEndMode ?? (ticket.salesEnd ? 'limited' : 'unlimited'),
 
             isHidden: ticket.isHidden ?? false,
 
@@ -757,7 +1082,7 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
       return
     }
 
-    await fetch(`/api/events/${state.eventId}`, {
+    const res = await fetch(`/api/events/${state.eventId}`, {
       method: 'PATCH',
       credentials: 'include',
       headers: {
@@ -767,6 +1092,12 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
         status: 'published',
       }),
     })
+
+    if (!res.ok) {
+      throw new Error(await res.text())
+    }
+
+    useEventEditorStore.getState().resetEvent()
   },
 
   resetBanner: () =>
@@ -780,6 +1111,7 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
   resetEvent: () =>
     set({
       eventId: null,
+      eventSlug: '',
 
       eventTitle: '',
       eventSummary: '',
@@ -794,6 +1126,7 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
       locationQuery: '',
       locationTitle: '',
       locationSubtitle: '',
+      locationId: null,
 
       locationLat: 0,
       locationLng: 0,
@@ -805,8 +1138,8 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
       bannerPosY: 50,
       tickets: [],
       eventType: 'conference',
-      category: 'technology',
-      subcategory: 'frontend',
+      category: '',
+      subcategory: '',
 
       tags: [],
 

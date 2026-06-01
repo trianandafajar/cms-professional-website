@@ -1,7 +1,7 @@
 'use client'
 
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useMemo, useState } from 'react'
 
 import moment from 'moment'
 import { Calendar, momentLocalizer, Views } from 'react-big-calendar'
@@ -10,35 +10,21 @@ import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 
-const localizer = momentLocalizer(moment)
+import { useEventsStore } from '@/stores/eventsStore'
 
-const sampleEvents = [
-  {
-    id: '1',
-    title: 'Tech Conference 2026',
-    start: new Date(2026, 4, 10, 10, 0),
-    end: new Date(2026, 4, 10, 13, 0),
-  },
-  {
-    id: '2',
-    title: 'Startup Meetup',
-    start: new Date(2026, 4, 15, 18, 0),
-    end: new Date(2026, 4, 15, 21, 0),
-  },
-  {
-    id: '3',
-    title: 'Music Festival',
-    start: new Date(2026, 4, 20, 14, 0),
-    end: new Date(2026, 4, 20, 22, 0),
-  },
-]
+const localizer = momentLocalizer(moment)
 
 export default function EventsCalendar() {
   const router = useRouter()
+  const { allEvents, isLoading, error, fetchAllEvents } = useEventsStore()
 
   const [view, setView] = useState<any>(Views.MONTH)
 
   const [date, setDate] = useState(new Date())
+
+  useEffect(() => {
+    fetchAllEvents()
+  }, [fetchAllEvents])
 
   const components = useMemo(
     () => ({
@@ -46,6 +32,31 @@ export default function EventsCalendar() {
     }),
     [],
   )
+
+  const calendarEvents = useMemo(
+    () =>
+      allEvents.map((event) => {
+        const start = new Date(event.startDate)
+        const end = event.endDate ? new Date(event.endDate) : new Date(start.getTime() + 60 * 60 * 1000)
+
+        return {
+          id: event.slug ?? event.id,
+          title: event.title,
+          start,
+          end,
+          slug: event.slug ?? null,
+        }
+      }),
+    [allEvents],
+  )
+
+  if (!isLoading && error) {
+    return (
+      <div className="rounded-3xl border border-red-100 bg-red-50 p-6 text-sm text-red-600">
+        {error}
+      </div>
+    )
+  }
 
   return (
     <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white">
@@ -107,9 +118,14 @@ export default function EventsCalendar() {
 
       {/* Calendar */}
       <div className="calendar-modern h-212.5 p-6">
+        {isLoading && allEvents.length === 0 ? (
+          <div className="flex h-full items-center justify-center text-sm text-zinc-500">
+            Loading events...
+          </div>
+        ) : (
         <Calendar
           localizer={localizer}
-          events={sampleEvents}
+          events={calendarEvents}
           view={view}
           date={date}
           selectable
@@ -124,7 +140,7 @@ export default function EventsCalendar() {
             router.push(`/organizations/events/create?date=${slot.start.toISOString()}`)
           }}
           onSelectEvent={(event: any) => {
-            router.push(`/organizations/events/${event.id}/edit`)
+            router.push(`/organizations/events/${event.slug ?? event.id}`)
           }}
           eventPropGetter={() => ({
             className: '!bg-blue-600 !border-0 !rounded-lg !px-2 !py-1 !text-sm !font-medium',
@@ -136,6 +152,7 @@ export default function EventsCalendar() {
             height: '100%',
           }}
         />
+        )}
       </div>
     </div>
   )

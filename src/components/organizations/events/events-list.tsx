@@ -99,13 +99,19 @@ export default function EventsList() {
 
         {/* Rows */}
         {events.map((event) => (
-          <EventRow
-            key={event.id}
-            event={event}
-            onEdit={() => router.push(`/organizations/events/${event.id}`)}
-            onDelete={() => deleteEvent(event.id)}
-            onDuplicate={() => duplicateEvent(event.id)}
-          />
+        <EventRow
+          key={event.id}
+          event={event}
+          onEdit={() => router.push(`/organizations/events/${event.slug ?? event.id}`)}
+          onDelete={() => deleteEvent(event.id)}
+          onDuplicate={async () => {
+            const duplicatedKey = await duplicateEvent(event.id)
+
+            if (duplicatedKey) {
+              router.push(`/organizations/events/${duplicatedKey}`)
+            }
+          }}
+        />
         ))}
       </div>
 
@@ -163,7 +169,7 @@ function EventRow({
   event: Event
   onEdit: () => void
   onDelete: () => void
-  onDuplicate: () => void
+  onDuplicate: () => void | Promise<void>
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -269,7 +275,7 @@ function EventRow({
               <button
                 onClick={() => {
                   setMenuOpen(false)
-                  onDuplicate()
+                  void onDuplicate()
                 }}
                 className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
               >

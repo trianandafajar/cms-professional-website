@@ -109,7 +109,7 @@ export default function DateLocationSection() {
 
     try {
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${query}`,
+        `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&q=${query}`,
       )
 
       const data = await res.json()
@@ -339,36 +339,34 @@ export default function DateLocationSection() {
                 className="h-11 w-full rounded-lg border border-zinc-200 pl-10 pr-3 text-sm outline-none transition focus:border-[#5151eb] focus:ring-2 focus:ring-[#5151eb]/10"
               />
 
-              {results.length > 0 && (
-                <div className="absolute left-0 top-full z-[99999] mt-2 w-full overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg">
-                  {results.map((item, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        const parts =
-                          item.display_name.split(
-                            ',',
+                {results.length > 0 && (
+                  <div className="absolute left-0 top-full z-[99999] mt-2 w-full overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg">
+                    {results.map((item, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          const parts = item.display_name.split(',').map((part: string) => part.trim())
+                          const locationName =
+                            item.address?.state ||
+                            item.address?.province ||
+                            item.address?.city ||
+                            item.address?.county ||
+                            item.address?.municipality ||
+                            item.address?.town ||
+                            parts[0] ||
+                            item.display_name
+                          const subtitleParts = parts.filter(
+                            (part: string) => part && part !== locationName,
                           )
 
-                        setLocationQuery(
-                          item.display_name,
-                        )
+                          setLocationQuery(item.display_name)
 
-                        setLocationTitle(
-                          parts[0] || '',
-                        )
+                          setLocationTitle(locationName)
 
-                        setLocationSubtitle(
-                          parts
-                            .slice(1, 4)
-                            .join(','),
-                        )
+                          setLocationSubtitle(subtitleParts.slice(0, 3).join(', '))
 
-                        setLocationPosition(
-                          Number(item.lat),
-                          Number(item.lon),
-                        )
+                          setLocationPosition(Number(item.lat), Number(item.lon))
 
                         setResults([])
                       }}
