@@ -1,5 +1,6 @@
-import { Event } from '@/payload-types'
 import { create } from 'zustand'
+import { apiClient } from '@/lib/apiClient'
+import { resolveCategoryId } from '@/lib/eventCategories'
 
 export interface EventImage {
   id: number
@@ -35,6 +36,27 @@ export interface EventTicketType {
 
   designId: string | null
   designSource: 'designer' | 'preset'
+}
+
+function normalizeTagList(tags: unknown): string[] {
+  if (!Array.isArray(tags)) {
+    return []
+  }
+
+  return tags
+    .map((item) => {
+      if (typeof item === 'string') {
+        return item
+      }
+
+      if (item && typeof item === 'object' && 'tag' in item) {
+        const tag = (item as { tag?: unknown }).tag
+        return typeof tag === 'string' ? tag : ''
+      }
+
+      return ''
+    })
+    .filter((tag): tag is string => tag.trim().length > 0)
 }
 
 interface EventEditorState {
@@ -106,8 +128,6 @@ interface EventEditorState {
   removePerk: (ticketId: string, perkId: string) => void
 
   saveEventSettings: () => Promise<void>
-
-  publishEvent: () => Promise<void>
 
   setEventId: (id: number | null) => void
 
@@ -495,13 +515,15 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
         return null
       }
 
-      const data: Event = await res.json()
+      const data: { doc?: { id?: number }; id?: number } = await res.json()
 
-      const id = data.doc?.id ?? data.id
+      const id = data.doc?.id ?? data.id ?? null
 
-      set({
-        eventId: id,
-      })
+      if (id) {
+        set({
+          eventId: id,
+        })
+      }
 
       return id
     } catch (error) {
@@ -526,27 +548,45 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
     })
 
     try {
+      let categoryId: number | null = null
+
+      if (state.category.trim()) {
+        categoryId = resolveCategoryId(state.category, [])
+
+        if (categoryId === null) {
+          const categories = await apiClient.get<{
+            docs: { id: number; name: string; group?: string | null }[]
+          }>('/api/categories?limit=200')
+
+          categoryId = resolveCategoryId(state.category, categories.docs)
+        }
+      }
+
+      const data: Record<string, unknown> = {
+        ticketTypes: state.tickets,
+
+        eventType: state.eventType,
+
+        subcategory: state.subcategory,
+
+        tags: state.tags.map((tag) => ({ tag })),
+
+        visibility: state.visibility,
+
+        organizerName: state.organizerName,
+      }
+
+      if (categoryId) {
+        data.category = categoryId
+      }
+
       const res = await fetch(`/api/events/${state.eventId}`, {
         method: 'PATCH',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ticketTypes: state.tickets,
-
-          eventType: state.eventType,
-
-          category: state.category,
-
-          subcategory: state.subcategory,
-
-          tags: state.tags,
-
-          visibility: state.visibility,
-
-          organizerName: state.organizerName,
-        }),
+        body: JSON.stringify(data),
       })
 
       if (!res.ok) {
@@ -650,11 +690,16 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
         bannerImages,
         eventType: doc.eventType ?? 'conference',
 
-        category: doc.category ?? 'technology',
+        category:
+          typeof doc.category === 'object' && doc.category
+            ? String(doc.category.id)
+            : doc.category != null
+              ? String(doc.category)
+              : 'technology',
 
         subcategory: doc.subcategory ?? 'frontend',
 
-        tags: doc.tags ?? [],
+        tags: normalizeTagList(doc.tags),
 
         visibility: doc.visibility ?? 'public',
 
@@ -770,39 +815,6 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
       organizerName: '',
     }),
 
-    publishEvent: async () => {
-  const state =
-    useEventEditorStore.getState()
-
-  if (!state.eventId) {
-    return
-  }
-
-  const res = await fetch(
-    `/api/events/${state.eventId}`,
-    {
-      method: 'PATCH',
-      credentials: 'include',
-      headers: {
-        'Content-Type':
-          'application/json',
-      },
-      body: JSON.stringify({
-        status: 'published',
-      }),
-    },
-  )
-
-  if (!res.ok) {
-    throw new Error(
-      await res.text(),
-    )
-  }
-
-  set({
-    eventStatus: 'published',
-  })
-},
   setEventData: (data) =>
     set({
       ...data,

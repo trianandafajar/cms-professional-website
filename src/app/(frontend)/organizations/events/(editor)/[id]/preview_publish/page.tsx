@@ -1,16 +1,39 @@
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { Calendar, MapPin, Ticket, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
 import { TagsInput } from '@/components/ui/tags-input'
+import { apiClient } from '@/lib/apiClient'
+import { resolveCategoryValue } from '@/lib/eventCategories'
 import { useEventEditorStore } from '@/stores/eventEditorStore'
+
+interface CategoryDoc {
+  id: number
+  name: string
+  group?: string | null
+}
+
+const GROUP_LABELS: Record<string, string> = {
+  'science-tech': 'Science & Tech',
+  'family-education': 'Family & Education',
+  'food-drink': 'Food & Drink',
+  business: 'Business',
+  music: 'Music',
+  arts: 'Arts',
+  community: 'Community',
+  hobbies: 'Hobbies',
+  'travel-outdoor': 'Travel & Outdoor',
+  'sports-fitness': 'Sports & Fitness',
+}
 
 export default function PreviewPublishPage() {
   // Banner from shared store (syncs with sidebar preview)
@@ -26,15 +49,12 @@ export default function PreviewPublishPage() {
 
     locationTitle,
 
-    tickets,
-
     eventType,
     category,
     subcategory,
 
     tags,
     visibility,
-    organizerName,
 
     setEventType,
     setCategory,
@@ -42,7 +62,6 @@ export default function PreviewPublishPage() {
 
     setTags,
     setVisibility,
-    setOrganizerName,
 
     setBannerZoom: setZoom,
     setBannerPosition,
@@ -50,10 +69,69 @@ export default function PreviewPublishPage() {
   } = useEventEditorStore()
 
   const bannerImage = bannerImages[0]?.url ?? ''
+  const [categories, setCategories] = useState<CategoryDoc[]>([])
+  const [loadingCategories, setLoadingCategories] = useState(true)
 
   const [isDragging, setIsDragging] = useState(false)
   const dragStart = useRef({ x: 0, y: 0, posX: 50, posY: 50 })
   const editorRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    let active = true
+
+    async function loadCategories() {
+      try {
+        const data = await apiClient.get<{ docs: CategoryDoc[] }>('/api/categories?limit=200')
+
+        if (active) {
+          setCategories(data.docs)
+        }
+      } catch (error) {
+        console.error('Failed to load categories', error)
+      } finally {
+        if (active) {
+          setLoadingCategories(false)
+        }
+      }
+    }
+
+    loadCategories()
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!categories.length) {
+      return
+    }
+
+    const resolvedCategory = resolveCategoryValue(category, categories)
+
+    if (resolvedCategory && resolvedCategory !== category) {
+      setCategory(resolvedCategory)
+    }
+  }, [categories, category, setCategory])
+
+  const groupedCategories = useMemo<Array<[string, CategoryDoc[]]>>(() => {
+    const groups = new Map<string, CategoryDoc[]>()
+
+    for (const categoryDoc of categories) {
+      const key = categoryDoc.group ?? 'other'
+      const items = groups.get(key) ?? []
+      items.push(categoryDoc)
+      groups.set(key, items)
+    }
+
+    return Array.from(groups.entries()).map(
+      ([groupKey, items]) =>
+        [
+          groupKey,
+          [...items].sort((left, right) => left.name.localeCompare(right.name)),
+        ] as [string, CategoryDoc[]],
+    )
+  }, [categories])
 
   function resetPosition() {
     resetBanner()
@@ -241,19 +319,31 @@ export default function PreviewPublishPage() {
                   </Select>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-                      Category
-                    </label>
-                    <Select value={category} onValueChange={setCategory}>
+                <div>
+                  <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                    Category
+                  </label>
+                    <Select
+                      value={category}
+                      onValueChange={setCategory}
+                      disabled={loadingCategories}
+                    >
                       <SelectTrigger className="mt-1.5 h-10 w-full rounded-lg border-zinc-200 text-sm">
-                        <SelectValue placeholder="Category" />
+                        <SelectValue
+                          placeholder={loadingCategories ? 'Loading categories...' : 'Category'}
+                        />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="other">Other</SelectItem>
-                        <SelectItem value="technology">Technology</SelectItem>
-                        <SelectItem value="education">Education</SelectItem>
-                        <SelectItem value="business">Business</SelectItem>
+                        {groupedCategories.map(([groupKey, items]) => (
+                          <SelectGroup key={groupKey}>
+                            <SelectLabel>{GROUP_LABELS[groupKey] ?? groupKey}</SelectLabel>
+                            {items.map((cat) => (
+                              <SelectItem key={cat.id} value={String(cat.id)}>
+                                {cat.name}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -343,16 +433,6 @@ export default function PreviewPublishPage() {
                   </div>
                 </label>
               </div>
-            </div>
-
-            {/* Organizer */}
-            <div className="rounded-xl border border-zinc-200 bg-white p-5">
-              <h3 className="text-sm font-semibold text-zinc-900">Organizer</h3>
-              <input
-                value={organizerName}
-                onChange={(e) => setOrganizerName(e.target.value)}
-                className="mt-3 h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-[#5151eb]"
-              />
             </div>
           </div>
         </div>

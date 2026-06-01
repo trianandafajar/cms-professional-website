@@ -22,6 +22,7 @@ interface TagsInputProps {
   options: string[]
   placeholder?: string
   max?: number
+  onValueChange?: (value: string[]) => void
 }
 
 export function TagsInput({
@@ -29,12 +30,13 @@ export function TagsInput({
   options,
   placeholder = 'Add search keywords to your event',
   max = 10,
+  onValueChange,
 }: TagsInputProps) {
   const anchor = useComboboxAnchor()
 
   return (
     <div>
-      <Combobox multiple autoHighlight items={options} defaultValue={value}>
+      <Combobox multiple autoHighlight items={options} value={value} onValueChange={onValueChange}>
         <ComboboxChips
           ref={anchor}
           className="
