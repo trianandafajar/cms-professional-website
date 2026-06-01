@@ -169,7 +169,7 @@ function EventRow({
   event: Event
   onEdit: () => void
   onDelete: () => void
-  onDuplicate: () => void | Promise<void>
+  onDuplicate: () => void
 }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)

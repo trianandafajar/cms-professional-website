@@ -3,6 +3,7 @@
 import { DashboardSkeleton } from '@/components/ui/skeleton'
 
 import React, { useState, useEffect } from 'react'
+import { useRef } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -95,9 +96,11 @@ function getAvatarUrl(avatar: unknown): string | null {
 export default function OrganizationsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
-  const { user, logout } = useAuthStore()
+  const user = useAuthStore((s) => s.user)
+  const logout = useAuthStore((s) => s.logout)
   const hasHydrated = useAuthStore((s) => s._hasHydrated)
   const [loggingOut, setLoggingOut] = useState(false)
+  const lastValidatedUserIdRef = useRef<string | null>(null)
 
   // Revalidate session on mount — if cookie expired, clear store & redirect
   useEffect(() => {
@@ -110,21 +113,30 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
     }
     if (!user) {
       console.log('[OrgLayout] No user, redirecting to /auth/signin')
+      lastValidatedUserIdRef.current = null
       router.push('/auth/signin')
       return
     }
+
+    if (lastValidatedUserIdRef.current === user.id) {
+      return
+    }
+
+    lastValidatedUserIdRef.current = user.id
 
     async function revalidateSession() {
       try {
         const res = await fetch('/api/me', { credentials: 'include' })
         console.log('[OrgLayout] /api/me response:', res.status, res.ok)
         if (!res.ok) {
+          lastValidatedUserIdRef.current = null
           useAuthStore.getState().setUser(null)
           router.push('/auth/signin')
           return
         }
         const data = await res.json()
         if (!data?.user) {
+          lastValidatedUserIdRef.current = null
           useAuthStore.getState().setUser(null)
           router.push('/auth/signin')
         } else {
@@ -138,7 +150,7 @@ export default function OrganizationsLayout({ children }: { children: React.Reac
     }
 
     revalidateSession()
-  }, [user, hasHydrated, router])
+  }, [user?.id, hasHydrated, router])
 
   // Show loading while hydrating
   if (!hasHydrated) {

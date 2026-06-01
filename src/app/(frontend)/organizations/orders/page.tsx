@@ -1,212 +1,156 @@
 'use client'
 
-import { useMemo, useRef, useState, useEffect } from 'react'
-import {
-  Search,
-  Eye,
-  ChevronLeft,
-  ChevronRight,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  ChevronDown,
-} from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { ChevronDown, ChevronLeft, ChevronRight, Eye, Search } from 'lucide-react'
 import Link from 'next/link'
 
-const dummyOrders = [
-  {
-    id: 'ORD-2026-001',
-    buyer: 'John Doe',
-    email: 'john@example.com',
-    event: 'React Conference 2026',
-    ticket: 'General Admission',
-    qty: 2,
-    total: 300000,
-    status: 'Completed',
-    checkin: true,
-    date: '2026-06-10',
-  },
-  {
-    id: 'ORD-2026-002',
-    buyer: 'Sarah Wilson',
-    email: 'sarah@example.com',
-    event: 'React Conference 2026',
-    ticket: 'VIP',
-    qty: 1,
-    total: 500000,
-    status: 'Completed',
-    checkin: true,
-    date: '2026-06-12',
-  },
-  {
-    id: 'ORD-2026-003',
-    buyer: 'Michael Chen',
-    email: 'michael@example.com',
-    event: 'Laravel Meetup',
-    ticket: 'General Admission',
-    qty: 4,
-    total: 600000,
-    status: 'Pending',
-    checkin: false,
-    date: '2026-06-14',
-  },
-  {
-    id: 'ORD-2026-004',
-    buyer: 'Emily Davis',
-    email: 'emily@example.com',
-    event: 'Next.js Summit',
-    ticket: 'VIP',
-    qty: 2,
-    total: 1000000,
-    status: 'Refunded',
-    checkin: false,
-    date: '2026-06-15',
-  },
-  {
-    id: 'ORD-2026-005',
-    buyer: 'Alex Johnson',
-    email: 'alex@example.com',
-    event: 'Next.js Summit',
-    ticket: 'VIP',
-    qty: 1,
-    total: 500000,
-    status: 'Completed',
-    checkin: true,
-    date: '2026-06-16',
-  },
-  {
-    id: 'ORD-2026-006',
-    buyer: 'Lisa Park',
-    email: 'lisa@example.com',
-    event: 'Laravel Meetup',
-    ticket: 'General Admission',
-    qty: 3,
-    total: 450000,
-    status: 'Pending',
-    checkin: false,
-    date: '2026-06-17',
-  },
-  {
-    id: 'ORD-2026-007',
-    buyer: 'David Kim',
-    email: 'david@example.com',
-    event: 'Vue.js Workshop',
-    ticket: 'General Admission',
-    qty: 1,
-    total: 150000,
-    status: 'Completed',
-    checkin: true,
-    date: '2026-06-18',
-  },
-  {
-    id: 'ORD-2026-008',
-    buyer: 'Nina Patel',
-    email: 'nina@example.com',
-    event: 'Vue.js Workshop',
-    ticket: 'VIP',
-    qty: 2,
-    total: 700000,
-    status: 'Pending',
-    checkin: false,
-    date: '2026-06-19',
-  },
-]
+import { useAuthStore } from '@/stores/authStore'
+import { useOrdersStore } from '@/stores/ordersStore'
 
 const statusOptions = ['All', 'Completed', 'Pending', 'Refunded']
 
-type SortField = 'date' | 'total' | 'buyer' | null
-type SortDir = 'asc' | 'desc'
+function formatOrderDate(value: string) {
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+function formatMoney(value: number) {
+  return `Rp ${value.toLocaleString('id-ID')}`
+}
+
+function escapeCsv(value: string | number | null | undefined) {
+  const normalized = value === null || value === undefined ? '' : String(value)
+  if (/[",\n]/.test(normalized)) {
+    return `"${normalized.replace(/"/g, '""')}"`
+  }
+  return normalized
+}
 
 export default function OrdersPage() {
+  const user = useAuthStore((state) => state.user)
+  const hasHydrated = useAuthStore((state) => state._hasHydrated)
+  const { orders, isLoading, error, fetchOrders } = useOrdersStore()
+
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('All')
   const [event, setEvent] = useState('All')
-  const [sortField, setSortField] = useState<SortField>(null)
-  const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [page, setPage] = useState(1)
   const [eventDropdownOpen, setEventDropdownOpen] = useState(false)
   const [eventSearch, setEventSearch] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
   const perPage = 5
 
-  // Close dropdown on outside click
+  useEffect(() => {
+    if (!hasHydrated) {
+      return
+    }
+
+    fetchOrders(user?.id ?? null)
+  }, [hasHydrated, user?.id, fetchOrders])
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setEventDropdownOpen(false)
       }
     }
+
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Extract unique events for filter
   const events = useMemo(() => {
-    const unique = [...new Set(dummyOrders.map((o) => o.event))]
+    const unique = [...new Set(orders.map((order) => order.event))]
     return unique.sort()
-  }, [])
+  }, [orders])
 
   const filteredEvents = useMemo(() => {
     if (!eventSearch) return events
-    return events.filter((e) => e.toLowerCase().includes(eventSearch.toLowerCase()))
+    return events.filter((name) => name.toLowerCase().includes(eventSearch.toLowerCase()))
   }, [events, eventSearch])
 
   const filtered = useMemo(() => {
-    let data = dummyOrders.filter((order) => {
+    return orders.filter((order) => {
+      const query = search.toLowerCase()
       const matchesSearch =
-        order.id.toLowerCase().includes(search.toLowerCase()) ||
-        order.buyer.toLowerCase().includes(search.toLowerCase()) ||
-        order.email.toLowerCase().includes(search.toLowerCase())
+        order.id.toLowerCase().includes(query) ||
+        order.buyer.toLowerCase().includes(query) ||
+        order.email.toLowerCase().includes(query) ||
+        order.event.toLowerCase().includes(query) ||
+        order.ticket.toLowerCase().includes(query)
+
       const matchesStatus = status === 'All' || order.status === status
       const matchesEvent = event === 'All' || order.event === event
       return matchesSearch && matchesStatus && matchesEvent
     })
+  }, [orders, search, status, event])
 
-    // Sort
-    if (sortField) {
-      data = [...data].sort((a, b) => {
-        let cmp = 0
-        if (sortField === 'date') {
-          cmp = a.date.localeCompare(b.date)
-        } else if (sortField === 'total') {
-          cmp = a.total - b.total
-        } else if (sortField === 'buyer') {
-          cmp = a.buyer.localeCompare(b.buyer)
-        }
-        return sortDir === 'asc' ? cmp : -cmp
-      })
-    }
-
-    return data
-  }, [search, status, event, sortField, sortDir])
-
-  const totalPages = Math.ceil(filtered.length / perPage)
+  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage))
   const paginated = filtered.slice((page - 1) * perPage, page * perPage)
 
-  function toggleSort(field: SortField) {
-    if (sortField === field) {
-      if (sortDir === 'desc') {
-        setSortDir('asc')
-      } else {
-        // Reset sort
-        setSortField(null)
-        setSortDir('desc')
-      }
-    } else {
-      setSortField(field)
-      setSortDir('desc')
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages)
     }
-    setPage(1)
+  }, [page, totalPages])
+
+  function handleExport() {
+    const rows = filtered.map((order) => [
+      order.id,
+      order.buyer,
+      order.email,
+      order.event,
+      order.ticket,
+      order.qty,
+      order.total,
+      order.status,
+      order.date,
+    ])
+
+    const csv = [
+      ['Order', 'Buyer', 'Email', 'Event', 'Ticket', 'Qty', 'Total', 'Status', 'Date'],
+      ...rows,
+    ]
+      .map((row) => row.map((value) => escapeCsv(value)).join(','))
+      .join('\n')
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
   }
 
-  function SortIcon({ field }: { field: SortField }) {
-    if (sortField !== field) {
-      return <ArrowUpDown size={12} className="text-zinc-300" />
-    }
-    return sortDir === 'desc' ? (
-      <ArrowDown size={12} className="text-[#5151eb]" />
-    ) : (
-      <ArrowUp size={12} className="text-[#5151eb]" />
+  if (isLoading && orders.length === 0) {
+    return (
+      <div className="flex items-center justify-center rounded-xl border border-zinc-200 bg-white py-20">
+        <p className="text-sm text-zinc-500">Loading orders...</p>
+      </div>
+    )
+  }
+
+  if (error && orders.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-xl border border-red-100 bg-red-50 py-12">
+        <p className="text-sm text-red-600">{error}</p>
+        <button
+          onClick={() => fetchOrders(user?.id ?? null)}
+          className="mt-3 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700"
+        >
+          Retry
+        </button>
+      </div>
     )
   }
 
@@ -217,9 +161,7 @@ export default function OrdersPage() {
         <p className="mt-1 text-sm text-zinc-500">Manage orders, attendees, and ticket delivery</p>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Search */}
+      <div className="mb-5 flex flex-wrap items-center gap-3">
         <div className="relative">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
           <input
@@ -233,25 +175,23 @@ export default function OrdersPage() {
           />
         </div>
 
-        {/* Status filter */}
         <div className="flex items-center rounded-lg border border-zinc-200 bg-white p-0.5">
-          {statusOptions.map((s) => (
+          {statusOptions.map((value) => (
             <button
-              key={s}
+              key={value}
               onClick={() => {
-                setStatus(s)
+                setStatus(value)
                 setPage(1)
               }}
               className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
-                status === s ? 'bg-[#5151eb] text-white' : 'text-zinc-600 hover:bg-zinc-50'
+                status === value ? 'bg-[#5151eb] text-white' : 'text-zinc-600 hover:bg-zinc-50'
               }`}
             >
-              {s}
+              {value}
             </button>
           ))}
         </div>
 
-        {/* Event filter */}
         <div className="relative" ref={dropdownRef}>
           <button
             type="button"
@@ -267,7 +207,6 @@ export default function OrdersPage() {
 
           {eventDropdownOpen && (
             <div className="absolute left-0 top-full z-20 mt-1 w-64 rounded-lg border border-zinc-200 bg-white p-1.5 shadow-lg">
-              {/* Search */}
               <div className="px-2 pb-2">
                 <input
                   type="text"
@@ -279,7 +218,6 @@ export default function OrdersPage() {
                 />
               </div>
               <div className="max-h-48 overflow-y-auto">
-                {/* All Events option */}
                 <button
                   type="button"
                   onClick={() => {
@@ -325,128 +263,54 @@ export default function OrdersPage() {
         </div>
 
         <div className="ml-auto">
-          <button className="flex h-9 items-center rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50">
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={filtered.length === 0}
+            className="flex h-9 items-center rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
             Export
           </button>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="mt-5">
-        {paginated.length > 0 ? (
-          <div className="overflow-hidden rounded-xl border border-zinc-200">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-zinc-100 bg-zinc-50/80">
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                    Order
-                  </th>
-                  <th
-                    className="cursor-pointer px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 select-none"
-                    onClick={() => toggleSort('buyer')}
-                  >
-                    <span className="inline-flex items-center gap-1">
-                      Buyer
-                      <SortIcon field="buyer" />
-                    </span>
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                    Event
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                    Ticket
-                  </th>
-                  <th
-                    className="cursor-pointer px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500 select-none"
-                    onClick={() => toggleSort('total')}
-                  >
-                    <span className="inline-flex items-center justify-end gap-1">
-                      Total
-                      <SortIcon field="total" />
-                    </span>
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                    Status
-                  </th>
-                  <th
-                    className="cursor-pointer px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500 select-none"
-                    onClick={() => toggleSort('date')}
-                  >
-                    <span className="inline-flex items-center gap-1">
-                      Date
-                      <SortIcon field="date" />
-                    </span>
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100 bg-white">
-                {paginated.map((order) => (
-                  <tr key={order.id} className="transition hover:bg-zinc-50/50">
-                    <td className="px-4 py-3.5">
-                      <p className="text-sm font-semibold text-zinc-900">{order.id}</p>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <p className="text-sm font-medium text-zinc-800">{order.buyer}</p>
-                      <p className="text-xs text-zinc-400">{order.email}</p>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <p className="text-sm text-zinc-700">{order.event}</p>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <p className="text-sm text-zinc-700">{order.ticket}</p>
-                      <p className="text-xs text-zinc-400">×{order.qty}</p>
-                    </td>
-                    <td className="px-4 py-3.5 text-right text-sm font-medium text-zinc-900">
-                      Rp {order.total.toLocaleString('id-ID')}
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          order.status === 'Completed'
-                            ? 'bg-emerald-50 text-emerald-700'
-                            : order.status === 'Pending'
-                              ? 'bg-amber-50 text-amber-700'
-                              : 'bg-red-50 text-red-600'
-                        }`}
-                      >
-                        {order.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 text-sm text-zinc-500">{order.date}</td>
-                    <td className="px-4 py-3.5 text-right">
-                      <Link
-                        href={`/organizations/orders/${order.id}`}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-[#5151eb] transition hover:text-[#3d3dcc]"
-                      >
-                        <Eye size={13} />
-                        View
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
+        <div className="grid grid-cols-8 gap-4 border-b border-zinc-100 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+          <div>Order</div>
+          <div className="flex items-center gap-1">
+            Buyer
           </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-200 py-16">
-            <h3 className="text-base font-semibold text-zinc-900">No orders found</h3>
+          <div>Event</div>
+          <div>Ticket</div>
+          <div className="flex items-center gap-1">
+            Total
+          </div>
+          <div>Status</div>
+          <div className="flex items-center gap-1">
+            Date
+          </div>
+          <div className="text-right">Action</div>
+        </div>
+
+        {paginated.length === 0 ? (
+          <div className="px-5 py-16 text-center">
+            <h3 className="text-base font-semibold text-zinc-900">No orders yet</h3>
             <p className="mt-1 text-sm text-zinc-500">
-              Try adjusting your search or filter criteria
+              Orders will appear here after tickets are purchased
             </p>
           </div>
+        ) : (
+          paginated.map((order) => <OrderRow key={order.id} order={order} />)
         )}
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between">
           <p className="text-xs text-zinc-500">
             Showing {(page - 1) * perPage + 1}–{Math.min(page * perPage, filtered.length)} of{' '}
             {filtered.length} orders
           </p>
+
           <div className="flex items-center gap-1">
             <button
               onClick={() => setPage(page - 1)}
@@ -455,6 +319,7 @@ export default function OrdersPage() {
             >
               <ChevronLeft size={14} className="text-zinc-600" />
             </button>
+
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
               <button
                 key={p}
@@ -468,6 +333,7 @@ export default function OrdersPage() {
                 {p}
               </button>
             ))}
+
             <button
               onClick={() => setPage(page + 1)}
               disabled={page >= totalPages}
@@ -478,6 +344,71 @@ export default function OrdersPage() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function OrderRow({
+  order,
+}: {
+  order: {
+    id: string
+    buyer: string
+    email: string
+    event: string
+    ticket: string
+    qty: number
+    total: number
+    status: 'Completed' | 'Pending' | 'Refunded'
+    date: string
+  }
+}) {
+  const statusClass =
+    order.status === 'Completed'
+      ? 'bg-emerald-50 text-emerald-700'
+      : order.status === 'Pending'
+        ? 'bg-amber-50 text-amber-700'
+        : 'bg-red-50 text-red-600'
+
+  return (
+    <div className="grid grid-cols-8 items-center gap-4 border-b border-zinc-50 px-5 py-5 transition last:border-b-0 hover:bg-indigo-50/20">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold text-zinc-900">{order.id}</p>
+      </div>
+
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium text-zinc-900">{order.buyer}</p>
+        <p className="truncate text-xs text-zinc-400">{order.email}</p>
+      </div>
+
+      <div className="min-w-0">
+        <p className="truncate text-sm text-zinc-700">{order.event}</p>
+      </div>
+
+      <div className="min-w-0">
+        <p className="truncate text-sm text-zinc-700">{order.ticket}</p>
+        <p className="text-xs text-zinc-400">×{order.qty}</p>
+      </div>
+
+      <div className="text-sm font-semibold text-zinc-900">{formatMoney(order.total)}</div>
+
+      <div>
+        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusClass}`}>
+          {order.status}
+        </span>
+      </div>
+
+      <div className="text-sm text-zinc-500">{formatOrderDate(order.date)}</div>
+
+      <div className="flex justify-end">
+        <Link
+          href={`/organizations/orders/${order.id}`}
+          className="inline-flex items-center gap-1 text-sm font-medium text-[#5151eb] transition hover:text-[#3d3dcc]"
+        >
+          <Eye size={14} />
+          View
+        </Link>
+      </div>
     </div>
   )
 }
