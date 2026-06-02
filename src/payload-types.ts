@@ -75,6 +75,8 @@ export interface Config {
     locations: Location;
     events: Event;
     tickets: Ticket;
+    'finance-settings': FinanceSetting;
+    'payment-connections': PaymentConnection;
     promotions: Promotion;
     posts: Post;
     comments: Comment;
@@ -93,6 +95,8 @@ export interface Config {
     locations: LocationsSelect<false> | LocationsSelect<true>;
     events: EventsSelect<false> | EventsSelect<true>;
     tickets: TicketsSelect<false> | TicketsSelect<true>;
+    'finance-settings': FinanceSettingsSelect<false> | FinanceSettingsSelect<true>;
+    'payment-connections': PaymentConnectionsSelect<false> | PaymentConnectionsSelect<true>;
     promotions: PromotionsSelect<false> | PromotionsSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
     comments: CommentsSelect<false> | CommentsSelect<true>;
@@ -425,9 +429,84 @@ export interface Ticket {
   purchaserPhone?: string | null;
   ticketType: string;
   price: number;
-  status: 'active' | 'checked_in' | 'cancelled' | 'refunded';
+  status: 'active' | 'pending' | 'checked_in' | 'cancelled' | 'refunded';
   checkedInAt?: string | null;
   checkedInBy?: (number | null) | User;
+  paymentProvider?: ('stripe' | 'paypal') | null;
+  serviceFeeAmount?: number | null;
+  taxAmount?: number | null;
+  subtotalAmount?: number | null;
+  totalAmount?: number | null;
+  currency?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "finance-settings".
+ */
+export interface FinanceSetting {
+  id: number;
+  organizer: number | User;
+  serviceFeePercent: number;
+  taxPercent: number;
+  taxLabel?: string | null;
+  defaultProvider: 'auto' | 'stripe' | 'paypal';
+  /**
+   * Default currency used in checkout calculations
+   */
+  currency: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payment-connections".
+ */
+export interface PaymentConnection {
+  id: number;
+  organizer: number | User;
+  provider: 'stripe' | 'paypal';
+  status: 'pending' | 'connected' | 'revoked' | 'disabled';
+  /**
+   * Used as the default checkout provider when multiple connections are active
+   */
+  defaultProvider?: boolean | null;
+  /**
+   * Stripe account id or PayPal merchant id
+   */
+  externalAccountId?: string | null;
+  accountEmail?: string | null;
+  accountName?: string | null;
+  country?: string | null;
+  /**
+   * Provider capabilities and onboarding metadata
+   */
+  capabilities?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  authState?: string | null;
+  accessToken?: string | null;
+  refreshToken?: string | null;
+  expiresAt?: string | null;
+  connectedAt?: string | null;
+  revokedAt?: string | null;
+  onboardingUrl?: string | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -572,6 +651,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'tickets';
         value: number | Ticket;
+      } | null)
+    | ({
+        relationTo: 'finance-settings';
+        value: number | FinanceSetting;
+      } | null)
+    | ({
+        relationTo: 'payment-connections';
+        value: number | PaymentConnection;
       } | null)
     | ({
         relationTo: 'promotions';
@@ -805,6 +892,51 @@ export interface TicketsSelect<T extends boolean = true> {
   status?: T;
   checkedInAt?: T;
   checkedInBy?: T;
+  paymentProvider?: T;
+  serviceFeeAmount?: T;
+  taxAmount?: T;
+  subtotalAmount?: T;
+  totalAmount?: T;
+  currency?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "finance-settings_select".
+ */
+export interface FinanceSettingsSelect<T extends boolean = true> {
+  organizer?: T;
+  serviceFeePercent?: T;
+  taxPercent?: T;
+  taxLabel?: T;
+  defaultProvider?: T;
+  currency?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payment-connections_select".
+ */
+export interface PaymentConnectionsSelect<T extends boolean = true> {
+  organizer?: T;
+  provider?: T;
+  status?: T;
+  defaultProvider?: T;
+  externalAccountId?: T;
+  accountEmail?: T;
+  accountName?: T;
+  country?: T;
+  capabilities?: T;
+  authState?: T;
+  accessToken?: T;
+  refreshToken?: T;
+  expiresAt?: T;
+  connectedAt?: T;
+  revokedAt?: T;
+  onboardingUrl?: T;
+  metadata?: T;
   updatedAt?: T;
   createdAt?: T;
 }

@@ -7,6 +7,7 @@ import { ArrowLeft, ChevronRight, Clock, MapPin, Calendar } from 'lucide-react'
 import { FrontendNavbar } from '@/components/frontend/navbar'
 import { TicketSelector } from '@/components/frontend/ticket-selector'
 import config from '@/payload.config'
+import { getConnectedProviders, normalizeFinanceSettings } from '@/lib/finance'
 import type { Event, Media, Location, Category } from '@/payload-types'
 
 type Props = {
@@ -179,6 +180,13 @@ export default async function EventTicketsPage({ params }: Props) {
       ? { name: (realEvent.organizer as any).name ?? 'Organizer', avatarUrl: '' }
       : { name: 'Organizer', avatarUrl: '' }
 
+  const organizerId =
+    realEvent.organizer && typeof realEvent.organizer === 'object'
+      ? String((realEvent.organizer as any).id ?? '')
+      : realEvent.organizer
+        ? String(realEvent.organizer)
+        : ''
+
   const ev = {
     id: realEvent.id,
     title: realEvent.title,
@@ -195,6 +203,43 @@ export default async function EventTicketsPage({ params }: Props) {
     organizer: organizerData,
     ticketTypes: realEvent.ticketTypes ?? [],
   }
+
+  const [financeSettingsDoc, paymentConnections] = organizerId
+    ? await Promise.all([
+        payload.find({
+          collection: 'finance-settings',
+          where: {
+            organizer: { equals: organizerId },
+          },
+          limit: 1,
+          depth: 0,
+          overrideAccess: true,
+        }),
+        payload.find({
+          collection: 'payment-connections',
+          where: {
+            organizer: { equals: organizerId },
+          },
+          limit: 10,
+          depth: 0,
+          overrideAccess: true,
+        }),
+      ])
+    : [{ docs: [] }, { docs: [] }]
+
+  const financeSettings = normalizeFinanceSettings(financeSettingsDoc.docs[0] ?? null)
+  const supportedProviders = getConnectedProviders(
+    paymentConnections.docs.map((connection) => ({
+      id: connection.id,
+      provider: connection.provider,
+      status: connection.status,
+      accountEmail: connection.accountEmail ?? null,
+      accountName: connection.accountName ?? null,
+      externalAccountId: connection.externalAccountId ?? null,
+      defaultProvider: Boolean(connection.defaultProvider),
+      connectedAt: connection.connectedAt ?? null,
+    })),
+  )
 
   // Redirect if event is cancelled or completed
   if (ev.status === 'cancelled' || ev.status === 'completed') {
@@ -287,6 +332,7 @@ export default async function EventTicketsPage({ params }: Props) {
             <div className="mt-6">
               {ticketTypes.length > 0 ? (
                 <TicketSelector
+                  eventId={realEvent.id}
                   ticketTypes={ticketTypes}
                   eventTitle={ev.title}
                   eventSlug={slug}
@@ -295,6 +341,8 @@ export default async function EventTicketsPage({ params }: Props) {
                   currentUser={
                     currentUser ? { name: currentUser.name ?? '', email: currentUser.email } : null
                   }
+                  financeSettings={financeSettings}
+                  paymentProviders={supportedProviders}
                 />
               ) : (
                 <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm">

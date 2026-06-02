@@ -59,6 +59,7 @@ export const Tickets: CollectionConfig = {
       defaultValue: 'active',
       options: [
         { label: 'Active', value: 'active' },
+        { label: 'Pending', value: 'pending' },
         { label: 'Checked In', value: 'checked_in' },
         { label: 'Cancelled', value: 'cancelled' },
         { label: 'Refunded', value: 'refunded' },
@@ -77,6 +78,63 @@ export const Tickets: CollectionConfig = {
       type: 'relationship',
       relationTo: 'users',
       admin: { readOnly: true },
+    },
+    {
+      name: 'paymentProvider',
+      type: 'select',
+      options: [
+        { label: 'Stripe', value: 'stripe' },
+        { label: 'PayPal', value: 'paypal' },
+      ],
+      label: 'Payment Provider',
+      admin: {
+        readOnly: true,
+      },
+    },
+    {
+      name: 'serviceFeeAmount',
+      type: 'number',
+      defaultValue: 0,
+      label: 'Service Fee Amount',
+      admin: {
+        readOnly: true,
+      },
+    },
+    {
+      name: 'taxAmount',
+      type: 'number',
+      defaultValue: 0,
+      label: 'Tax Amount',
+      admin: {
+        readOnly: true,
+      },
+    },
+    {
+      name: 'subtotalAmount',
+      type: 'number',
+      defaultValue: 0,
+      label: 'Subtotal Amount',
+      admin: {
+        readOnly: true,
+      },
+    },
+    {
+      name: 'totalAmount',
+      type: 'number',
+      defaultValue: 0,
+      label: 'Total Amount',
+      admin: {
+        readOnly: true,
+      },
+    },
+    {
+      name: 'currency',
+      type: 'text',
+      defaultValue: 'IDR',
+      label: 'Currency',
+      admin: {
+        readOnly: true,
+      },
     },
   ],
 }

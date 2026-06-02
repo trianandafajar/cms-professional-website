@@ -11,11 +11,16 @@ import {
   User,
   Mail,
   Phone,
-  CreditCard,
   Lock,
   AlertCircle,
   CheckCircle2,
 } from 'lucide-react'
+import { apiClient } from '@/lib/apiClient'
+import {
+  calculateCheckoutTotals,
+  type FinanceSettingsSummary,
+  type PaymentProvider,
+} from '@/lib/finance'
 import type { TicketType } from '@/app/(frontend)/events/[city]/[slug]/tickets/page'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -31,12 +36,15 @@ type CheckoutUser = {
 } | null
 
 type Props = {
+  eventId: string | number
   ticketTypes: TicketType[]
   eventTitle: string
   eventSlug: string
   citySlug: string
   isFree: boolean
   currentUser: CheckoutUser
+  financeSettings: FinanceSettingsSummary
+  paymentProviders: PaymentProvider[]
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -49,11 +57,16 @@ function formatPrice(amount: number, currency: string): string {
   return `${currency} ${amount.toLocaleString()}`
 }
 
-function formatPriceShort(amount: number): string {
+function formatPriceShort(amount: number, currency: string): string {
   if (amount === 0) return 'Free'
-  if (amount >= 1_000_000) return `Rp ${(amount / 1_000_000).toFixed(1)}jt`
-  if (amount >= 1_000) return `Rp ${(amount / 1_000).toFixed(0)}k`
-  return `Rp ${amount}`
+  if (currency === 'IDR') {
+    if (amount >= 1_000_000) return `Rp ${(amount / 1_000_000).toFixed(1)}jt`
+    if (amount >= 1_000) return `Rp ${(amount / 1_000).toFixed(0)}k`
+    return `Rp ${amount}`
+  }
+  if (amount >= 1_000_000) return `${currency} ${(amount / 1_000_000).toFixed(1)}M`
+  if (amount >= 1_000) return `${currency} ${(amount / 1_000).toFixed(0)}k`
+  return `${currency} ${amount}`
 }
 
 // ─── Ticket Type Card ─────────────────────────────────────────────────────────
@@ -187,15 +200,19 @@ function TicketTypeCard({
 function OrderSummary({
   cart,
   isFree,
+  financeSettings,
   onCheckout,
 }: {
   cart: CartItem[]
   isFree: boolean
+  financeSettings: FinanceSettingsSummary
   onCheckout: () => void
 }) {
   const subtotal = cart.reduce((sum, item) => sum + item.ticketType.price * item.quantity, 0)
-  const serviceFee = isFree || subtotal === 0 ? 0 : Math.round(subtotal * 0.05)
-  const total = subtotal + serviceFee
+  const totals = calculateCheckoutTotals(subtotal, financeSettings)
+  const serviceFee = isFree || subtotal === 0 ? 0 : totals.serviceFee
+  const taxAmount = isFree || subtotal === 0 ? 0 : totals.taxAmount
+  const total = isFree || subtotal === 0 ? subtotal : totals.total
   const totalTickets = cart.reduce((sum, item) => sum + item.quantity, 0)
 
   if (totalTickets === 0) return null
@@ -223,17 +240,26 @@ function OrderSummary({
         <>
           <div className="my-3 border-t border-zinc-100" />
           <div className="flex items-center justify-between text-sm">
-            <span className="text-zinc-500">Service fee (5%)</span>
-            <span className="text-zinc-600">{formatPrice(serviceFee, 'IDR')}</span>
+            <span className="text-zinc-500">Service fee ({financeSettings.serviceFeePercent}%)</span>
+            <span className="text-zinc-600">{formatPrice(serviceFee, financeSettings.currency)}</span>
           </div>
         </>
+      )}
+
+      {taxAmount > 0 && (
+        <div className="mt-2 flex items-center justify-between text-sm">
+          <span className="text-zinc-500">
+            {financeSettings.taxLabel} ({financeSettings.taxPercent}%)
+          </span>
+          <span className="text-zinc-600">{formatPrice(taxAmount, financeSettings.currency)}</span>
+        </div>
       )}
 
       <div className="my-3 border-t border-zinc-200" />
       <div className="flex items-center justify-between">
         <span className="text-base font-bold text-[#12192f]">Total</span>
         <span className="text-xl font-extrabold text-[#5151eb]">
-          {total === 0 ? 'Free' : formatPrice(total, 'IDR')}
+          {total === 0 ? 'Free' : formatPrice(total, financeSettings.currency)}
         </span>
       </div>
 
@@ -243,7 +269,9 @@ function OrderSummary({
         className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#5151eb] py-3.5 text-sm font-bold text-white transition hover:bg-[#4040d0] active:scale-[0.98]"
       >
         <Ticket className="size-4" />
-        {isFree || total === 0 ? 'Register Now' : `Checkout — ${formatPriceShort(total)}`}
+        {isFree || total === 0
+          ? 'Register Now'
+          : `Checkout — ${formatPriceShort(total, financeSettings.currency)}`}
       </button>
 
       <p className="mt-3 flex items-center justify-center gap-1.5 text-xs text-zinc-400">
@@ -257,31 +285,45 @@ function OrderSummary({
 // ─── Checkout Form ────────────────────────────────────────────────────────────
 
 function CheckoutForm({
+  eventId,
   cart,
   isFree,
   currentUser,
+  financeSettings,
+  paymentProviders,
+  selectedProvider,
+  onSelectedProviderChange,
   onBack,
   onSuccess,
 }: {
+  eventId: string | number
   cart: CartItem[]
   isFree: boolean
   currentUser: CheckoutUser
+  financeSettings: FinanceSettingsSummary
+  paymentProviders: PaymentProvider[]
+  selectedProvider: PaymentProvider | null
+  onSelectedProviderChange: (provider: PaymentProvider | null) => void
   onBack: () => void
-  onSuccess: () => void
+  onSuccess: (orderId: string, email: string) => void
 }) {
   const [name, setName] = useState(currentUser?.name ?? '')
   const [email, setEmail] = useState(currentUser?.email ?? '')
   const [phone, setPhone] = useState('')
-  const [cardNumber, setCardNumber] = useState('')
-  const [expiry, setExpiry] = useState('')
-  const [cvv, setCvv] = useState('')
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const subtotal = cart.reduce((sum, item) => sum + item.ticketType.price * item.quantity, 0)
-  const serviceFee = isFree || subtotal === 0 ? 0 : Math.round(subtotal * 0.05)
-  const total = subtotal + serviceFee
+  const totals = calculateCheckoutTotals(subtotal, financeSettings)
+  const serviceFee = isFree || subtotal === 0 ? 0 : totals.serviceFee
+  const taxAmount = isFree || subtotal === 0 ? 0 : totals.taxAmount
+  const total = isFree || subtotal === 0 ? subtotal : totals.total
   const totalTickets = cart.reduce((sum, item) => sum + item.quantity, 0)
+  const canSelectProvider = !isFree && total > 0 && paymentProviders.length > 0
+  const effectiveProvider =
+    selectedProvider && paymentProviders.includes(selectedProvider)
+      ? selectedProvider
+      : paymentProviders[0] ?? null
 
   function validate() {
     const errs: Record<string, string> = {}
@@ -289,41 +331,44 @@ function CheckoutForm({
     if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       errs.email = 'Valid email is required'
     if (!phone.trim()) errs.phone = 'Phone number is required'
-    if (!isFree && total > 0) {
-      if (cardNumber.replace(/\s/g, '').length < 16) errs.card = 'Valid card number required'
-      if (!expiry.match(/^\d{2}\/\d{2}$/)) errs.expiry = 'Format: MM/YY'
-      if (cvv.length < 3) errs.cvv = 'CVV required'
+    if (!isFree && total > 0 && !effectiveProvider) {
+      errs.provider = 'Select a payment provider'
     }
     return errs
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const errs = validate()
     if (Object.keys(errs).length > 0) {
       setErrors(errs)
       return
     }
+
     setLoading(true)
-    // Simulate processing
-    setTimeout(() => {
+    try {
+      const response = await apiClient.post<{ success: boolean; orderId: string }>(
+        '/api/finance/checkout',
+        {
+          eventId,
+          buyer: { name, email, phone },
+          provider: effectiveProvider,
+          cart: cart.map((item) => ({
+            ticketTypeId: item.ticketType.id,
+            quantity: item.quantity,
+          })),
+        },
+      )
+
+      onSuccess(response.orderId, email)
+    } catch (err: any) {
+      setErrors((prev) => ({
+        ...prev,
+        submit: err.message || 'Checkout failed',
+      }))
+    } finally {
       setLoading(false)
-      onSuccess()
-    }, 1800)
-  }
-
-  function formatCardNumber(val: string) {
-    return val
-      .replace(/\D/g, '')
-      .slice(0, 16)
-      .replace(/(.{4})/g, '$1 ')
-      .trim()
-  }
-
-  function formatExpiry(val: string) {
-    const digits = val.replace(/\D/g, '').slice(0, 4)
-    if (digits.length >= 3) return `${digits.slice(0, 2)}/${digits.slice(2)}`
-    return digits
+    }
   }
 
   return (
@@ -400,63 +445,48 @@ function CheckoutForm({
         <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
           <h3 className="mb-4 text-base font-bold text-[#12192f]">Payment Details</h3>
           <div className="space-y-4">
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold text-zinc-600">
-                Card Number <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <CreditCard className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
-                <input
-                  type="text"
-                  value={cardNumber}
-                  onChange={(e) => {
-                    setCardNumber(formatCardNumber(e.target.value))
-                    setErrors((p) => ({ ...p, card: '' }))
-                  }}
-                  placeholder="1234 5678 9012 3456"
-                  maxLength={19}
-                  className={`h-11 w-full rounded-xl border pl-10 pr-4 text-sm font-mono outline-none transition focus:ring-2 focus:ring-[#5151eb]/20 ${errors.card ? 'border-red-400' : 'border-zinc-200 focus:border-[#5151eb]'}`}
-                />
-              </div>
-              {errors.card && <p className="mt-1 text-xs text-red-500">{errors.card}</p>}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+            {canSelectProvider ? (
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-zinc-600">
-                  Expiry <span className="text-red-500">*</span>
+                  Payment provider <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={expiry}
-                  onChange={(e) => {
-                    setExpiry(formatExpiry(e.target.value))
-                    setErrors((p) => ({ ...p, expiry: '' }))
-                  }}
-                  placeholder="MM/YY"
-                  maxLength={5}
-                  className={`h-11 w-full rounded-xl border px-4 text-sm font-mono outline-none transition focus:ring-2 focus:ring-[#5151eb]/20 ${errors.expiry ? 'border-red-400' : 'border-zinc-200 focus:border-[#5151eb]'}`}
-                />
-                {errors.expiry && <p className="mt-1 text-xs text-red-500">{errors.expiry}</p>}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {paymentProviders.map((provider) => {
+                    const active = effectiveProvider === provider
+                    return (
+                      <button
+                        key={provider}
+                        type="button"
+                        onClick={() => {
+                          onSelectedProviderChange(provider)
+                          setErrors((prev) => ({ ...prev, provider: '' }))
+                        }}
+                        className={`rounded-xl border px-4 py-3 text-left transition ${
+                          active
+                            ? 'border-[#5151eb] bg-[#5151eb]/5'
+                            : 'border-zinc-200 hover:border-zinc-300'
+                        }`}
+                      >
+                        <p className="text-sm font-semibold text-zinc-900">
+                          {provider === 'stripe' ? 'Stripe' : 'PayPal'}
+                        </p>
+                        <p className="mt-0.5 text-xs text-zinc-500">
+                          {provider === 'stripe'
+                            ? 'Cards and international payments'
+                            : 'Wallet and alternative checkout'}
+                        </p>
+                      </button>
+                    )
+                  })}
+                </div>
+                {errors.provider && <p className="mt-1 text-xs text-red-500">{errors.provider}</p>}
               </div>
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-zinc-600">
-                  CVV <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={cvv}
-                  onChange={(e) => {
-                    setCvv(e.target.value.replace(/\D/g, '').slice(0, 4))
-                    setErrors((p) => ({ ...p, cvv: '' }))
-                  }}
-                  placeholder="123"
-                  maxLength={4}
-                  className={`h-11 w-full rounded-xl border px-4 text-sm font-mono outline-none transition focus:ring-2 focus:ring-[#5151eb]/20 ${errors.cvv ? 'border-red-400' : 'border-zinc-200 focus:border-[#5151eb]'}`}
-                />
-                {errors.cvv && <p className="mt-1 text-xs text-red-500">{errors.cvv}</p>}
+            ) : (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                This event currently has no connected payment provider. Checkout cannot proceed
+                until the organizer connects Stripe or PayPal.
               </div>
-            </div>
+            )}
 
             <div className="flex items-center gap-2 rounded-xl bg-zinc-50 p-3 text-xs text-zinc-500">
               <Lock className="size-3.5 shrink-0 text-zinc-400" />
@@ -484,8 +514,22 @@ function CheckoutForm({
           ))}
           {serviceFee > 0 && (
             <div className="flex justify-between text-sm">
-              <span className="text-zinc-500">Service fee</span>
-              <span className="text-zinc-600">{formatPrice(serviceFee, 'IDR')}</span>
+              <span className="text-zinc-500">
+                Service fee ({financeSettings.serviceFeePercent}%)
+              </span>
+              <span className="text-zinc-600">
+                {formatPrice(serviceFee, financeSettings.currency)}
+              </span>
+            </div>
+          )}
+          {taxAmount > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-zinc-500">
+                {financeSettings.taxLabel} ({financeSettings.taxPercent}%)
+              </span>
+              <span className="text-zinc-600">
+                {formatPrice(taxAmount, financeSettings.currency)}
+              </span>
             </div>
           )}
           <div className="border-t border-zinc-200 pt-2 flex justify-between">
@@ -493,9 +537,10 @@ function CheckoutForm({
               Total ({totalTickets} ticket{totalTickets > 1 ? 's' : ''})
             </span>
             <span className="text-lg font-extrabold text-[#5151eb]">
-              {total === 0 ? 'Free' : formatPrice(total, 'IDR')}
+              {total === 0 ? 'Free' : formatPrice(total, financeSettings.currency)}
             </span>
           </div>
+          {errors.submit && <p className="mt-2 text-xs text-red-500">{errors.submit}</p>}
         </div>
       </div>
 
@@ -510,7 +555,7 @@ function CheckoutForm({
         </button>
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || (!isFree && total > 0 && !effectiveProvider)}
           className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#5151eb] py-3 text-sm font-bold text-white transition hover:bg-[#4040d0] disabled:opacity-70"
         >
           {loading ? (
@@ -521,7 +566,9 @@ function CheckoutForm({
           ) : (
             <>
               <Lock className="size-4" />
-              {isFree || total === 0 ? 'Complete Registration' : `Pay ${formatPriceShort(total)}`}
+              {isFree || total === 0
+                ? 'Complete Registration'
+                : 'Place Order'}
             </>
           )}
         </button>
@@ -536,10 +583,12 @@ function SuccessScreen({
   eventTitle,
   email,
   isFree,
+  orderId,
 }: {
   eventTitle: string
   email: string
   isFree: boolean
+  orderId: string | null
 }) {
   return (
     <div className="flex flex-col items-center py-12 text-center">
@@ -547,13 +596,18 @@ function SuccessScreen({
         <CheckCircle2 className="size-10 text-emerald-500" />
       </div>
       <h2 className="mt-6 text-2xl font-extrabold text-[#12192f]">
-        {isFree ? "You're registered!" : 'Booking confirmed!'}
+        {isFree ? "You're registered!" : 'Order received!'}
       </h2>
       <p className="mt-3 max-w-sm text-sm text-zinc-500">
         {isFree
           ? `Your spot for "${eventTitle}" is secured. A confirmation has been sent to ${email}.`
-          : `Your tickets for "${eventTitle}" are confirmed. Check ${email} for your e-tickets.`}
+          : `Your order for "${eventTitle}" has been created. Check ${email} for the next update.`}
       </p>
+      {orderId && (
+        <p className="mt-3 text-xs font-semibold text-zinc-400">
+          Order reference: <span className="text-zinc-600">{orderId}</span>
+        </p>
+      )}
       <div className="mt-8 flex flex-col gap-3 sm:flex-row">
         <a
           href="/"
@@ -574,10 +628,24 @@ function SuccessScreen({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function TicketSelector({ ticketTypes, eventTitle, isFree, currentUser }: Props) {
+export function TicketSelector({
+  eventId,
+  ticketTypes,
+  eventTitle,
+  isFree,
+  currentUser,
+  financeSettings,
+  paymentProviders,
+}: Props) {
   const [cart, setCart] = useState<CartItem[]>([])
   const [step, setStep] = useState<'select' | 'checkout' | 'success'>('select')
   const [checkoutEmail, setCheckoutEmail] = useState(currentUser?.email ?? '')
+  const [checkoutOrderId, setCheckoutOrderId] = useState<string | null>(null)
+  const [selectedProvider, setSelectedProvider] = useState<PaymentProvider | null>(
+    paymentProviders.includes(financeSettings.defaultProvider as PaymentProvider)
+      ? (financeSettings.defaultProvider as PaymentProvider)
+      : paymentProviders[0] ?? null,
+  )
 
   function addTicket(ticket: TicketType) {
     setCart((prev) => {
@@ -613,17 +681,33 @@ export function TicketSelector({ ticketTypes, eventTitle, isFree, currentUser }:
   const activeCart = cart.filter((i) => i.quantity > 0)
 
   if (step === 'success') {
-    return <SuccessScreen eventTitle={eventTitle} email={checkoutEmail} isFree={isFree} />
+    return (
+      <SuccessScreen
+        eventTitle={eventTitle}
+        email={checkoutEmail}
+        isFree={isFree}
+        orderId={checkoutOrderId}
+      />
+    )
   }
 
   if (step === 'checkout') {
     return (
       <CheckoutForm
+        eventId={eventId}
         cart={activeCart}
         isFree={isFree}
         currentUser={currentUser}
+        financeSettings={financeSettings}
+        paymentProviders={paymentProviders}
+        selectedProvider={selectedProvider}
+        onSelectedProviderChange={setSelectedProvider}
         onBack={() => setStep('select')}
-        onSuccess={() => setStep('success')}
+        onSuccess={(orderId, email) => {
+          setCheckoutEmail(email)
+          setCheckoutOrderId(orderId)
+          setStep('success')
+        }}
       />
     )
   }
@@ -646,7 +730,12 @@ export function TicketSelector({ ticketTypes, eventTitle, isFree, currentUser }:
       {/* Proceed CTA */}
       {totalTickets > 0 && (
         <>
-          <OrderSummary cart={activeCart} isFree={isFree} onCheckout={() => setStep('checkout')} />
+          <OrderSummary
+            cart={activeCart}
+            isFree={isFree}
+            financeSettings={financeSettings}
+            onCheckout={() => setStep('checkout')}
+          />
         </>
       )}
 

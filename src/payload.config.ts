@@ -13,6 +13,8 @@ import { Categories } from './collections/Categories'
 import { Locations } from './collections/Locations'
 import { Events } from './collections/Events'
 import { Tickets } from './collections/Tickets'
+import { FinanceSettings } from './collections/FinanceSettings'
+import { PaymentConnections } from './collections/PaymentConnections'
 import { Promotions } from './collections/Promotions'
 import { Posts } from './collections/Posts'
 import { Comments } from './collections/Comments'
@@ -20,6 +22,17 @@ import { checkinValidateEndpoint } from './endpoints/checkin-validate'
 import { checkinConfirmEndpoint } from './endpoints/checkin-confirm'
 import { checkinStatsEndpoint } from './endpoints/checkin-stats'
 import { meEndpoint } from './endpoints/me'
+import {
+  financeCheckoutCreateEndpoint,
+  financeConnectPayPalCallbackEndpoint,
+  financeConnectStartEndpoint,
+  financeConnectStripeRefreshEndpoint,
+  financeConnectionDisconnectEndpoint,
+  financeWorkspaceEndpoint,
+  financeWorkspaceUpdateEndpoint,
+  financeWebhookEndpoint,
+} from './endpoints/finance'
+import { financeConnectStripeReturnEndpoint } from './endpoints/finance-stripe-return'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -41,6 +54,8 @@ export default buildConfig({
     Locations,
     Events,
     Tickets,
+    FinanceSettings,
+    PaymentConnections,
     Promotions,
     Posts,
     Comments,
@@ -66,6 +81,15 @@ export default buildConfig({
     checkinStatsEndpoint,
     // Toggle like/unlike an event for the authenticated user
     meEndpoint,
+    financeWorkspaceEndpoint,
+    financeWorkspaceUpdateEndpoint,
+    financeConnectionDisconnectEndpoint,
+    financeCheckoutCreateEndpoint,
+    financeConnectStartEndpoint,
+    financeConnectPayPalCallbackEndpoint,
+    financeConnectStripeRefreshEndpoint,
+    financeConnectStripeReturnEndpoint,
+    financeWebhookEndpoint,
     {
       path: '/likes/toggle/:eventId',
       method: 'post',
