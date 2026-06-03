@@ -38,6 +38,42 @@ function normalizeMoneyAmount(amount: number) {
   return Math.max(0, Math.round(Number.isFinite(amount) ? amount : 0))
 }
 
+function getStripeCheckoutCurrency() {
+  const configuredCurrency = String(process.env.STRIPE_CHECKOUT_CURRENCY ?? 'USD').trim().toLowerCase()
+
+  return configuredCurrency || 'usd'
+}
+
+function getIdrToUsdRate() {
+  const configuredRate = Number(process.env.STRIPE_IDR_TO_USD_RATE ?? 16000)
+
+  if (!Number.isFinite(configuredRate) || configuredRate <= 0) {
+    return 16000
+  }
+
+  return configuredRate
+}
+
+function convertMoneyForStripe(amount: number, sourceCurrency: string, targetCurrency: string) {
+  const normalizedAmount = normalizeMoneyAmount(amount)
+  const normalizedSourceCurrency = String(sourceCurrency ?? '').trim().toLowerCase()
+  const normalizedTargetCurrency = String(targetCurrency ?? '').trim().toLowerCase()
+
+  if (!normalizedAmount) {
+    return 0
+  }
+
+  if (normalizedSourceCurrency === normalizedTargetCurrency) {
+    return normalizedAmount
+  }
+
+  if (normalizedSourceCurrency === 'idr' && normalizedTargetCurrency === 'usd') {
+    return Math.max(1, Math.round((normalizedAmount / getIdrToUsdRate()) * 100))
+  }
+
+  return normalizedAmount
+}
+
 function extractTicketTypeId(value: string) {
   const rawValue = String(value ?? '').trim()
   if (!rawValue) return ''
@@ -430,6 +466,7 @@ async function createTicketsForOrder({
   totals,
   orderId,
   paymentProvider,
+  status = 'completed',
   stripeCheckoutSessionId,
   stripePaymentIntentId,
   stripeDestinationAccountId,
@@ -447,6 +484,7 @@ async function createTicketsForOrder({
   totals: { subtotal: number; serviceFee: number; taxAmount: number; total: number }
   orderId: string
   paymentProvider?: PaymentProvider
+  status?: 'active' | 'pending' | 'completed' | 'checked_in' | 'cancelled' | 'refunded'
   stripeCheckoutSessionId?: string | null
   stripePaymentIntentId?: string | null
   stripeDestinationAccountId?: string | null
@@ -465,14 +503,14 @@ async function createTicketsForOrder({
           purchaserPhone: buyer.phone ? String(buyer.phone) : undefined,
           ticketType: item.ticketName,
           price: item.unitPrice,
-          status: 'active',
+          status: status ?? 'completed',
           paymentProvider,
           serviceFeeAmount: totals.serviceFee,
           taxAmount: totals.taxAmount,
           subtotalAmount: totals.subtotal,
           totalAmount: totals.total,
           currency: item.currency,
-          paidAt: new Date().toISOString(),
+          paidAt: status === 'pending' ? undefined : new Date().toISOString(),
           stripeCheckoutSessionId: stripeCheckoutSessionId ?? undefined,
           stripePaymentIntentId: stripePaymentIntentId ?? undefined,
           stripeDestinationAccountId: stripeDestinationAccountId ?? undefined,
@@ -491,27 +529,29 @@ async function createTicketsForOrder({
     items.map((item) => ({ ticketTypeId: item.ticketTypeId, quantity: item.quantity })),
   )
 
-  void queueNotification(payload, {
-    recipient: event.organizer && typeof event.organizer === 'object' ? event.organizer.id : event.organizer,
-    type: 'order',
-    title: `New order ${orderId}`,
-    message: `${buyer.name} purchased ${ticketDocs.length} ticket${ticketDocs.length > 1 ? 's' : ''} for ${event.title}.`,
-    link: `/organizations/orders/${orderId}`,
-    metadata: {
-      orderId,
-      eventId: event.id,
-      ticketCount: ticketDocs.length,
-      buyerEmail: buyer.email,
-      provider: paymentProvider ?? 'stripe',
-    },
-  })
+  if (status !== 'pending') {
+    void queueNotification(payload, {
+      recipient: event.organizer && typeof event.organizer === 'object' ? event.organizer.id : event.organizer,
+      type: 'order',
+      title: `New order ${orderId}`,
+      message: `${buyer.name} purchased ${ticketDocs.length} ticket${ticketDocs.length > 1 ? 's' : ''} for ${event.title}.`,
+      link: `/organizations/orders/${orderId}`,
+      metadata: {
+        orderId,
+        eventId: event.id,
+        ticketCount: ticketDocs.length,
+        buyerEmail: buyer.email,
+        provider: paymentProvider ?? 'stripe',
+      },
+    })
+  }
 
   return ticketDocs
 }
 
 function mapWebhookStatus(status: string) {
   if (status === 'paid' || status === 'succeeded' || status === 'completed') {
-    return 'active'
+    return 'completed'
   }
 
   if (status === 'refunded') {
@@ -816,14 +856,61 @@ export const financeCheckoutCreateEndpoint: Endpoint = {
       return Response.json({ error: 'Stripe connected account not found' }, { status: 400 })
     }
 
+    const connectedAccount = await getStripeAccount(stripe, connectedAccountId)
+    const requirements = connectedAccount.requirements as
+      | {
+          disabled_reason?: string | null
+          currently_due?: string[]
+          eventually_due?: string[]
+        }
+      | undefined
+
+    if (!connectedAccount.charges_enabled) {
+      const disabledReason = String(requirements?.disabled_reason ?? 'requirements.past_due')
+      const currentlyDue = Array.isArray(requirements?.currently_due)
+        ? requirements.currently_due.slice(0, 5)
+        : []
+
+      if (debugCheckout) {
+        console.error('[finance.checkout.stripe.account_disabled]', {
+          connectedAccountId,
+          chargesEnabled: connectedAccount.charges_enabled,
+          payoutsEnabled: connectedAccount.payouts_enabled,
+          disabledReason,
+          currentlyDue,
+        })
+      }
+
+      return Response.json(
+        {
+          error:
+            'Stripe connected account cannot currently make charges. Please complete the remaining onboarding requirements in Stripe.',
+          disabledReason,
+          currentlyDue,
+        },
+        { status: 400 },
+      )
+    }
+
     if (!returnPath.startsWith('/')) {
       return Response.json({ error: 'returnPath is required' }, { status: 400 })
     }
 
-    const currency = String(normalizedItems[0]?.currency ?? settings.currency).toLowerCase()
-    const lineItems = normalizedItems.map((item) => ({
+    const originalCurrency = String(normalizedItems[0]?.currency ?? settings.currency).toLowerCase()
+    const chargeCurrency = getStripeCheckoutCurrency()
+    const chargeItems = normalizedItems.map((item) => ({
+      ...item,
+      unitPrice: convertMoneyForStripe(item.unitPrice, originalCurrency, chargeCurrency),
+    }))
+    const chargeTotals = {
+      subtotal: convertMoneyForStripe(totals.subtotal, originalCurrency, chargeCurrency),
+      serviceFee: convertMoneyForStripe(totals.serviceFee, originalCurrency, chargeCurrency),
+      taxAmount: convertMoneyForStripe(totals.taxAmount, originalCurrency, chargeCurrency),
+      total: convertMoneyForStripe(totals.total, originalCurrency, chargeCurrency),
+    }
+    const lineItems = chargeItems.map((item) => ({
       price_data: {
-        currency,
+        currency: chargeCurrency,
         product_data: {
           name: item.ticketName,
         },
@@ -835,11 +922,11 @@ export const financeCheckoutCreateEndpoint: Endpoint = {
     if (totals.serviceFee > 0) {
       lineItems.push({
         price_data: {
-          currency,
+          currency: chargeCurrency,
           product_data: {
             name: 'Service Fee',
           },
-          unit_amount: normalizeMoneyAmount(totals.serviceFee),
+          unit_amount: normalizeMoneyAmount(chargeTotals.serviceFee),
         },
         quantity: 1,
       })
@@ -848,11 +935,11 @@ export const financeCheckoutCreateEndpoint: Endpoint = {
     if (totals.taxAmount > 0) {
       lineItems.push({
         price_data: {
-          currency,
+          currency: chargeCurrency,
           product_data: {
             name: settings.taxLabel,
           },
-          unit_amount: normalizeMoneyAmount(totals.taxAmount),
+          unit_amount: normalizeMoneyAmount(chargeTotals.taxAmount),
         },
         quantity: 1,
       })
@@ -861,10 +948,12 @@ export const financeCheckoutCreateEndpoint: Endpoint = {
     if (debugCheckout) {
       console.info('[finance.checkout.stripe]', {
         orderId,
-        currency,
+        originalCurrency,
+        chargeCurrency,
         connectedAccountId,
         lineItems,
         totals,
+        chargeTotals,
       })
     }
 
@@ -878,7 +967,7 @@ export const financeCheckoutCreateEndpoint: Endpoint = {
         success_url: `${getServerURL()}${returnPath}?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${getServerURL()}${returnPath}?checkout=cancelled`,
         payment_intent_data: {
-          application_fee_amount: totals.serviceFee,
+          application_fee_amount: chargeTotals.serviceFee,
           on_behalf_of: connectedAccountId,
           transfer_data: {
             destination: connectedAccountId,
@@ -900,7 +989,12 @@ export const financeCheckoutCreateEndpoint: Endpoint = {
           serviceFee: String(totals.serviceFee),
           taxAmount: String(totals.taxAmount),
           total: String(totals.total),
-          currency,
+          currency: originalCurrency,
+          chargeCurrency,
+          chargeSubtotal: String(chargeTotals.subtotal),
+          chargeServiceFee: String(chargeTotals.serviceFee),
+          chargeTaxAmount: String(chargeTotals.taxAmount),
+          chargeTotal: String(chargeTotals.total),
           items: JSON.stringify(normalizedItems),
           returnPath,
         },
@@ -924,8 +1018,8 @@ export const financeCheckoutCreateEndpoint: Endpoint = {
         return Response.json(
           {
             error:
-              currency === 'idr'
-                ? 'The order total is too small for Stripe checkout. Please increase the ticket amount to at least Rp10.000.'
+              chargeCurrency === 'usd'
+                ? 'The order total is too small for Stripe checkout after currency conversion. Please increase the ticket amount.'
                 : 'The order total is too small for Stripe checkout. Please increase the ticket amount.',
           },
           { status: 400 },
@@ -938,6 +1032,23 @@ export const financeCheckoutCreateEndpoint: Endpoint = {
     if (!checkoutSession.url) {
       return Response.json({ error: 'Stripe checkout URL was not returned' }, { status: 500 })
     }
+
+    await createTicketsForOrder({
+      payload,
+      event,
+      buyer: {
+        name: String(buyer.name),
+        email: String(buyer.email),
+        phone: buyer.phone ? String(buyer.phone) : null,
+      },
+      items: normalizedItems,
+      totals,
+      orderId,
+      paymentProvider: 'stripe',
+      status: 'pending',
+      stripeCheckoutSessionId: checkoutSession.id,
+      stripeDestinationAccountId: connectedAccountId,
+    })
 
     return Response.json({
       success: true,
@@ -980,6 +1091,11 @@ export const financeCheckoutCompleteEndpoint: Endpoint = {
       return Response.json({ error: 'Checkout metadata is incomplete' }, { status: 400 })
     }
 
+    const paymentIntent = session.payment_intent
+    const paymentIntentId =
+      paymentIntent && typeof paymentIntent === 'object' ? String(paymentIntent.id ?? '') : null
+    const connectedAccountId = await getConnectedStripeAccountId(payload, organizerId)
+
     const { docs: existingTickets } = await payload.find({
       collection: 'tickets',
       where: {
@@ -991,18 +1107,44 @@ export const financeCheckoutCompleteEndpoint: Endpoint = {
     })
 
     if (existingTickets.length > 0) {
-      return Response.json({
-        success: true,
-        orderId,
-        buyerEmail: String(existingTickets[0].purchaserEmail ?? metadata.buyerEmail ?? ''),
-        tickets: existingTickets.map((doc: any) => ({
-          id: doc.id,
-          order: doc.order,
-          status: doc.status,
-        })),
-        alreadyProcessed: true,
-      })
-    }
+      const ticketsAlreadyCompleted = existingTickets.every(
+        (ticket: any) => ticket.status === 'completed' || ticket.status === 'checked_in',
+      )
+
+      if (!ticketsAlreadyCompleted) {
+        const completedAt = new Date().toISOString()
+
+        await Promise.all(
+          existingTickets.map((ticket: any) =>
+            payload.update({
+              collection: 'tickets',
+              id: ticket.id,
+              data: {
+                status: 'completed',
+                paymentProvider: 'stripe',
+                paidAt: completedAt,
+                stripePaymentIntentId: paymentIntentId ?? undefined,
+                stripeDestinationAccountId: connectedAccountId ?? undefined,
+              },
+              depth: 0,
+              overrideAccess: true,
+            }),
+          ),
+        )
+      }
+
+    return Response.json({
+      success: true,
+      orderId,
+      buyerEmail: String(existingTickets[0].purchaserEmail ?? metadata.buyerEmail ?? ''),
+      tickets: existingTickets.map((doc: any) => ({
+        id: doc.id,
+        order: doc.order,
+        status: ticketsAlreadyCompleted ? doc.status : 'completed',
+      })),
+      alreadyProcessed: ticketsAlreadyCompleted,
+    })
+  }
 
     const event = await findEventByIdOrSlug(payload, eventId)
     if (!event) {
@@ -1034,12 +1176,6 @@ export const financeCheckoutCompleteEndpoint: Endpoint = {
       total: Number(metadata.total ?? 0),
     }
 
-    const paymentIntent = session.payment_intent
-    const paymentIntentId =
-      paymentIntent && typeof paymentIntent === 'object' ? String(paymentIntent.id ?? '') : null
-
-    const connectedAccountId = await getConnectedStripeAccountId(payload, organizerId)
-
     const ticketDocs = await createTicketsForOrder({
       payload,
       event,
@@ -1048,6 +1184,7 @@ export const financeCheckoutCompleteEndpoint: Endpoint = {
       totals,
       orderId,
       paymentProvider: 'stripe',
+      status: 'completed',
       stripeCheckoutSessionId: sessionId,
       stripePaymentIntentId: paymentIntentId,
       stripeDestinationAccountId: connectedAccountId ?? undefined,
@@ -1062,6 +1199,102 @@ export const financeCheckoutCompleteEndpoint: Endpoint = {
         order: doc.order,
         status: doc.status,
       })),
+    })
+  },
+}
+
+export const financeCheckoutCancelEndpoint: Endpoint = {
+  path: '/finance/checkout/cancel',
+  method: 'post',
+  handler: async (req) => {
+    const { payload } = req
+    const body = await (req.json as () => Promise<any>)()
+    const sessionId = String(body?.sessionId ?? '')
+
+    if (!sessionId) {
+      return Response.json({ error: 'sessionId is required' }, { status: 400 })
+    }
+
+    const stripe = getStripeClient()
+    const session = await stripe.checkout.sessions.retrieve(sessionId)
+    const metadata = (session.metadata ?? {}) as Record<string, string | undefined>
+    const eventId = String(metadata.eventId ?? '')
+    const orderId = String(metadata.orderId ?? '')
+
+    const items = JSON.parse(metadata.items ?? '[]') as Array<{
+      ticketTypeId: string
+      ticketName: string
+      quantity: number
+      unitPrice: number
+      currency: string
+    }>
+
+    const event = eventId ? await findEventByIdOrSlug(payload, eventId) : null
+
+    const { docs } = await payload.find({
+      collection: 'tickets',
+      where: {
+        stripeCheckoutSessionId: { equals: sessionId },
+      },
+      limit: 100,
+      depth: 0,
+      overrideAccess: true,
+    })
+
+    if (docs.length === 0) {
+      return Response.json({ success: true, updated: 0 })
+    }
+
+    const alreadyCancelled = docs.every(
+      (ticket: any) => ticket.status === 'cancelled' || ticket.status === 'refunded',
+    )
+
+    if (alreadyCancelled) {
+      return Response.json({
+        success: true,
+        updated: 0,
+        status: 'cancelled',
+        orderId,
+      })
+    }
+
+    if (event && items.length > 0) {
+      await updateEventTicketSoldCounts(
+        payload,
+        event,
+        items.map((item) => ({
+          ticketTypeId: item.ticketTypeId,
+          quantity: item.quantity * -1,
+        })),
+      )
+    }
+
+    const nextStatus = 'cancelled' as const
+    const cancelledAt = new Date().toISOString()
+    for (const ticket of docs) {
+      if (ticket.status === 'completed' || ticket.status === 'checked_in') {
+        continue
+      }
+
+      await payload.update({
+        collection: 'tickets',
+        id: ticket.id,
+        data: {
+          status: nextStatus,
+          paymentProvider: 'stripe',
+          paidAt: undefined,
+        },
+        depth: 0,
+        overrideAccess: true,
+      })
+    }
+
+    return Response.json({
+      success: true,
+      updated: docs.length,
+      status: nextStatus,
+      cancelledAt,
+      orderId,
     })
   },
 }
@@ -1151,7 +1384,28 @@ export const financeConnectStartEndpoint: Endpoint = {
         : await stripe.accounts.create({
             type: 'express',
             email: user.email,
+            capabilities: {
+              card_payments: {
+                requested: true,
+              },
+              transfers: {
+                requested: true,
+              },
+            },
           })
+
+      if (account) {
+        await stripe.accounts.update(connectedAccount.id, {
+          capabilities: {
+            card_payments: {
+              requested: true,
+            },
+            transfers: {
+              requested: true,
+            },
+          },
+        })
+      }
 
       const accountLink = await stripe.accountLinks.create({
         account: connectedAccount.id,

@@ -10,10 +10,11 @@ import { apiClient } from '@/lib/apiClient'
 import { useAuthStore } from '@/stores/authStore'
 import type { Ticket as TicketRecord } from '@/payload-types'
 
-type TicketStatus = 'active' | 'used' | 'expired' | 'cancelled'
+type TicketStatus = 'active' | 'pending' | 'used' | 'expired' | 'cancelled'
 
 const statusConfig: Record<TicketStatus, { label: string; className: string }> = {
   active: { label: 'Active', className: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
+  pending: { label: 'Pending', className: 'border-amber-200 bg-amber-50 text-amber-700' },
   used: { label: 'Used', className: 'border-zinc-200 bg-zinc-50 text-zinc-600' },
   expired: { label: 'Expired', className: 'border-amber-200 bg-amber-50 text-amber-700' },
   cancelled: { label: 'Cancelled', className: 'border-red-200 bg-red-50 text-red-600' },
@@ -22,6 +23,7 @@ const statusConfig: Record<TicketStatus, { label: string; className: string }> =
 const filterOptions: { label: string; value: 'all' | TicketStatus }[] = [
   { label: 'All', value: 'all' },
   { label: 'Active', value: 'active' },
+  { label: 'Pending', value: 'pending' },
   { label: 'Used', value: 'used' },
   { label: 'Expired', value: 'expired' },
 ]
@@ -101,6 +103,8 @@ function buildCheckinUrl(ticket: TicketRecord) {
 }
 
 function getDisplayStatus(ticket: TicketRecord): TicketStatus {
+  if (ticket.status === 'pending') return 'pending'
+  if (ticket.status === 'completed' || ticket.status === 'active') return 'active'
   if (ticket.status === 'checked_in') return 'used'
   if (ticket.status === 'cancelled' || ticket.status === 'refunded') return 'cancelled'
 
@@ -136,7 +140,7 @@ export default function MyTicketsPage() {
 
       try {
         const response = await apiClient.get<{ docs: TicketRecord[] }>(
-          `/api/tickets?limit=1000&depth=2&sort=-createdAt&where[purchaserEmail][equals]=${encodeURIComponent(user.email)}`,
+          `/api/tickets?limit=1000&depth=2&sort=-createdAt&where[purchaserEmail][equals]=${encodeURIComponent(user.email)}&where[status][equals]=completed`,
         )
         setTickets(response.docs ?? [])
       } catch (err: any) {

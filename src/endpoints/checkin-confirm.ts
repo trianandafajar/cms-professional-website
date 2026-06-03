@@ -61,7 +61,12 @@ export const checkinConfirmEndpoint: Endpoint = {
         return Response.json({ error: 'Ticket belongs to a different event' }, { status: 400 })
       }
 
-      // 6. Check if ticket is already checked in (idempotence)
+      // 6. Check if ticket is in a valid paid state
+      if (ticket.status === 'pending' || ticket.status === 'cancelled' || ticket.status === 'refunded') {
+        return Response.json({ error: 'Ticket is not active' }, { status: 400 })
+      }
+
+      // 7. Check if ticket is already checked in (idempotence)
       if (ticket.status === 'checked_in') {
         return Response.json(
           {
@@ -72,7 +77,7 @@ export const checkinConfirmEndpoint: Endpoint = {
         )
       }
 
-      // 7. Update ticket status to "checked_in"
+      // 8. Update ticket status to "checked_in"
       const checkedInAt = new Date().toISOString()
       await payload.update({
         collection: 'tickets',
@@ -84,7 +89,7 @@ export const checkinConfirmEndpoint: Endpoint = {
         },
       })
 
-      // 8. Return success with attendee info
+      // 9. Return success with attendee info
       return Response.json({
         success: true,
         attendeeName: ticket.purchaserName,

@@ -74,6 +74,7 @@ export const Tickets: CollectionConfig = {
       options: [
         { label: 'Active', value: 'active' },
         { label: 'Pending', value: 'pending' },
+        { label: 'Completed', value: 'completed' },
         { label: 'Checked In', value: 'checked_in' },
         { label: 'Cancelled', value: 'cancelled' },
         { label: 'Refunded', value: 'refunded' },

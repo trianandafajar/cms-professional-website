@@ -215,8 +215,25 @@ export default function MyOrderDetailPage() {
             Purchased on {paidAt ? formatDate(paidAt) : 'Unknown date'}
           </p>
         </div>
-        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-          {tickets.every((ticket) => ticket.status === 'checked_in') ? 'Completed' : 'Paid'}
+        <span
+          className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+            tickets.some((ticket) => ticket.status === 'pending')
+              ? 'border-amber-200 bg-amber-50 text-amber-700'
+              : tickets.some(
+                    (ticket) =>
+                      ticket.status === 'cancelled' || ticket.status === 'refunded',
+                  )
+                ? 'border-zinc-200 bg-zinc-50 text-zinc-700'
+                : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+          }`}
+        >
+          {tickets.some((ticket) => ticket.status === 'pending')
+            ? 'Pending'
+            : tickets.some(
+                  (ticket) => ticket.status === 'cancelled' || ticket.status === 'refunded',
+                )
+              ? 'Cancelled'
+              : 'Completed'}
         </span>
       </div>
 

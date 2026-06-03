@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { useAuthStore } from '@/stores/authStore'
 import { useOrdersStore } from '@/stores/ordersStore'
 
-const statusOptions = ['All', 'Completed', 'Pending', 'Refunded']
+const statusOptions = ['All', 'Completed', 'Pending', 'Cancelled', 'Refunded']
 
 function formatOrderDate(value: string) {
   const date = new Date(value)
@@ -359,7 +359,7 @@ function OrderRow({
     ticket: string
     qty: number
     total: number
-    status: 'Completed' | 'Pending' | 'Refunded'
+    status: 'Completed' | 'Pending' | 'Cancelled' | 'Refunded'
     date: string
   }
 }) {
@@ -368,7 +368,9 @@ function OrderRow({
       ? 'bg-emerald-50 text-emerald-700'
       : order.status === 'Pending'
         ? 'bg-amber-50 text-amber-700'
-        : 'bg-red-50 text-red-600'
+        : order.status === 'Cancelled'
+          ? 'bg-zinc-100 text-zinc-700'
+          : 'bg-red-50 text-red-600'
 
   return (
     <div className="grid grid-cols-8 items-center gap-4 border-b border-zinc-50 px-5 py-5 transition last:border-b-0 hover:bg-indigo-50/20">

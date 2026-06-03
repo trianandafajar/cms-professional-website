@@ -26,6 +26,7 @@ import { meEndpoint } from './endpoints/me'
 import {
   financeCheckoutCreateEndpoint,
   financeCheckoutCompleteEndpoint,
+  financeCheckoutCancelEndpoint,
   financeConnectPayPalCallbackEndpoint,
   financeConnectStartEndpoint,
   financeConnectStripeRefreshEndpoint,
@@ -89,6 +90,7 @@ export default buildConfig({
     financeConnectionDisconnectEndpoint,
     financeCheckoutCreateEndpoint,
     financeCheckoutCompleteEndpoint,
+    financeCheckoutCancelEndpoint,
     financeConnectStartEndpoint,
     financeConnectPayPalCallbackEndpoint,
     financeConnectStripeRefreshEndpoint,

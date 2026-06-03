@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Minus,
   Plus,
@@ -331,9 +331,28 @@ function CheckoutForm({
     const checkoutStatus = searchParams.get('checkout')
     const sessionId = searchParams.get('session_id')
 
-    if (checkoutStatus === 'cancelled') {
-      setCheckoutNotice('Stripe checkout was cancelled.')
-      return
+    if (checkoutStatus === 'cancelled' && sessionId) {
+      let cancelled = false
+
+      async function cancelSession() {
+        try {
+          await apiClient.post('/api/finance/checkout/cancel', {
+            sessionId,
+          })
+        } catch {
+          // ignore cancel sync errors; the user already cancelled in Stripe
+        } finally {
+          if (!cancelled) {
+            setCheckoutNotice('Stripe checkout was cancelled.')
+          }
+        }
+      }
+
+      cancelSession()
+
+      return () => {
+        cancelled = true
+      }
     }
 
     if (checkoutStatus !== 'success' || !sessionId) {
@@ -385,9 +404,6 @@ function CheckoutForm({
     if (!phone.trim()) errs.phone = 'Phone number is required'
     if (!isFree && total > 0 && !stripeAvailable) {
       errs.provider = 'Stripe is not available for this event'
-    }
-    if (!isFree && financeSettings.currency.toLowerCase() === 'idr' && total > 0 && total < 10000) {
-      errs.submit = 'Minimum checkout amount for Stripe is Rp10.000'
     }
     return errs
   }
@@ -709,6 +725,9 @@ export function TicketSelector({
   const [step, setStep] = useState<'select' | 'checkout' | 'success'>('select')
   const [checkoutEmail, setCheckoutEmail] = useState(currentUser?.email ?? '')
   const [checkoutOrderId, setCheckoutOrderId] = useState<string | null>(null)
+  const [checkoutNotice, setCheckoutNotice] = useState<string | null>(null)
+  const [restoringSession, setRestoringSession] = useState(false)
+  const finalizedSessionRef = useRef<string | null>(null)
 
   function addTicket(ticket: TicketType) {
     setCart((prev) => {
@@ -740,6 +759,85 @@ export function TicketSelector({
     return cart.find((i) => i.ticketType.id === ticketId)?.quantity ?? 0
   }
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const searchParams = new URLSearchParams(window.location.search)
+    const checkoutStatus = searchParams.get('checkout')
+    const sessionId = searchParams.get('session_id')
+
+    if (checkoutStatus === 'cancelled' && sessionId) {
+      let cancelled = false
+
+      async function cancelSession() {
+        try {
+          await apiClient.post('/api/finance/checkout/cancel', {
+            sessionId,
+          })
+        } catch {
+          // ignore cancel sync errors; user already cancelled in Stripe
+        } finally {
+          if (!cancelled) {
+            setCheckoutNotice('Stripe checkout was cancelled.')
+          }
+        }
+      }
+
+      cancelSession()
+
+      return () => {
+        cancelled = true
+      }
+    }
+
+    if (checkoutStatus !== 'success' || !sessionId) {
+      return
+    }
+
+    if (finalizedSessionRef.current === sessionId) {
+      return
+    }
+
+    finalizedSessionRef.current = sessionId
+
+    let cancelled = false
+
+    async function finalizeSession() {
+      setRestoringSession(true)
+
+      try {
+        const response = await apiClient.post<{
+          success: boolean
+          orderId: string
+          buyerEmail?: string
+          tickets?: Array<{ id: number; order: string; status: string }>
+        }>('/api/finance/checkout/complete', {
+          sessionId,
+        })
+
+        if (cancelled) return
+
+        setCheckoutEmail(response.buyerEmail ?? currentUser?.email ?? '')
+        setCheckoutOrderId(response.orderId)
+        setCheckoutNotice(null)
+        setStep('success')
+      } catch (err: any) {
+        if (cancelled) return
+        setCheckoutNotice(err.message || 'Payment completed, but we could not finalize the order.')
+      } finally {
+        if (!cancelled) {
+          setRestoringSession(false)
+        }
+      }
+    }
+
+    finalizeSession()
+
+    return () => {
+      cancelled = true
+    }
+  }, [currentUser?.email])
+
   const totalTickets = cart.reduce((sum, i) => sum + i.quantity, 0)
   const activeCart = cart.filter((i) => i.quantity > 0)
 
@@ -751,6 +849,25 @@ export function TicketSelector({
         isFree={isFree}
         orderId={checkoutOrderId}
       />
+    )
+  }
+
+  if (restoringSession) {
+    return (
+      <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
+        <p className="text-sm font-medium text-zinc-700">Finalizing your Stripe payment…</p>
+        <p className="mt-2 text-sm text-zinc-500">
+          We&apos;re creating your tickets and QR codes right now.
+        </p>
+      </div>
+    )
+  }
+
+  if (checkoutNotice) {
+    return (
+      <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm">
+        <p className="text-sm font-medium text-zinc-700">{checkoutNotice}</p>
+      </div>
     )
   }
 

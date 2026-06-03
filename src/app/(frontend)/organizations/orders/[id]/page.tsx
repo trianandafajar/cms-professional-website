@@ -69,7 +69,9 @@ export default function OrderDetailPage() {
       ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
       : activeOrder.status === 'Pending'
         ? 'border-amber-200 bg-amber-50 text-amber-700'
-        : 'border-red-200 bg-red-50 text-red-600'
+        : activeOrder.status === 'Cancelled'
+          ? 'border-zinc-200 bg-zinc-50 text-zinc-700'
+          : 'border-red-200 bg-red-50 text-red-600'
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">

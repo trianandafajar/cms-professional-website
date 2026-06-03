@@ -8,7 +8,7 @@ import { apiClient } from '@/lib/apiClient'
 import { useAuthStore } from '@/stores/authStore'
 import type { Ticket as TicketRecord } from '@/payload-types'
 
-type OrderStatus = 'Completed' | 'Pending' | 'Refunded'
+type OrderStatus = 'Completed' | 'Pending' | 'Cancelled' | 'Refunded'
 
 type OrderRow = {
   id: string
@@ -22,7 +22,7 @@ type OrderRow = {
   date: string
 }
 
-const statusTabs = ['All', 'Completed', 'Pending', 'Refunded'] as const
+const statusTabs = ['All', 'Completed', 'Pending', 'Cancelled', 'Refunded'] as const
 
 function getEventTitle(ticket: TicketRecord) {
   const event = ticket.event
@@ -35,12 +35,28 @@ function getEventTitle(ticket: TicketRecord) {
 function mapOrderStatus(items: TicketRecord[]): OrderStatus {
   const statuses = items.map((ticket) => ticket.status)
 
-  if (statuses.every((status) => status === 'refunded' || status === 'cancelled')) {
+  if (statuses.every((status) => status === 'pending')) {
+    return 'Pending'
+  }
+
+  if (statuses.every((status) => status === 'cancelled')) {
+    return 'Cancelled'
+  }
+
+  if (statuses.every((status) => status === 'refunded')) {
     return 'Refunded'
   }
 
-  if (statuses.some((status) => status === 'checked_in')) {
+  if (statuses.every((status) => status === 'completed' || status === 'checked_in' || status === 'active')) {
     return 'Completed'
+  }
+
+  if (statuses.some((status) => status === 'completed' || status === 'checked_in' || status === 'active')) {
+    return 'Completed'
+  }
+
+  if (statuses.some((status) => status === 'cancelled')) {
+    return 'Cancelled'
   }
 
   return 'Pending'
@@ -277,7 +293,9 @@ export default function MyOrdersPage() {
                             ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
                             : order.status === 'Pending'
                               ? 'border-amber-200 bg-amber-50 text-amber-700'
-                              : 'border-red-200 bg-red-50 text-red-600'
+                              : order.status === 'Cancelled'
+                                ? 'border-zinc-200 bg-zinc-50 text-zinc-700'
+                                : 'border-red-200 bg-red-50 text-red-600'
                         }`}
                       >
                         {order.status}

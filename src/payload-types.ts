@@ -431,7 +431,7 @@ export interface Ticket {
   purchaserPhone?: string | null;
   ticketType: string;
   price: number;
-  status: 'active' | 'pending' | 'checked_in' | 'cancelled' | 'refunded';
+  status: 'active' | 'pending' | 'completed' | 'checked_in' | 'cancelled' | 'refunded';
   qrToken?: string | null;
   stripeCheckoutSessionId?: string | null;
   stripePaymentIntentId?: string | null;

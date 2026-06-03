@@ -39,12 +39,12 @@ export const checkinStatsEndpoint: Endpoint = {
       return Response.json({ error: 'You are not the organizer of this event' }, { status: 403 })
     }
 
-    // 4. Query tickets for this event with status active or checked_in
+    // 4. Query tickets for this event with status completed/active or checked_in
     const totalSoldResult = await payload.count({
       collection: 'tickets',
       where: {
         event: { equals: eventId },
-        status: { in: ['active', 'checked_in'] },
+        status: { in: ['active', 'completed', 'checked_in'] },
       },
     })
 

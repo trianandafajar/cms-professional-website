@@ -66,7 +66,18 @@ export const checkinValidateEndpoint: Endpoint = {
       )
     }
 
-    // 6. Check if ticket is already checked in
+    // 6. Check if ticket is in a payable/check-in eligible state
+    if (ticket.status === 'pending' || ticket.status === 'cancelled' || ticket.status === 'refunded') {
+      return Response.json(
+        {
+          status: 'invalid',
+          error: 'Ticket is not active',
+        },
+        { status: 400 },
+      )
+    }
+
+    // 7. Check if ticket is already checked in
     if (ticket.status === 'checked_in') {
       return Response.json(
         {
@@ -84,7 +95,7 @@ export const checkinValidateEndpoint: Endpoint = {
       )
     }
 
-    // 7. Ticket is valid - return purchaser data
+    // 8. Ticket is valid - return purchaser data
     return Response.json({
       status: 'valid',
       ticket: {

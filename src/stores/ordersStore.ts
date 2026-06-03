@@ -3,7 +3,7 @@ import { create } from 'zustand'
 import { apiClient } from '@/lib/apiClient'
 import type { Ticket } from '@/payload-types'
 
-type OrderStatus = 'Completed' | 'Pending' | 'Refunded'
+type OrderStatus = 'Completed' | 'Pending' | 'Cancelled' | 'Refunded'
 
 export interface OrderTicketItem {
   id: number
@@ -77,16 +77,28 @@ function getEventOrganizerId(ticket: Ticket): string | null {
 function mapOrderStatus(items: Ticket[]): OrderStatus {
   const statuses = items.map((ticket) => ticket.status)
 
-  if (statuses.every((status) => status === 'refunded' || status === 'cancelled')) {
+  if (statuses.every((status) => status === 'pending')) {
+    return 'Pending'
+  }
+
+  if (statuses.every((status) => status === 'cancelled')) {
+    return 'Cancelled'
+  }
+
+  if (statuses.every((status) => status === 'refunded')) {
     return 'Refunded'
   }
 
-  if (statuses.every((status) => status === 'checked_in')) {
+  if (statuses.every((status) => status === 'completed' || status === 'checked_in' || status === 'active')) {
     return 'Completed'
   }
 
-  if (statuses.some((status) => status === 'checked_in')) {
+  if (statuses.some((status) => status === 'completed' || status === 'checked_in' || status === 'active')) {
     return 'Completed'
+  }
+
+  if (statuses.some((status) => status === 'cancelled')) {
+    return 'Cancelled'
   }
 
   return 'Pending'
