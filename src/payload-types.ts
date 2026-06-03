@@ -79,6 +79,8 @@ export interface Config {
     'finance-settings': FinanceSetting;
     'payment-connections': PaymentConnection;
     promotions: Promotion;
+    'email-template-defaults': EmailTemplateDefault;
+    'organization-email-templates': OrganizationEmailTemplate;
     posts: Post;
     comments: Comment;
     'payload-kv': PayloadKv;
@@ -100,6 +102,8 @@ export interface Config {
     'finance-settings': FinanceSettingsSelect<false> | FinanceSettingsSelect<true>;
     'payment-connections': PaymentConnectionsSelect<false> | PaymentConnectionsSelect<true>;
     promotions: PromotionsSelect<false> | PromotionsSelect<true>;
+    'email-template-defaults': EmailTemplateDefaultsSelect<false> | EmailTemplateDefaultsSelect<true>;
+    'organization-email-templates': OrganizationEmailTemplatesSelect<false> | OrganizationEmailTemplatesSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
     comments: CommentsSelect<false> | CommentsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
@@ -581,6 +585,93 @@ export interface Promotion {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "email-template-defaults".
+ */
+export interface EmailTemplateDefault {
+  id: number;
+  /**
+   * Stable system key used to resolve the template in app flows
+   */
+  key: string;
+  name: string;
+  description?: string | null;
+  status: 'active' | 'draft';
+  subject: string;
+  preheader: string;
+  headline: string;
+  body: string;
+  ctaLabel: string;
+  ctaUrl: string;
+  campaignName: string;
+  fromName: string;
+  fromEmail: string;
+  replyToEmail: string;
+  organizationName: string;
+  address: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  country: string;
+  brandColor: string;
+  secondaryColor: string;
+  backgroundColor: string;
+  cardBackground: string;
+  bodyTextColor: string;
+  headingColor: string;
+  footerTextColor: string;
+  buttonTextColor: string;
+  fontFamily: string;
+  borderRadius: number;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "organization-email-templates".
+ */
+export interface OrganizationEmailTemplate {
+  id: number;
+  organizer: number | User;
+  defaultTemplate?: (number | null) | EmailTemplateDefault;
+  key: string;
+  organizerTemplateKey?: string | null;
+  name: string;
+  description?: string | null;
+  status: 'active' | 'draft';
+  subject: string;
+  preheader: string;
+  headline: string;
+  body: string;
+  ctaLabel: string;
+  ctaUrl: string;
+  campaignName: string;
+  fromName: string;
+  fromEmail: string;
+  replyToEmail: string;
+  organizationName: string;
+  address: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  country: string;
+  brandColor: string;
+  secondaryColor: string;
+  backgroundColor: string;
+  cardBackground: string;
+  bodyTextColor: string;
+  headingColor: string;
+  footerTextColor: string;
+  buttonTextColor: string;
+  fontFamily: string;
+  borderRadius: number;
+  isCustomized?: boolean | null;
+  customizedAt?: string | null;
+  lastSyncedFromDefaultAt?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "posts".
  */
 export interface Post {
@@ -699,6 +790,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'promotions';
         value: number | Promotion;
+      } | null)
+    | ({
+        relationTo: 'email-template-defaults';
+        value: number | EmailTemplateDefault;
+      } | null)
+    | ({
+        relationTo: 'organization-email-templates';
+        value: number | OrganizationEmailTemplate;
       } | null)
     | ({
         relationTo: 'posts';
@@ -1018,6 +1117,88 @@ export interface PromotionsSelect<T extends boolean = true> {
   endsAtMode?: T;
   endsAt?: T;
   organizer?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "email-template-defaults_select".
+ */
+export interface EmailTemplateDefaultsSelect<T extends boolean = true> {
+  key?: T;
+  name?: T;
+  description?: T;
+  status?: T;
+  subject?: T;
+  preheader?: T;
+  headline?: T;
+  body?: T;
+  ctaLabel?: T;
+  ctaUrl?: T;
+  campaignName?: T;
+  fromName?: T;
+  fromEmail?: T;
+  replyToEmail?: T;
+  organizationName?: T;
+  address?: T;
+  city?: T;
+  province?: T;
+  postalCode?: T;
+  country?: T;
+  brandColor?: T;
+  secondaryColor?: T;
+  backgroundColor?: T;
+  cardBackground?: T;
+  bodyTextColor?: T;
+  headingColor?: T;
+  footerTextColor?: T;
+  buttonTextColor?: T;
+  fontFamily?: T;
+  borderRadius?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "organization-email-templates_select".
+ */
+export interface OrganizationEmailTemplatesSelect<T extends boolean = true> {
+  organizer?: T;
+  defaultTemplate?: T;
+  key?: T;
+  organizerTemplateKey?: T;
+  name?: T;
+  description?: T;
+  status?: T;
+  subject?: T;
+  preheader?: T;
+  headline?: T;
+  body?: T;
+  ctaLabel?: T;
+  ctaUrl?: T;
+  campaignName?: T;
+  fromName?: T;
+  fromEmail?: T;
+  replyToEmail?: T;
+  organizationName?: T;
+  address?: T;
+  city?: T;
+  province?: T;
+  postalCode?: T;
+  country?: T;
+  brandColor?: T;
+  secondaryColor?: T;
+  backgroundColor?: T;
+  cardBackground?: T;
+  bodyTextColor?: T;
+  headingColor?: T;
+  footerTextColor?: T;
+  buttonTextColor?: T;
+  fontFamily?: T;
+  borderRadius?: T;
+  isCustomized?: T;
+  customizedAt?: T;
+  lastSyncedFromDefaultAt?: T;
   updatedAt?: T;
   createdAt?: T;
 }

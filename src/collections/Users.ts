@@ -1,5 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
+import { ensureOrganizerEmailTemplates } from '@/lib/marketing/email-template-sync'
+
 export const Users: CollectionConfig = {
   slug: 'users',
   admin: {
@@ -102,6 +104,15 @@ export const Users: CollectionConfig = {
         }
 
         return data
+      },
+    ],
+    afterChange: [
+      async ({ doc, req }) => {
+        if (doc.isOrganizer) {
+          await ensureOrganizerEmailTemplates(req.payload, doc.id)
+        }
+
+        return doc
       },
     ],
   },

@@ -17,6 +17,8 @@ import { Notifications } from './collections/Notifications'
 import { FinanceSettings } from './collections/FinanceSettings'
 import { PaymentConnections } from './collections/PaymentConnections'
 import { Promotions } from './collections/Promotions'
+import { EmailTemplateDefaults } from './collections/EmailTemplateDefaults'
+import { OrganizationEmailTemplates } from './collections/OrganizationEmailTemplates'
 import { Posts } from './collections/Posts'
 import { Comments } from './collections/Comments'
 import { checkinValidateEndpoint } from './endpoints/checkin-validate'
@@ -24,6 +26,12 @@ import { checkinConfirmEndpoint } from './endpoints/checkin-confirm'
 import { checkinStatsEndpoint } from './endpoints/checkin-stats'
 import { meEndpoint } from './endpoints/me'
 import { notificationsBootstrapEndpoint } from './endpoints/notifications-bootstrap'
+import {
+  emailTemplateWorkspaceDetailEndpoint,
+  emailTemplatesResetAllEndpoint,
+  emailTemplatesResetOneEndpoint,
+  emailTemplatesWorkspaceEndpoint,
+} from './endpoints/email-templates'
 import {
   financeCheckoutCreateEndpoint,
   financeCheckoutCompleteEndpoint,
@@ -62,6 +70,8 @@ export default buildConfig({
     FinanceSettings,
     PaymentConnections,
     Promotions,
+    EmailTemplateDefaults,
+    OrganizationEmailTemplates,
     Posts,
     Comments,
   ],
@@ -87,6 +97,10 @@ export default buildConfig({
     // Toggle like/unlike an event for the authenticated user
     meEndpoint,
     notificationsBootstrapEndpoint,
+    emailTemplatesWorkspaceEndpoint,
+    emailTemplateWorkspaceDetailEndpoint,
+    emailTemplatesResetOneEndpoint,
+    emailTemplatesResetAllEndpoint,
     financeWorkspaceEndpoint,
     financeWorkspaceUpdateEndpoint,
     financeConnectionDisconnectEndpoint,

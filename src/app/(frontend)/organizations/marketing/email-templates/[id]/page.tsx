@@ -1,9 +1,7 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
 import { ChevronLeft } from 'lucide-react'
 
 import { EmailTemplateEditor } from '@/components/organizations/marketing/email-template-editor'
-import { getEmailTemplateById } from '@/lib/marketing/email-templates'
 
 export default async function EmailTemplateDetailPage({
   params,
@@ -11,11 +9,6 @@ export default async function EmailTemplateDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const template = getEmailTemplateById(id)
-
-  if (!template) {
-    notFound()
-  }
 
   return (
     <div className="px-1 py-2">
@@ -27,7 +20,7 @@ export default async function EmailTemplateDetailPage({
         Back to templates
       </Link>
 
-      <EmailTemplateEditor template={template} />
+      <EmailTemplateEditor templateId={id} />
     </div>
   )
 }
