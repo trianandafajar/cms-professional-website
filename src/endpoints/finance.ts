@@ -146,6 +146,42 @@ async function queueNotification(payload: any, data: Record<string, unknown>) {
   }, 0)
 }
 
+function getEventOrganizerId(event: any) {
+  if (!event?.organizer) return null
+  if (typeof event.organizer === 'object') {
+    return event.organizer.id ?? null
+  }
+
+  return event.organizer
+}
+
+function queueOrderNotification(
+  payload: any,
+  event: any,
+  orderId: string,
+  buyer: { name: string; email: string },
+  ticketCount: number,
+  provider: PaymentProvider = 'stripe',
+) {
+  const recipient = getEventOrganizerId(event)
+  if (!recipient) return
+
+  void queueNotification(payload, {
+    recipient,
+    type: 'order',
+    title: `New order ${orderId}`,
+    message: `${buyer.name} purchased ${ticketCount} ticket${ticketCount > 1 ? 's' : ''} for ${event.title}.`,
+    link: `/organizations/orders/${orderId}`,
+    metadata: {
+      orderId,
+      eventId: event.id,
+      ticketCount,
+      buyerEmail: buyer.email,
+      provider,
+    },
+  })
+}
+
 async function findConnection(payload: any, organizerId: string, provider: 'stripe' | 'paypal') {
   const { docs } = await payload.find({
     collection: 'payment-connections',
@@ -530,20 +566,14 @@ async function createTicketsForOrder({
   )
 
   if (status !== 'pending') {
-    void queueNotification(payload, {
-      recipient: event.organizer && typeof event.organizer === 'object' ? event.organizer.id : event.organizer,
-      type: 'order',
-      title: `New order ${orderId}`,
-      message: `${buyer.name} purchased ${ticketDocs.length} ticket${ticketDocs.length > 1 ? 's' : ''} for ${event.title}.`,
-      link: `/organizations/orders/${orderId}`,
-      metadata: {
-        orderId,
-        eventId: event.id,
-        ticketCount: ticketDocs.length,
-        buyerEmail: buyer.email,
-        provider: paymentProvider ?? 'stripe',
-      },
-    })
+    queueOrderNotification(
+      payload,
+      event,
+      orderId,
+      buyer,
+      ticketDocs.length,
+      paymentProvider ?? 'stripe',
+    )
   }
 
   return ticketDocs
@@ -1095,6 +1125,10 @@ export const financeCheckoutCompleteEndpoint: Endpoint = {
     const paymentIntentId =
       paymentIntent && typeof paymentIntent === 'object' ? String(paymentIntent.id ?? '') : null
     const connectedAccountId = await getConnectedStripeAccountId(payload, organizerId)
+    const event = await findEventByIdOrSlug(payload, eventId)
+    if (!event) {
+      return Response.json({ error: 'Event not found' }, { status: 404 })
+    }
 
     const { docs: existingTickets } = await payload.find({
       collection: 'tickets',
@@ -1131,6 +1165,20 @@ export const financeCheckoutCompleteEndpoint: Endpoint = {
             }),
           ),
         )
+
+        const completedBuyer = {
+          name: String(metadata.buyerName ?? session.customer_details?.name ?? 'Attendee'),
+          email: String(metadata.buyerEmail ?? session.customer_email ?? ''),
+        }
+
+        queueOrderNotification(
+          payload,
+          event,
+          orderId,
+          completedBuyer,
+          existingTickets.length,
+          'stripe',
+        )
       }
 
     return Response.json({
@@ -1145,11 +1193,6 @@ export const financeCheckoutCompleteEndpoint: Endpoint = {
       alreadyProcessed: ticketsAlreadyCompleted,
     })
   }
-
-    const event = await findEventByIdOrSlug(payload, eventId)
-    if (!event) {
-      return Response.json({ error: 'Event not found' }, { status: 404 })
-    }
 
     const items = JSON.parse(metadata.items ?? '[]') as Array<{
       ticketTypeId: string

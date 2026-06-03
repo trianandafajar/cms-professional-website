@@ -23,6 +23,7 @@ import { checkinValidateEndpoint } from './endpoints/checkin-validate'
 import { checkinConfirmEndpoint } from './endpoints/checkin-confirm'
 import { checkinStatsEndpoint } from './endpoints/checkin-stats'
 import { meEndpoint } from './endpoints/me'
+import { notificationsBootstrapEndpoint } from './endpoints/notifications-bootstrap'
 import {
   financeCheckoutCreateEndpoint,
   financeCheckoutCompleteEndpoint,
@@ -85,6 +86,7 @@ export default buildConfig({
     checkinStatsEndpoint,
     // Toggle like/unlike an event for the authenticated user
     meEndpoint,
+    notificationsBootstrapEndpoint,
     financeWorkspaceEndpoint,
     financeWorkspaceUpdateEndpoint,
     financeConnectionDisconnectEndpoint,

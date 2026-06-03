@@ -189,6 +189,16 @@ function EventRow({
   const coverImage = event.coverImage as Media | null
   const coverUrl = coverImage?.url || null
 
+  const ticketTypes = Array.isArray(event.ticketTypes) ? event.ticketTypes : []
+  const totalQuantity = ticketTypes.reduce((sum, ticketType: any) => sum + Number(ticketType.quantity ?? 0), 0)
+  const totalSold = ticketTypes.reduce((sum, ticketType: any) => sum + Number(ticketType.sold ?? 0), 0)
+  const capacityLabel =
+    totalQuantity > 0
+      ? `${totalSold.toLocaleString('id-ID')} / ${totalQuantity.toLocaleString('id-ID')}`
+      : event.capacity
+        ? `0 / ${Number(event.capacity).toLocaleString('id-ID')}`
+        : '—'
+
   const statusColors: Record<string, string> = {
     draft: 'border-zinc-200 bg-zinc-50 text-zinc-600',
     published: 'border-emerald-200 bg-emerald-50 text-emerald-700',
@@ -247,7 +257,8 @@ function EventRow({
 
         {/* Capacity */}
         <div className="col-span-2 text-xs text-zinc-600">
-          {event.capacity ? `${event.capacity} seats` : '—'}
+          <span className="font-medium text-zinc-900">{capacityLabel}</span>
+          <span className="ml-1 text-zinc-400">sold / total</span>
         </div>
 
         {/* Actions */}

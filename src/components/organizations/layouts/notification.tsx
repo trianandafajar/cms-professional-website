@@ -1,21 +1,24 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Bell, Loader2, Megaphone, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Bell, Loader2, Megaphone, Trash2, X } from 'lucide-react'
 
 import { apiClient } from '@/lib/apiClient'
-import { Drawer, DrawerClose, DrawerContent, DrawerTrigger } from '@/components/ui/drawer'
+import {
+  getNotificationWsUrl,
+  type NotificationSocketEvent,
+  type RealtimeNotification,
+} from '@/websocket/notifications'
+import { useAuthStore } from '@/stores/authStore'
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
-
-type NotificationItem = {
-  id: number | string
-  title: string
-  message: string
-  link?: string | null
-  isRead?: boolean | null
-  type?: string | null
-  createdAt?: string | null
-}
 
 function formatRelativeDate(value?: string | null) {
   if (!value) return ''
@@ -30,49 +33,169 @@ function formatRelativeDate(value?: string | null) {
   })
 }
 
+function upsertNotification(
+  list: RealtimeNotification[],
+  nextNotification: RealtimeNotification,
+): RealtimeNotification[] {
+  const index = list.findIndex((item) => String(item.id) === String(nextNotification.id))
+  if (index === -1) {
+    return [nextNotification, ...list].sort((left, right) => {
+      const leftDate = new Date(left.createdAt ?? '').getTime()
+      const rightDate = new Date(right.createdAt ?? '').getTime()
+      return rightDate - leftDate
+    })
+  }
+
+  const next = [...list]
+  next[index] = { ...next[index], ...nextNotification }
+  return next
+}
+
 export default function NotificationDrawer() {
+  const user = useAuthStore((state) => state.user)
+  const hasHydrated = useAuthStore((state) => state._hasHydrated)
+
   const [open, setOpen] = useState(false)
-  const [notifications, setNotifications] = useState<NotificationItem[]>([])
-  const [loading, setLoading] = useState(false)
+  const [notifications, setNotifications] = useState<RealtimeNotification[]>([])
+  const [initialLoading, setInitialLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const wsRef = useRef<WebSocket | null>(null)
+  const lastUserIdRef = useRef<string | null>(null)
+
+  const unreadCount = useMemo(
+    () => notifications.filter((notification) => !notification.isRead).length,
+    [notifications],
+  )
 
   useEffect(() => {
-    if (!open) return
+    if (!hasHydrated) return
+
+    const currentUserId = user?.id ?? null
+
+    if (lastUserIdRef.current !== currentUserId) {
+      lastUserIdRef.current = currentUserId
+      setNotifications([])
+      setError(null)
+      setInitialLoading(true)
+    }
+
+    if (!currentUserId) {
+      setNotifications([])
+      setInitialLoading(false)
+      setError(null)
+      return
+    }
 
     let cancelled = false
 
-    async function loadNotifications() {
-      setLoading(true)
+    async function loadInitialNotifications() {
+      setInitialLoading(true)
       setError(null)
 
       try {
-        const response = await apiClient.get<{ docs: NotificationItem[] }>(
+        const response = await apiClient.get<{ docs: RealtimeNotification[] }>(
           '/api/notifications?limit=20&sort=-createdAt&depth=0',
         )
 
-        if (!cancelled) {
-          setNotifications(response.docs ?? [])
-        }
+        if (cancelled) return
+        setNotifications((response.docs ?? []).filter(Boolean))
       } catch (err: any) {
-        if (!cancelled) {
-          setError(err.message || 'Failed to load notifications')
-          setNotifications([])
-        }
+        if (cancelled) return
+        setError(err.message || 'Failed to load notifications')
+        setNotifications([])
       } finally {
         if (!cancelled) {
-          setLoading(false)
+          setInitialLoading(false)
         }
       }
     }
 
-    loadNotifications()
+    void loadInitialNotifications()
 
     return () => {
       cancelled = true
     }
-  }, [open])
+  }, [hasHydrated, user?.id])
 
-  const unreadCount = notifications.filter((notification) => !notification.isRead).length
+  useEffect(() => {
+    if (!hasHydrated || !user?.id) {
+      wsRef.current?.close()
+      wsRef.current = null
+      return
+    }
+
+    const ws = new WebSocket(getNotificationWsUrl(user?.id))
+    wsRef.current = ws
+
+    ws.addEventListener('message', (event) => {
+      try {
+        const payload = JSON.parse(event.data as string) as NotificationSocketEvent | { type?: string }
+
+        if (payload.type === 'notification.created' || payload.type === 'notification.updated') {
+          const notificationPayload = payload as Extract<
+            NotificationSocketEvent,
+            { type: 'notification.created' | 'notification.updated' }
+          >
+          setNotifications((current) => upsertNotification(current, notificationPayload.notification))
+          return
+        }
+
+        if (payload.type === 'notification.deleted') {
+          const deletedPayload = payload as Extract<NotificationSocketEvent, { type: 'notification.deleted' }>
+          setNotifications((current) =>
+            current.filter((notification) => String(notification.id) !== String(deletedPayload.notificationId)),
+          )
+        }
+      } catch {
+        // ignore malformed socket payloads
+      }
+    })
+
+    ws.addEventListener('close', () => {
+      if (wsRef.current === ws) {
+        wsRef.current = null
+      }
+    })
+
+    return () => {
+      ws.close()
+      if (wsRef.current === ws) {
+        wsRef.current = null
+      }
+    }
+  }, [hasHydrated, user?.id])
+
+  async function markAsRead(notificationId: number | string) {
+    const nextReadAt = new Date().toISOString()
+    setNotifications((current) =>
+      current.map((notification) =>
+        String(notification.id) === String(notificationId)
+          ? { ...notification, isRead: true, readAt: nextReadAt }
+          : notification,
+      ),
+    )
+
+    try {
+      await apiClient.patch(`/api/notifications/${notificationId}`, {
+        isRead: true,
+        readAt: nextReadAt,
+      })
+    } catch {
+      // optimistic update already applied
+    }
+  }
+
+  async function deleteNotification(notificationId: number | string) {
+    setNotifications((current) =>
+      current.filter((notification) => String(notification.id) !== String(notificationId)),
+    )
+
+    try {
+      await apiClient.delete(`/api/notifications/${notificationId}`)
+    } catch {
+      // optimistic update already applied
+    }
+  }
 
   return (
     <Drawer direction="right" open={open} onOpenChange={setOpen}>
@@ -93,6 +216,10 @@ export default function NotificationDrawer() {
 
       <DrawerContent className="w-full border-l border-zinc-200 p-0 sm:max-w-[440px]">
         <div className="flex h-full flex-col bg-white">
+          <DrawerTitle className="sr-only">Notifications</DrawerTitle>
+          <DrawerDescription className="sr-only">
+            Real-time order, finance, and system updates
+          </DrawerDescription>
           <div className="border-b border-zinc-100 px-6 py-5">
             <div className="flex items-start justify-between">
               <div>
@@ -100,7 +227,7 @@ export default function NotificationDrawer() {
                   Notifications
                 </h2>
                 <p className="mt-1 text-sm text-zinc-500">
-                  Stay up to date on important information
+                  Real-time order, finance, and system updates
                 </p>
               </div>
 
@@ -113,7 +240,7 @@ export default function NotificationDrawer() {
           </div>
 
           <div className="flex-1 overflow-y-auto px-4 py-4">
-            {loading ? (
+            {initialLoading ? (
               <div className="flex h-56 items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-50">
                 <Loader2 className="size-5 animate-spin text-[#5151eb]" />
               </div>
@@ -130,25 +257,46 @@ export default function NotificationDrawer() {
                   Nothing to see here (yet)!
                 </h3>
                 <p className="mt-4 max-w-[320px] text-base leading-relaxed text-zinc-600">
-                  We&apos;ll show order, finance, and system updates here when they arrive.
+                  We&apos;ll show order, finance, and system updates here as soon as they happen.
                 </p>
               </div>
             ) : (
               <div className="space-y-3">
                 {notifications.map((notification) => {
+                  const isUnread = !notification.isRead
+                  const className = `block rounded-2xl border p-4 transition ${
+                    isUnread
+                      ? 'border-indigo-100 bg-indigo-50/40 hover:bg-indigo-50'
+                      : 'border-zinc-200 bg-white hover:bg-zinc-50'
+                  }`
+
                   const content = (
                     <>
                       <div className="flex items-start justify-between gap-3">
-                        <div>
+                        <div className="min-w-0">
                           <p className="text-sm font-semibold text-[#12192f]">
                             {notification.title}
                           </p>
                           <p className="mt-1 text-sm text-zinc-600">{notification.message}</p>
                         </div>
-                        {!notification.isRead && (
-                          <span className="mt-1 size-2 rounded-full bg-[#5151eb]" />
-                        )}
+
+                        <div className="flex items-center gap-2">
+                          {isUnread && <span className="size-2 rounded-full bg-[#5151eb]" />}
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.preventDefault()
+                              event.stopPropagation()
+                              void deleteNotification(notification.id)
+                            }}
+                            className="rounded-full p-1 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
+                            aria-label="Delete notification"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
+
                       <div className="mt-3 flex items-center justify-between text-xs text-zinc-400">
                         <span className="rounded-full bg-white px-2 py-0.5 font-medium uppercase tracking-wide text-zinc-500">
                           {notification.type || 'system'}
@@ -158,24 +306,36 @@ export default function NotificationDrawer() {
                     </>
                   )
 
-                  const className = `block rounded-2xl border p-4 transition ${
-                    notification.isRead
-                      ? 'border-zinc-200 bg-white hover:bg-zinc-50'
-                      : 'border-indigo-100 bg-indigo-50/40 hover:bg-indigo-50'
-                  }`
-
                   if (notification.link) {
                     return (
-                      <a key={notification.id} href={notification.link} className={className}>
+                      <a
+                        key={notification.id}
+                        href={notification.link}
+                        className={className}
+                        onClick={() => {
+                          if (isUnread) {
+                            void markAsRead(notification.id)
+                          }
+                        }}
+                      >
                         {content}
                       </a>
                     )
                   }
 
                   return (
-                    <div key={notification.id} className={className}>
+                    <button
+                      key={notification.id}
+                      type="button"
+                      onClick={() => {
+                        if (isUnread) {
+                          void markAsRead(notification.id)
+                        }
+                      }}
+                      className={`w-full text-left ${className}`}
+                    >
                       {content}
-                    </div>
+                    </button>
                   )
                 })}
               </div>

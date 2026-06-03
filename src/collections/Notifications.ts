@@ -1,4 +1,13 @@
 import type { CollectionConfig } from 'payload'
+import { broadcastNotificationEvent } from '@/websocket/notifications'
+
+function getRecipientId(recipient: any) {
+  if (!recipient) return null
+  if (typeof recipient === 'object') {
+    return String(recipient.id ?? '')
+  }
+  return String(recipient)
+}
 
 function isAdminUser(user: any) {
   if (!user) return false
@@ -68,6 +77,60 @@ export const Notifications: CollectionConfig = {
         }
 
         return notificationData
+      },
+    ],
+    afterChange: [
+      async ({ doc, operation }) => {
+        const recipientId = getRecipientId(doc.recipient)
+        if (!recipientId) return doc
+
+        if (operation === 'create') {
+          void broadcastNotificationEvent({
+            type: 'notification.created',
+            notification: {
+              id: doc.id,
+              recipient: recipientId,
+              title: doc.title,
+              message: doc.message,
+              link: doc.link ?? null,
+              isRead: doc.isRead ?? false,
+              type: doc.type ?? 'system',
+              createdAt: doc.createdAt,
+              updatedAt: doc.updatedAt,
+            },
+          })
+        } else {
+          void broadcastNotificationEvent({
+            type: 'notification.updated',
+            notification: {
+              id: doc.id,
+              recipient: recipientId,
+              title: doc.title,
+              message: doc.message,
+              link: doc.link ?? null,
+              isRead: doc.isRead ?? false,
+              type: doc.type ?? 'system',
+              createdAt: doc.createdAt,
+              updatedAt: doc.updatedAt,
+            },
+          })
+        }
+
+        return doc
+      },
+    ],
+    afterDelete: [
+      async ({ doc }) => {
+        const recipientId = getRecipientId(doc.recipient)
+        if (!recipientId) return doc
+
+        void broadcastNotificationEvent({
+          type: 'notification.deleted',
+          notificationId: doc.id,
+          recipientId,
+        })
+
+        return doc
       },
     ],
   },
