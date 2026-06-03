@@ -13,6 +13,7 @@ import { Categories } from './collections/Categories'
 import { Locations } from './collections/Locations'
 import { Events } from './collections/Events'
 import { Tickets } from './collections/Tickets'
+import { Notifications } from './collections/Notifications'
 import { FinanceSettings } from './collections/FinanceSettings'
 import { PaymentConnections } from './collections/PaymentConnections'
 import { Promotions } from './collections/Promotions'
@@ -24,6 +25,7 @@ import { checkinStatsEndpoint } from './endpoints/checkin-stats'
 import { meEndpoint } from './endpoints/me'
 import {
   financeCheckoutCreateEndpoint,
+  financeCheckoutCompleteEndpoint,
   financeConnectPayPalCallbackEndpoint,
   financeConnectStartEndpoint,
   financeConnectStripeRefreshEndpoint,
@@ -54,6 +56,7 @@ export default buildConfig({
     Locations,
     Events,
     Tickets,
+    Notifications,
     FinanceSettings,
     PaymentConnections,
     Promotions,
@@ -85,6 +88,7 @@ export default buildConfig({
     financeWorkspaceUpdateEndpoint,
     financeConnectionDisconnectEndpoint,
     financeCheckoutCreateEndpoint,
+    financeCheckoutCompleteEndpoint,
     financeConnectStartEndpoint,
     financeConnectPayPalCallbackEndpoint,
     financeConnectStripeRefreshEndpoint,

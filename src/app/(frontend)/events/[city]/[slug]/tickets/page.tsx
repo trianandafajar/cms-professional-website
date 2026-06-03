@@ -44,6 +44,20 @@ function getCategoryName(category: unknown): string {
   return ''
 }
 
+function dedupeTicketsById(tickets: any[]): any[] {
+  const byId = new Map<string, any>()
+
+  for (const ticket of tickets) {
+    const ticketId = String(ticket?.id ?? '')
+    if (!ticketId) continue
+    if (!byId.has(ticketId)) {
+      byId.set(ticketId, ticket)
+    }
+  }
+
+  return Array.from(byId.values())
+}
+
 function slugToDisplayName(slug: string): string {
   return decodeURIComponent(slug)
     .split('-')
@@ -86,10 +100,10 @@ export type TicketType = {
  * Convert raw event.ticketTypes from Payload into the TicketType[] shape
  * used by the TicketSelector component.
  */
-function mapPayloadTicketTypes(rawTickets: NonNullable<Event['ticketTypes']>): TicketType[] {
+function mapPayloadTicketTypes(rawTickets: NonNullable<Event['ticketTypes']>, eventSlug: string): TicketType[] {
   const now = new Date()
 
-  return rawTickets
+  return dedupeTicketsById(rawTickets)
     .filter((t) => !t.isHidden)
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
     .filter((t) => {
@@ -97,17 +111,17 @@ function mapPayloadTicketTypes(rawTickets: NonNullable<Event['ticketTypes']>): T
       if (t.salesEnd && new Date(t.salesEnd) < now) return false
       return true
     })
-    .map((t) => {
-      const available = Math.max(0, (t.quantity ?? 0) - (t.sold ?? 0))
-      return {
-        id: t.id ?? `tt-${t.name}`,
-        name: t.name,
-        description: t.description ?? '',
-        price: t.price ?? 0,
+      .map((t) => {
+        const available = Math.max(0, (t.quantity ?? 0) - (t.sold ?? 0))
+        return {
+        id: `${eventSlug}:${t.id ?? `tt-${t.name}`}`,
+          name: t.name,
+          description: t.description ?? '',
+          price: t.price ?? 0,
         currency: t.currency ?? 'IDR',
         available,
         maxPerOrder: t.maxPerOrder ?? 10,
-        perks: (t.perks ?? []).map((p) => p.perk).filter(Boolean) as string[],
+        perks: (t.perks ?? []).map((p: any) => p.perk).filter(Boolean) as string[],
         isSoldOut: available === 0,
       }
     })
@@ -275,7 +289,7 @@ export default async function EventTicketsPage({ params }: Props) {
     ]
   } else if (ev.ticketTypes.length > 0) {
     // Paid event with organizer-defined ticket types
-    ticketTypes = mapPayloadTicketTypes(ev.ticketTypes)
+    ticketTypes = mapPayloadTicketTypes(ev.ticketTypes, ev.slug ?? slug)
   } else {
     // No ticket types defined yet — show a message
     ticketTypes = []
@@ -337,6 +351,7 @@ export default async function EventTicketsPage({ params }: Props) {
                   eventTitle={ev.title}
                   eventSlug={slug}
                   citySlug={city}
+                  checkoutReturnPath={`/events/${city}/${slug}/tickets`}
                   isFree={ev.isFree}
                   currentUser={
                     currentUser ? { name: currentUser.name ?? '', email: currentUser.email } : null

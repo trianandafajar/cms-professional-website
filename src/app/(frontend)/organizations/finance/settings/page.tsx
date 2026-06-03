@@ -78,6 +78,14 @@ export default function PaymentAccountsPage() {
     [connections],
   )
 
+  const routeError = searchParams.get('error')
+  const routeErrorMessage =
+    routeError === 'paypal_partner_not_enabled'
+      ? 'PayPal partner onboarding is not enabled for this PayPal app. Please use an approved partner account or switch to the platform account flow.'
+      : routeError === 'paypal_onboarding_failed'
+        ? 'PayPal onboarding failed. Please check the app credentials and sandbox/live environment.'
+        : null
+
   async function handleSave() {
     await saveSettings(form)
   }
@@ -106,9 +114,9 @@ export default function PaymentAccountsPage() {
         </p>
       </div>
 
-      {error && (
+      {(routeErrorMessage || error) && (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          {error}
+          {routeErrorMessage || error}
         </div>
       )}
 

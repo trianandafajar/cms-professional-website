@@ -1,4 +1,5 @@
 import type { CollectionConfig } from 'payload'
+import { randomUUID } from 'crypto'
 
 export const Tickets: CollectionConfig = {
   slug: 'tickets',
@@ -12,6 +13,19 @@ export const Tickets: CollectionConfig = {
     create: ({ req }) => Boolean(req.user),
     update: ({ req }) => Boolean(req.user),
     delete: ({ req }) => Boolean(req.user),
+  },
+  hooks: {
+    beforeValidate: [
+      async ({ data, operation }) => {
+        const ticketData = data ?? {}
+
+        if (operation === 'create' && !ticketData.qrToken) {
+          ticketData.qrToken = randomUUID().replace(/-/g, '')
+        }
+
+        return ticketData
+      },
+    ],
   },
   fields: [
     {
@@ -64,6 +78,49 @@ export const Tickets: CollectionConfig = {
         { label: 'Cancelled', value: 'cancelled' },
         { label: 'Refunded', value: 'refunded' },
       ],
+    },
+    {
+      name: 'qrToken',
+      type: 'text',
+      unique: true,
+      index: true,
+      label: 'QR Token',
+      admin: {
+        hidden: true,
+      },
+    },
+    {
+      name: 'stripeCheckoutSessionId',
+      type: 'text',
+      label: 'Stripe Checkout Session ID',
+      admin: {
+        hidden: true,
+      },
+    },
+    {
+      name: 'stripePaymentIntentId',
+      type: 'text',
+      label: 'Stripe Payment Intent ID',
+      admin: {
+        hidden: true,
+      },
+    },
+    {
+      name: 'stripeDestinationAccountId',
+      type: 'text',
+      label: 'Stripe Destination Account ID',
+      admin: {
+        hidden: true,
+      },
+    },
+    {
+      name: 'paidAt',
+      type: 'date',
+      label: 'Paid At',
+      admin: {
+        date: { pickerAppearance: 'dayAndTime' },
+        readOnly: true,
+      },
     },
     {
       name: 'checkedInAt',

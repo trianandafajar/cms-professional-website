@@ -75,6 +75,7 @@ export interface Config {
     locations: Location;
     events: Event;
     tickets: Ticket;
+    notifications: Notification;
     'finance-settings': FinanceSetting;
     'payment-connections': PaymentConnection;
     promotions: Promotion;
@@ -95,6 +96,7 @@ export interface Config {
     locations: LocationsSelect<false> | LocationsSelect<true>;
     events: EventsSelect<false> | EventsSelect<true>;
     tickets: TicketsSelect<false> | TicketsSelect<true>;
+    notifications: NotificationsSelect<false> | NotificationsSelect<true>;
     'finance-settings': FinanceSettingsSelect<false> | FinanceSettingsSelect<true>;
     'payment-connections': PaymentConnectionsSelect<false> | PaymentConnectionsSelect<true>;
     promotions: PromotionsSelect<false> | PromotionsSelect<true>;
@@ -430,6 +432,11 @@ export interface Ticket {
   ticketType: string;
   price: number;
   status: 'active' | 'pending' | 'checked_in' | 'cancelled' | 'refunded';
+  qrToken?: string | null;
+  stripeCheckoutSessionId?: string | null;
+  stripePaymentIntentId?: string | null;
+  stripeDestinationAccountId?: string | null;
+  paidAt?: string | null;
   checkedInAt?: string | null;
   checkedInBy?: (number | null) | User;
   paymentProvider?: ('stripe' | 'paypal') | null;
@@ -438,6 +445,31 @@ export interface Ticket {
   subtotalAmount?: number | null;
   totalAmount?: number | null;
   currency?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "notifications".
+ */
+export interface Notification {
+  id: number;
+  recipient: number | User;
+  type: 'order' | 'checkin' | 'finance' | 'system';
+  title: string;
+  message: string;
+  link?: string | null;
+  isRead?: boolean | null;
+  readAt?: string | null;
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -651,6 +683,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'tickets';
         value: number | Ticket;
+      } | null)
+    | ({
+        relationTo: 'notifications';
+        value: number | Notification;
       } | null)
     | ({
         relationTo: 'finance-settings';
@@ -890,6 +926,11 @@ export interface TicketsSelect<T extends boolean = true> {
   ticketType?: T;
   price?: T;
   status?: T;
+  qrToken?: T;
+  stripeCheckoutSessionId?: T;
+  stripePaymentIntentId?: T;
+  stripeDestinationAccountId?: T;
+  paidAt?: T;
   checkedInAt?: T;
   checkedInBy?: T;
   paymentProvider?: T;
@@ -898,6 +939,22 @@ export interface TicketsSelect<T extends boolean = true> {
   subtotalAmount?: T;
   totalAmount?: T;
   currency?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "notifications_select".
+ */
+export interface NotificationsSelect<T extends boolean = true> {
+  recipient?: T;
+  type?: T;
+  title?: T;
+  message?: T;
+  link?: T;
+  isRead?: T;
+  readAt?: T;
+  metadata?: T;
   updatedAt?: T;
   createdAt?: T;
 }

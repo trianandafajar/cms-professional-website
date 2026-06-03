@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Minus,
   Plus,
@@ -41,6 +41,7 @@ type Props = {
   eventTitle: string
   eventSlug: string
   citySlug: string
+  checkoutReturnPath: string
   isFree: boolean
   currentUser: CheckoutUser
   financeSettings: FinanceSettingsSummary
@@ -286,24 +287,24 @@ function OrderSummary({
 
 function CheckoutForm({
   eventId,
+  eventSlug,
   cart,
   isFree,
   currentUser,
   financeSettings,
   paymentProviders,
-  selectedProvider,
-  onSelectedProviderChange,
+  checkoutReturnPath,
   onBack,
   onSuccess,
 }: {
   eventId: string | number
+  eventSlug: string
   cart: CartItem[]
   isFree: boolean
   currentUser: CheckoutUser
   financeSettings: FinanceSettingsSummary
   paymentProviders: PaymentProvider[]
-  selectedProvider: PaymentProvider | null
-  onSelectedProviderChange: (provider: PaymentProvider | null) => void
+  checkoutReturnPath: string
   onBack: () => void
   onSuccess: (orderId: string, email: string) => void
 }) {
@@ -319,11 +320,62 @@ function CheckoutForm({
   const taxAmount = isFree || subtotal === 0 ? 0 : totals.taxAmount
   const total = isFree || subtotal === 0 ? subtotal : totals.total
   const totalTickets = cart.reduce((sum, item) => sum + item.quantity, 0)
-  const canSelectProvider = !isFree && total > 0 && paymentProviders.length > 0
-  const effectiveProvider =
-    selectedProvider && paymentProviders.includes(selectedProvider)
-      ? selectedProvider
-      : paymentProviders[0] ?? null
+  const stripeAvailable = paymentProviders.includes('stripe')
+  const [finalizingSession, setFinalizingSession] = useState(false)
+  const [checkoutNotice, setCheckoutNotice] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const searchParams = new URLSearchParams(window.location.search)
+    const checkoutStatus = searchParams.get('checkout')
+    const sessionId = searchParams.get('session_id')
+
+    if (checkoutStatus === 'cancelled') {
+      setCheckoutNotice('Stripe checkout was cancelled.')
+      return
+    }
+
+    if (checkoutStatus !== 'success' || !sessionId) {
+      return
+    }
+
+    let cancelled = false
+
+    async function finalizeSession() {
+      setFinalizingSession(true)
+      setErrors({})
+
+      try {
+        const response = await apiClient.post<{
+          success: boolean
+          orderId: string
+          buyerEmail?: string
+          tickets?: Array<{ id: number; order: string; status: string }>
+        }>('/api/finance/checkout/complete', {
+          sessionId,
+        })
+
+        if (cancelled) return
+
+        setCheckoutNotice(null)
+        onSuccess(response.orderId, response.buyerEmail ?? currentUser?.email ?? '')
+      } catch (err: any) {
+        if (cancelled) return
+        setCheckoutNotice(err.message || 'Payment completed, but we could not finalize the order.')
+      } finally {
+        if (!cancelled) {
+          setFinalizingSession(false)
+        }
+      }
+    }
+
+    finalizeSession()
+
+    return () => {
+      cancelled = true
+    }
+  }, [currentUser?.email, onSuccess])
 
   function validate() {
     const errs: Record<string, string> = {}
@@ -331,8 +383,11 @@ function CheckoutForm({
     if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       errs.email = 'Valid email is required'
     if (!phone.trim()) errs.phone = 'Phone number is required'
-    if (!isFree && total > 0 && !effectiveProvider) {
-      errs.provider = 'Select a payment provider'
+    if (!isFree && total > 0 && !stripeAvailable) {
+      errs.provider = 'Stripe is not available for this event'
+    }
+    if (!isFree && financeSettings.currency.toLowerCase() === 'idr' && total > 0 && total < 10000) {
+      errs.submit = 'Minimum checkout amount for Stripe is Rp10.000'
     }
     return errs
   }
@@ -347,18 +402,32 @@ function CheckoutForm({
 
     setLoading(true)
     try {
-      const response = await apiClient.post<{ success: boolean; orderId: string }>(
+      const response = await apiClient.post<{
+        success: boolean
+        orderId: string
+        checkoutUrl?: string
+      }>(
         '/api/finance/checkout',
         {
           eventId,
+          eventSlug,
           buyer: { name, email, phone },
-          provider: effectiveProvider,
+          provider: 'stripe',
+          returnPath: checkoutReturnPath,
           cart: cart.map((item) => ({
             ticketTypeId: item.ticketType.id,
+            ticketKey: item.ticketType.id,
+            unitPrice: item.ticketType.price,
+            currency: item.ticketType.currency,
             quantity: item.quantity,
           })),
         },
       )
+
+      if (response.checkoutUrl) {
+        window.location.href = response.checkoutUrl
+        return
+      }
 
       onSuccess(response.orderId, email)
     } catch (err: any) {
@@ -445,48 +514,45 @@ function CheckoutForm({
         <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
           <h3 className="mb-4 text-base font-bold text-[#12192f]">Payment Details</h3>
           <div className="space-y-4">
-            {canSelectProvider ? (
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-zinc-600">
-                  Payment provider <span className="text-red-500">*</span>
-                </label>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {paymentProviders.map((provider) => {
-                    const active = effectiveProvider === provider
-                    return (
-                      <button
-                        key={provider}
-                        type="button"
-                        onClick={() => {
-                          onSelectedProviderChange(provider)
-                          setErrors((prev) => ({ ...prev, provider: '' }))
-                        }}
-                        className={`rounded-xl border px-4 py-3 text-left transition ${
-                          active
-                            ? 'border-[#5151eb] bg-[#5151eb]/5'
-                            : 'border-zinc-200 hover:border-zinc-300'
-                        }`}
-                      >
-                        <p className="text-sm font-semibold text-zinc-900">
-                          {provider === 'stripe' ? 'Stripe' : 'PayPal'}
-                        </p>
-                        <p className="mt-0.5 text-xs text-zinc-500">
-                          {provider === 'stripe'
-                            ? 'Cards and international payments'
-                            : 'Wallet and alternative checkout'}
-                        </p>
-                      </button>
-                    )
-                  })}
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-zinc-600">
+                Payment provider <span className="text-red-500">*</span>
+              </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  disabled={!stripeAvailable}
+                  className={`rounded-xl border px-4 py-3 text-left transition ${
+                    stripeAvailable
+                      ? 'border-[#5151eb] bg-[#5151eb]/5'
+                      : 'cursor-not-allowed border-zinc-200 bg-zinc-50 opacity-60'
+                  }`}
+                >
+                  <p className="text-sm font-semibold text-zinc-900">Stripe</p>
+                  <p className="mt-0.5 text-xs text-zinc-500">
+                    Cards and international payments
+                  </p>
+                </button>
+
+                <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 opacity-80">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-zinc-900">PayPal</p>
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                      Coming soon
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-zinc-500">
+                    Wallet and alternative checkout
+                  </p>
                 </div>
-                {errors.provider && <p className="mt-1 text-xs text-red-500">{errors.provider}</p>}
               </div>
-            ) : (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                This event currently has no connected payment provider. Checkout cannot proceed
-                until the organizer connects Stripe or PayPal.
-              </div>
-            )}
+              {!stripeAvailable && (
+                <p className="mt-1 text-xs text-amber-600">
+                  Stripe has not been connected by the organizer yet.
+                </p>
+              )}
+              {errors.provider && <p className="mt-1 text-xs text-red-500">{errors.provider}</p>}
+            </div>
 
             <div className="flex items-center gap-2 rounded-xl bg-zinc-50 p-3 text-xs text-zinc-500">
               <Lock className="size-3.5 shrink-0 text-zinc-400" />
@@ -555,13 +621,13 @@ function CheckoutForm({
         </button>
         <button
           type="submit"
-          disabled={loading || (!isFree && total > 0 && !effectiveProvider)}
+          disabled={loading || finalizingSession || (!isFree && total > 0 && !stripeAvailable)}
           className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#5151eb] py-3 text-sm font-bold text-white transition hover:bg-[#4040d0] disabled:opacity-70"
         >
-          {loading ? (
+          {loading || finalizingSession ? (
             <>
               <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-              Processing…
+              Processing...
             </>
           ) : (
             <>
@@ -630,8 +696,10 @@ function SuccessScreen({
 
 export function TicketSelector({
   eventId,
+  eventSlug,
   ticketTypes,
   eventTitle,
+  checkoutReturnPath,
   isFree,
   currentUser,
   financeSettings,
@@ -641,11 +709,6 @@ export function TicketSelector({
   const [step, setStep] = useState<'select' | 'checkout' | 'success'>('select')
   const [checkoutEmail, setCheckoutEmail] = useState(currentUser?.email ?? '')
   const [checkoutOrderId, setCheckoutOrderId] = useState<string | null>(null)
-  const [selectedProvider, setSelectedProvider] = useState<PaymentProvider | null>(
-    paymentProviders.includes(financeSettings.defaultProvider as PaymentProvider)
-      ? (financeSettings.defaultProvider as PaymentProvider)
-      : paymentProviders[0] ?? null,
-  )
 
   function addTicket(ticket: TicketType) {
     setCart((prev) => {
@@ -695,13 +758,13 @@ export function TicketSelector({
     return (
       <CheckoutForm
         eventId={eventId}
+        eventSlug={eventSlug}
         cart={activeCart}
         isFree={isFree}
         currentUser={currentUser}
         financeSettings={financeSettings}
         paymentProviders={paymentProviders}
-        selectedProvider={selectedProvider}
-        onSelectedProviderChange={setSelectedProvider}
+        checkoutReturnPath={checkoutReturnPath}
         onBack={() => setStep('select')}
         onSuccess={(orderId, email) => {
           setCheckoutEmail(email)
@@ -716,9 +779,9 @@ export function TicketSelector({
     <div>
       {/* Ticket type list */}
       <div className="space-y-4">
-        {ticketTypes.map((ticket) => (
+        {ticketTypes.map((ticket, index) => (
           <TicketTypeCard
-            key={ticket.id}
+            key={`${ticket.id}-${index}`}
             ticket={ticket}
             quantity={getQuantity(ticket.id)}
             onAdd={() => addTicket(ticket)}
