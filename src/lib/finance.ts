@@ -26,6 +26,48 @@ export type CheckoutTotals = {
   total: number
 }
 
+export const DEFAULT_CURRENCY = 'USD' as const
+
+export function formatMoneyAmount(amount: number, currency: string = DEFAULT_CURRENCY) {
+  const normalizedAmount = Math.max(0, Number.isFinite(amount) ? Number(amount) : 0)
+
+  if (currency.toUpperCase() === 'USD') {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(normalizedAmount)
+  }
+
+  if (currency.toUpperCase() === 'IDR') {
+    return `Rp ${Math.round(normalizedAmount).toLocaleString('id-ID')}`
+  }
+
+  return `${currency.toUpperCase()} ${normalizedAmount.toLocaleString()}`
+}
+
+export function formatMoneyShortAmount(amount: number, currency: string = DEFAULT_CURRENCY) {
+  const normalizedAmount = Math.max(0, Number.isFinite(amount) ? Number(amount) : 0)
+  const normalizedCurrency = currency.toUpperCase()
+
+  if (normalizedCurrency === 'USD') {
+    if (normalizedAmount >= 1_000_000) return `$${(normalizedAmount / 1_000_000).toFixed(1)}M`
+    if (normalizedAmount >= 1_000) return `$${(normalizedAmount / 1_000).toFixed(1)}k`
+    return `$${normalizedAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  }
+
+  if (normalizedCurrency === 'IDR') {
+    if (normalizedAmount >= 1_000_000) return `Rp ${(normalizedAmount / 1_000_000).toFixed(1)}jt`
+    if (normalizedAmount >= 1_000) return `Rp ${(normalizedAmount / 1_000).toFixed(0)}k`
+    return `Rp ${normalizedAmount}`
+  }
+
+  if (normalizedAmount >= 1_000_000) return `${normalizedCurrency} ${(normalizedAmount / 1_000_000).toFixed(1)}M`
+  if (normalizedAmount >= 1_000) return `${normalizedCurrency} ${(normalizedAmount / 1_000).toFixed(0)}k`
+  return `${normalizedCurrency} ${normalizedAmount}`
+}
+
 export function normalizeFinanceSettings(
   settings:
     | {
@@ -43,7 +85,7 @@ export function normalizeFinanceSettings(
     taxPercent: Number(settings?.taxPercent ?? 0),
     taxLabel: String(settings?.taxLabel ?? 'Tax'),
     defaultProvider: (settings?.defaultProvider ?? 'auto') as FinanceSettingsSummary['defaultProvider'],
-    currency: String(settings?.currency ?? 'IDR'),
+    currency: String(settings?.currency ?? DEFAULT_CURRENCY),
   }
 }
 
@@ -51,15 +93,15 @@ export function calculateCheckoutTotals(
   subtotal: number,
   settings: Pick<FinanceSettingsSummary, 'serviceFeePercent' | 'taxPercent'>,
 ): CheckoutTotals {
-  const normalizedSubtotal = Math.max(0, Math.round(subtotal))
-  const serviceFee = Math.round((normalizedSubtotal * Math.max(0, settings.serviceFeePercent)) / 100)
-  const taxAmount = Math.round((normalizedSubtotal * Math.max(0, settings.taxPercent)) / 100)
+  const normalizedSubtotal = Math.max(0, Number.isFinite(subtotal) ? Number(subtotal) : 0)
+  const serviceFee = Math.round(((normalizedSubtotal * Math.max(0, settings.serviceFeePercent)) / 100) * 100) / 100
+  const taxAmount = Math.round(((normalizedSubtotal * Math.max(0, settings.taxPercent)) / 100) * 100) / 100
 
   return {
-    subtotal: normalizedSubtotal,
+    subtotal: Math.round(normalizedSubtotal * 100) / 100,
     serviceFee,
     taxAmount,
-    total: normalizedSubtotal + serviceFee + taxAmount,
+    total: Math.round((normalizedSubtotal + serviceFee + taxAmount) * 100) / 100,
   }
 }
 
@@ -69,17 +111,23 @@ export function getConnectedProviders(connections: PaymentConnectionSummary[]) {
     .map((connection) => connection.provider)
 }
 
+export function getActiveCheckoutProviders(connections: PaymentConnectionSummary[]) {
+  return getConnectedProviders(connections).filter(
+    (provider): provider is Extract<PaymentProvider, 'stripe'> => provider === 'stripe',
+  )
+}
+
 export function getDefaultCheckoutProvider(
   connections: PaymentConnectionSummary[],
   defaultProvider: FinanceSettingsSummary['defaultProvider'],
 ): PaymentProvider | null {
-  const connected = getConnectedProviders(connections)
+  const connected = getActiveCheckoutProviders(connections)
 
   if (connected.length === 0) {
     return null
   }
 
-  if (defaultProvider !== 'auto' && connected.includes(defaultProvider)) {
+  if (defaultProvider === 'stripe' && connected.includes('stripe')) {
     return defaultProvider
   }
 
@@ -87,7 +135,7 @@ export function getDefaultCheckoutProvider(
 }
 
 export function buildPaymentProviderLabel(provider: PaymentProvider) {
-  return provider === 'stripe' ? 'Stripe' : 'PayPal'
+  return provider === 'stripe' ? 'Stripe' : 'PayPal (Upcoming)'
 }
 
 export function createAuthState(provider: PaymentProvider) {

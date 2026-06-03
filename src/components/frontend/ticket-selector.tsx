@@ -18,6 +18,8 @@ import {
 import { apiClient } from '@/lib/apiClient'
 import {
   calculateCheckoutTotals,
+  formatMoneyAmount,
+  formatMoneyShortAmount,
   type FinanceSettingsSummary,
   type PaymentProvider,
 } from '@/lib/finance'
@@ -52,22 +54,12 @@ type Props = {
 
 function formatPrice(amount: number, currency: string): string {
   if (amount === 0) return 'Free'
-  if (currency === 'IDR') {
-    return `Rp ${amount.toLocaleString('id-ID')}`
-  }
-  return `${currency} ${amount.toLocaleString()}`
+  return formatMoneyAmount(amount, currency)
 }
 
 function formatPriceShort(amount: number, currency: string): string {
   if (amount === 0) return 'Free'
-  if (currency === 'IDR') {
-    if (amount >= 1_000_000) return `Rp ${(amount / 1_000_000).toFixed(1)}jt`
-    if (amount >= 1_000) return `Rp ${(amount / 1_000).toFixed(0)}k`
-    return `Rp ${amount}`
-  }
-  if (amount >= 1_000_000) return `${currency} ${(amount / 1_000_000).toFixed(1)}M`
-  if (amount >= 1_000) return `${currency} ${(amount / 1_000).toFixed(0)}k`
-  return `${currency} ${amount}`
+  return formatMoneyShortAmount(amount, currency)
 }
 
 // ─── Ticket Type Card ─────────────────────────────────────────────────────────
@@ -434,7 +426,7 @@ function CheckoutForm({
             ticketTypeId: item.ticketType.id,
             ticketKey: item.ticketType.id,
             unitPrice: item.ticketType.price,
-            currency: item.ticketType.currency,
+            currency: 'USD',
             quantity: item.quantity,
           })),
         },

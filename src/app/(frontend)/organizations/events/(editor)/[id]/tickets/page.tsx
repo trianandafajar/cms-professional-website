@@ -12,6 +12,7 @@ import {
   initialDesigns,
   getTicketBackground,
 } from '@/lib/ticket-designs'
+import { DEFAULT_CURRENCY, formatMoneyAmount } from '@/lib/finance'
 
 function toDatetimeLocalValue(date = new Date()) {
   const offset = date.getTimezoneOffset()
@@ -227,8 +228,7 @@ export default function EventTicketsPage() {
                   </div>
                   <div className="mt-0.5 flex items-center gap-4 text-xs text-zinc-400">
                     <span>
-                      {ticket.currency === 'IDR' ? 'Rp' : '$'}{' '}
-                      {(ticket.price ?? 0).toLocaleString(ticket.currency === 'IDR' ? 'id-ID' : 'en-US')}
+                      {formatMoneyAmount(ticket.price ?? 0, DEFAULT_CURRENCY)}
                     </span>
                     <span>{ticket.quantity} available</span>
                     {ticket.designId && (
@@ -277,21 +277,15 @@ export default function EventTicketsPage() {
                     </div>
                     <div>
                       <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-                        Price
+                        Price (USD)
                       </label>
                       <div className="mt-1.5 flex gap-2">
-                        <select
-                          value={ticket.currency}
-                          onChange={(e) =>
-                            updateTicket(ticket.id, { currency: e.target.value as 'IDR' | 'USD' })
-                          }
-                          className="h-10 rounded-lg border border-zinc-200 px-2 text-sm outline-none focus:border-[#5151eb]"
-                        >
-                          <option value="IDR">IDR</option>
-                          <option value="USD">USD</option>
-                        </select>
+                        <div className="flex h-10 items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm font-semibold text-zinc-700">
+                          USD
+                        </div>
                         <input
                           type="number"
+                          step="0.01"
                           min={0}
                           value={ticket.price ?? ''}
                           onChange={(e) =>

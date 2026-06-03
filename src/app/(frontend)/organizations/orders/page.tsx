@@ -6,6 +6,7 @@ import Link from 'next/link'
 
 import { useAuthStore } from '@/stores/authStore'
 import { useOrdersStore } from '@/stores/ordersStore'
+import { formatMoneyAmount } from '@/lib/finance'
 
 const statusOptions = ['All', 'Completed', 'Pending', 'Cancelled', 'Refunded']
 
@@ -24,7 +25,8 @@ function formatOrderDate(value: string) {
 }
 
 function formatMoney(value: number) {
-  return `Rp ${value.toLocaleString('id-ID')}`
+  if (value === 0) return 'Free'
+  return formatMoneyAmount(value, 'USD')
 }
 
 function escapeCsv(value: string | number | null | undefined) {

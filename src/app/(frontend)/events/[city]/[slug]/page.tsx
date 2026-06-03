@@ -127,7 +127,7 @@ const DUMMY_EVENT = {
   categoryName: 'Music',
   isFree: false,
   isOnline: false,
-  price: 'From Rp 150,000',
+  price: 'From $150.00',
   capacity: 600,
   interestedCount: 2400,
   status: 'published' as const,

@@ -7,7 +7,7 @@ import { Loader2, CreditCard, Landmark, RefreshCw, ShieldCheck, Trash2 } from 'l
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useFinanceStore } from '@/stores/financeStore'
-import type { PaymentProvider } from '@/lib/finance'
+import { DEFAULT_CURRENCY, type PaymentProvider } from '@/lib/finance'
 
 const PROVIDER_META: Record<
   PaymentProvider,
@@ -21,7 +21,7 @@ const PROVIDER_META: Record<
   },
   paypal: {
     name: 'PayPal',
-    description: 'Good for wallet-based payments and alternative checkout.',
+    description: 'Upcoming checkout option. Stripe is the active payment path for now.',
     accent: 'text-blue-600',
     icon: Landmark,
   },
@@ -48,7 +48,7 @@ export default function PaymentAccountsPage() {
     taxPercent: 0,
     taxLabel: 'Tax',
     defaultProvider: 'auto' as 'auto' | PaymentProvider,
-    currency: 'IDR',
+    currency: DEFAULT_CURRENCY,
   })
 
   useEffect(() => {
@@ -68,8 +68,8 @@ export default function PaymentAccountsPage() {
       serviceFeePercent: Number(settings.serviceFeePercent ?? 5),
       taxPercent: Number(settings.taxPercent ?? 0),
       taxLabel: settings.taxLabel || 'Tax',
-      defaultProvider: settings.defaultProvider,
-      currency: settings.currency || 'IDR',
+      defaultProvider: settings.defaultProvider === 'paypal' ? 'auto' : settings.defaultProvider,
+      currency: DEFAULT_CURRENCY,
     })
   }, [settings])
 
@@ -81,9 +81,9 @@ export default function PaymentAccountsPage() {
   const routeError = searchParams.get('error')
   const routeErrorMessage =
     routeError === 'paypal_partner_not_enabled'
-      ? 'PayPal partner onboarding is not enabled for this PayPal app. Please use an approved partner account or switch to the platform account flow.'
+      ? 'PayPal is an upcoming checkout option and is not active yet.'
       : routeError === 'paypal_onboarding_failed'
-        ? 'PayPal onboarding failed. Please check the app credentials and sandbox/live environment.'
+        ? 'PayPal is not active yet.'
         : null
 
   async function handleSave() {
@@ -109,8 +109,7 @@ export default function PaymentAccountsPage() {
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-zinc-900">Payment Settings</h2>
         <p className="mt-1 text-sm text-zinc-500">
-          Connect Stripe and PayPal using Eventbro-owned credentials. Organizer accounts only grant
-          access.
+          Stripe is the active checkout provider. PayPal is shown as upcoming until the next phase.
         </p>
       </div>
 
@@ -189,11 +188,15 @@ export default function PaymentAccountsPage() {
               <label htmlFor="currency" className="text-sm font-medium text-zinc-700">
                 Currency
               </label>
-              <Input
+              <select
                 id="currency"
-                value={form.currency}
-                onChange={(e) => setForm((prev) => ({ ...prev, currency: e.target.value }))}
-              />
+                value={DEFAULT_CURRENCY}
+                disabled
+                className="h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-600 outline-none"
+              >
+                <option value={DEFAULT_CURRENCY}>{DEFAULT_CURRENCY}</option>
+              </select>
+              <p className="text-xs text-zinc-400">Currency is locked to USD.</p>
             </div>
 
             <div className="space-y-2 sm:col-span-2">
@@ -213,7 +216,6 @@ export default function PaymentAccountsPage() {
               >
                 <option value="auto">Auto</option>
                 <option value="stripe">Stripe</option>
-                <option value="paypal">PayPal</option>
               </select>
               <p className="text-xs text-zinc-400">
                 Auto picks your default connected provider. If only one is connected, checkout uses
@@ -250,6 +252,7 @@ export default function PaymentAccountsPage() {
               const meta = PROVIDER_META[provider]
               const Icon = meta.icon
               const isConnected = connection?.status === 'connected'
+              const isUpcoming = provider === 'paypal'
 
               return (
                 <div
@@ -266,19 +269,27 @@ export default function PaymentAccountsPage() {
                           <p className="font-semibold text-zinc-900">{meta.name}</p>
                           <span
                             className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                              isConnected
+                              isUpcoming
+                                ? 'bg-amber-50 text-amber-700'
+                                : isConnected
                                 ? 'bg-emerald-50 text-emerald-700'
                                 : 'bg-zinc-100 text-zinc-500'
                             }`}
                           >
-                            {isConnected ? 'Connected' : connection ? connection.status : 'Not connected'}
+                            {isUpcoming
+                              ? 'Upcoming'
+                              : isConnected
+                                ? 'Connected'
+                                : connection
+                                  ? connection.status
+                                  : 'Not connected'}
                           </span>
                         </div>
                         <p className="mt-1 text-sm text-zinc-500">{meta.description}</p>
-                        {connection?.accountEmail && (
+                        {!isUpcoming && connection?.accountEmail && (
                           <p className="mt-2 text-xs text-zinc-400">{connection.accountEmail}</p>
                         )}
-                        {defaultCheckoutProvider === provider && (
+                        {!isUpcoming && defaultCheckoutProvider === provider && (
                           <p className="mt-2 text-xs font-semibold text-[#5151eb]">
                             Default checkout provider
                           </p>
@@ -287,26 +298,34 @@ export default function PaymentAccountsPage() {
                     </div>
 
                     <div className="flex shrink-0 flex-col gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="rounded-lg bg-[#5151eb] text-white hover:bg-[#3d3dcc]"
-                        onClick={() => handleConnect(provider)}
-                      >
-                        {isConnected ? 'Reconnect' : 'Connect'}
-                      </Button>
+                      {isUpcoming ? (
+                        <span className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
+                          Upcoming
+                        </span>
+                      ) : (
+                        <>
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="rounded-lg bg-[#5151eb] text-white hover:bg-[#3d3dcc]"
+                            onClick={() => handleConnect(provider)}
+                          >
+                            {isConnected ? 'Reconnect' : 'Connect'}
+                          </Button>
 
-                      {isConnected && (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          className="rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-600"
-                          onClick={() => handleDisconnect(provider)}
-                        >
-                          <Trash2 className="mr-1.5 size-4" />
-                          Disconnect
-                        </Button>
+                          {isConnected && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-600"
+                              onClick={() => handleDisconnect(provider)}
+                            >
+                              <Trash2 className="mr-1.5 size-4" />
+                              Disconnect
+                            </Button>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>

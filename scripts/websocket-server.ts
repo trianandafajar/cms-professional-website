@@ -6,6 +6,7 @@ import { WebSocketServer, type WebSocket } from 'ws'
 
 import type {
   NotificationSocketEvent,
+  RealtimeNotification,
 } from '../src/websocket/notifications'
 
 type AuthedSocket = WebSocket & {

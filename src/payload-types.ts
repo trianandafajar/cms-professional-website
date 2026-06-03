@@ -367,14 +367,14 @@ export interface Event {
          */
         description?: string | null;
         /**
-         * Price in IDR. Set to 0 for free tickets.
+         * Price in USD. Set to 0 for free tickets.
          */
         price: number;
         /**
          * Choose whether ticket sales stop on a date or when sold out
          */
         salesEndMode?: ('limited' | 'unlimited') | null;
-        currency?: ('IDR' | 'USD') | null;
+        currency?: 'USD' | null;
         /**
          * Total number of tickets available for this tier
          */
@@ -444,7 +444,7 @@ export interface Ticket {
   taxAmount?: number | null;
   subtotalAmount?: number | null;
   totalAmount?: number | null;
-  currency?: string | null;
+  currency?: 'USD' | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -483,11 +483,11 @@ export interface FinanceSetting {
   serviceFeePercent: number;
   taxPercent: number;
   taxLabel?: string | null;
-  defaultProvider: 'auto' | 'stripe' | 'paypal';
+  defaultProvider: 'auto' | 'stripe';
   /**
-   * Default currency used in checkout calculations
+   * Checkout currency is locked to USD
    */
-  currency: string;
+  currency: 'USD';
   updatedAt: string;
   createdAt: string;
 }

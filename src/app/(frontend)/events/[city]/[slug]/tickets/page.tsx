@@ -7,7 +7,7 @@ import { ArrowLeft, ChevronRight, Clock, MapPin, Calendar } from 'lucide-react'
 import { FrontendNavbar } from '@/components/frontend/navbar'
 import { TicketSelector } from '@/components/frontend/ticket-selector'
 import config from '@/payload.config'
-import { getConnectedProviders, normalizeFinanceSettings } from '@/lib/finance'
+import { DEFAULT_CURRENCY, getActiveCheckoutProviders, normalizeFinanceSettings } from '@/lib/finance'
 import type { Event, Media, Location, Category } from '@/payload-types'
 
 type Props = {
@@ -118,7 +118,7 @@ function mapPayloadTicketTypes(rawTickets: NonNullable<Event['ticketTypes']>, ev
           name: t.name,
           description: t.description ?? '',
           price: t.price ?? 0,
-        currency: t.currency ?? 'IDR',
+        currency: t.currency ?? DEFAULT_CURRENCY,
         available,
         maxPerOrder: t.maxPerOrder ?? 10,
         perks: (t.perks ?? []).map((p: any) => p.perk).filter(Boolean) as string[],
@@ -242,7 +242,7 @@ export default async function EventTicketsPage({ params }: Props) {
     : [{ docs: [] }, { docs: [] }]
 
   const financeSettings = normalizeFinanceSettings(financeSettingsDoc.docs[0] ?? null)
-  const supportedProviders = getConnectedProviders(
+  const supportedProviders = getActiveCheckoutProviders(
     paymentConnections.docs.map((connection) => ({
       id: connection.id,
       provider: connection.provider,
@@ -274,7 +274,7 @@ export default async function EventTicketsPage({ params }: Props) {
         name: 'Free Registration',
         description: 'Register for free to secure your spot.',
         price: 0,
-        currency: 'IDR',
+        currency: DEFAULT_CURRENCY,
         available:
           ev.ticketTypes.length > 0
             ? ev.ticketTypes.reduce(

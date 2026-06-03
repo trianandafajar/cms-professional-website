@@ -17,6 +17,7 @@ import {
 
 import { useAuthStore } from '@/stores/authStore'
 import { useOrdersStore, type OrderRow } from '@/stores/ordersStore'
+import { formatMoneyAmount } from '@/lib/finance'
 
 export default function OrderDetailPage() {
   const params = useParams()
@@ -110,7 +111,7 @@ export default function OrderDetailPage() {
             { label: 'Purchase Date', value: formatDateTime(activeOrder.date) },
             { label: 'Event', value: activeOrder.event },
             { label: 'Quantity', value: String(activeOrder.qty) },
-            { label: 'Total', value: `Rp ${activeOrder.total.toLocaleString('id-ID')}` },
+            { label: 'Total', value: activeOrder.total === 0 ? 'Free' : formatMoneyAmount(activeOrder.total, 'USD') },
           ]}
         />
 
@@ -155,7 +156,7 @@ export default function OrderDetailPage() {
               </div>
               <div className="text-right">
                 <p className="text-sm font-semibold text-zinc-900">
-                  Rp {ticket.price.toLocaleString('id-ID')}
+                  {ticket.price === 0 ? 'Free' : formatMoneyAmount(ticket.price, 'USD')}
                 </p>
                 <p className="text-xs text-zinc-500">
                   {ticket.checkedIn ? (

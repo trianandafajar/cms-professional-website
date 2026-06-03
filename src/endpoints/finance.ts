@@ -6,8 +6,9 @@ import {
   calculateCheckoutTotals,
   createAuthState,
   generateOrderId,
-  getConnectedProviders,
+  getActiveCheckoutProviders,
   getDefaultCheckoutProvider,
+  DEFAULT_CURRENCY,
   type FinanceSettingsSummary,
   type PaymentConnectionSummary,
   type PaymentProvider,
@@ -39,9 +40,7 @@ function normalizeMoneyAmount(amount: number) {
 }
 
 function getStripeCheckoutCurrency() {
-  const configuredCurrency = String(process.env.STRIPE_CHECKOUT_CURRENCY ?? 'USD').trim().toLowerCase()
-
-  return configuredCurrency || 'usd'
+  return 'usd'
 }
 
 function getIdrToUsdRate() {
@@ -64,6 +63,10 @@ function convertMoneyForStripe(amount: number, sourceCurrency: string, targetCur
   }
 
   if (normalizedSourceCurrency === normalizedTargetCurrency) {
+    if (normalizedTargetCurrency === 'usd') {
+      return Math.max(1, Math.round(normalizedAmount * 100))
+    }
+
     return normalizedAmount
   }
 
@@ -374,7 +377,7 @@ function serializeSettings(doc: any | null): FinanceSettingsSummary & { id: numb
     taxPercent: Number(doc?.taxPercent ?? 0),
     taxLabel: String(doc?.taxLabel ?? 'Tax'),
     defaultProvider: (doc?.defaultProvider ?? 'auto') as FinanceSettingsSummary['defaultProvider'],
-    currency: String(doc?.currency ?? 'IDR'),
+    currency: String(doc?.currency ?? DEFAULT_CURRENCY),
   }
 }
 
@@ -619,7 +622,7 @@ export const financeWorkspaceEndpoint: Endpoint = {
     return Response.json({
       settings: serializeSettings(settings),
       connections: providerSummaries,
-      supportedProviders: getConnectedProviders(providerSummaries),
+      supportedProviders: getActiveCheckoutProviders(providerSummaries),
       defaultCheckoutProvider: getDefaultCheckoutProvider(
         providerSummaries,
         serializeSettings(settings).defaultProvider,
@@ -648,7 +651,7 @@ export const financeWorkspaceUpdateEndpoint: Endpoint = {
       taxPercent: Number(body?.taxPercent ?? 0),
       taxLabel: String(body?.taxLabel ?? 'Tax'),
       defaultProvider: (body?.defaultProvider ?? 'auto') as FinanceSettingsSummary['defaultProvider'],
-      currency: String(body?.currency ?? 'IDR'),
+      currency: DEFAULT_CURRENCY,
     }
 
     const existing = await findFinanceSettings(payload, organizerId)
@@ -657,8 +660,8 @@ export const financeWorkspaceUpdateEndpoint: Endpoint = {
       serviceFeePercent: Number.isFinite(input.serviceFeePercent) ? input.serviceFeePercent : 5,
       taxPercent: Number.isFinite(input.taxPercent) ? input.taxPercent : 0,
       taxLabel: input.taxLabel || 'Tax',
-      defaultProvider: input.defaultProvider,
-      currency: input.currency || 'IDR',
+      defaultProvider: input.defaultProvider === 'paypal' ? 'auto' : input.defaultProvider,
+      currency: DEFAULT_CURRENCY,
     }
 
     const saved = existing
@@ -778,7 +781,7 @@ export const financeCheckoutCreateEndpoint: Endpoint = {
 
     const settings = serializeSettings(settingsDoc)
     const providerSummaries = connections.map(serializeConnection)
-    const supportedProviders = getConnectedProviders(providerSummaries)
+    const supportedProviders = getActiveCheckoutProviders(providerSummaries)
     const stripeAvailable = supportedProviders.includes('stripe')
     const debugCheckout = isCheckoutDebugEnabled()
     if (provider && provider !== 'stripe') {
@@ -809,7 +812,7 @@ export const financeCheckoutCreateEndpoint: Endpoint = {
           ticketName: String(ticketType.name ?? 'Ticket'),
           quantity,
           unitPrice: normalizeMoneyAmount(Number(ticketType.price ?? item.unitPrice ?? 0)),
-          currency: String(ticketType.currency ?? settings.currency),
+          currency: String(ticketType.currency ?? DEFAULT_CURRENCY),
         }
       })
       .filter(Boolean) as Array<{
@@ -926,7 +929,7 @@ export const financeCheckoutCreateEndpoint: Endpoint = {
       return Response.json({ error: 'returnPath is required' }, { status: 400 })
     }
 
-    const originalCurrency = String(normalizedItems[0]?.currency ?? settings.currency).toLowerCase()
+    const originalCurrency = String(normalizedItems[0]?.currency ?? DEFAULT_CURRENCY).toLowerCase()
     const chargeCurrency = getStripeCheckoutCurrency()
     const chargeItems = normalizedItems.map((item) => ({
       ...item,
@@ -1408,6 +1411,10 @@ export const financeConnectStartEndpoint: Endpoint = {
     const provider = getProviderFromRoute(String(req.routeParams?.provider ?? ''))
     if (!provider) {
       return Response.json({ error: 'Invalid provider' }, { status: 400 })
+    }
+
+    if (provider === 'paypal') {
+      return Response.json({ error: 'PayPal is an upcoming checkout option' }, { status: 400 })
     }
 
     const pending = await upsertPendingConnection(payload, user, provider)

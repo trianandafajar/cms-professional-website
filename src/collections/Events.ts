@@ -2,6 +2,7 @@
 import type { CollectionConfig } from 'payload'
 
 import { slugify } from '@/lib/slugify'
+import { DEFAULT_CURRENCY } from '@/lib/finance'
 
 export const Events: CollectionConfig = {
   slug: 'events',
@@ -219,7 +220,7 @@ export const Events: CollectionConfig = {
     {
       name: 'price',
       type: 'text',
-      label: 'Price (e.g., Rp 50.000 or Free)',
+      label: 'Price (e.g., $50 or Free)',
     },
     {
       name: 'category',
@@ -291,7 +292,7 @@ export const Events: CollectionConfig = {
           defaultValue: 0,
           min: 0,
           admin: {
-            description: 'Price in IDR. Set to 0 for free tickets.',
+            description: 'Price in USD. Set to 0 for free tickets.',
           },
         },
         {
@@ -310,11 +311,8 @@ export const Events: CollectionConfig = {
         {
           name: 'currency',
           type: 'select',
-          defaultValue: 'IDR',
-          options: [
-            { label: 'IDR (Rupiah)', value: 'IDR' },
-            { label: 'USD (Dollar)', value: 'USD' },
-          ],
+          defaultValue: DEFAULT_CURRENCY,
+          options: [{ label: 'USD (Dollar)', value: DEFAULT_CURRENCY }],
         },
         {
           name: 'quantity',

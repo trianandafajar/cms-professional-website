@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ChevronLeft, ChevronRight, Eye, Search } from 'lucide-react'
 
 import { apiClient } from '@/lib/apiClient'
+import { formatMoneyAmount } from '@/lib/finance'
 import { useAuthStore } from '@/stores/authStore'
 import type { Ticket as TicketRecord } from '@/payload-types'
 
@@ -107,7 +108,7 @@ function formatOrderDate(value: string) {
 
 function formatMoney(value: number) {
   if (value === 0) return 'Free'
-  return `Rp ${value.toLocaleString('id-ID')}`
+  return formatMoneyAmount(value, 'USD')
 }
 
 export default function MyOrdersPage() {

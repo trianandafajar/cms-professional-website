@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Event, Location } from '@/payload-types'
 import { apiClient } from '@/lib/apiClient'
+import { DEFAULT_CURRENCY } from '@/lib/finance'
 import { resolveCategoryId } from '@/lib/eventCategories'
 
 export interface EventImage {
@@ -493,7 +494,7 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
           description: '',
 
           price: null,
-          currency: 'IDR',
+          currency: DEFAULT_CURRENCY,
 
           quantity: 100,
           sold: 0,
@@ -1037,7 +1038,7 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
 
             price: ticket.price ?? null,
 
-            currency: ticket.currency ?? 'IDR',
+            currency: ticket.currency ?? DEFAULT_CURRENCY,
 
             quantity: ticket.quantity ?? 0,
 

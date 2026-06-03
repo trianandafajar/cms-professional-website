@@ -19,6 +19,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import { toPng } from 'html-to-image'
 
 import { apiClient } from '@/lib/apiClient'
+import { formatMoneyAmount } from '@/lib/finance'
 import { useAuthStore } from '@/stores/authStore'
 import type { Ticket as TicketRecord } from '@/payload-types'
 
@@ -365,7 +366,7 @@ export default function MyOrderDetailPage() {
           <div className="border-t border-zinc-100 pt-2 flex justify-between">
             <span className="font-bold text-[#12192f]">Total</span>
             <span className="text-lg font-extrabold text-[#5151eb]">
-              {totalAmount === 0 ? 'Free' : `Rp ${totalAmount.toLocaleString('id-ID')}`}
+              {totalAmount === 0 ? 'Free' : formatMoneyAmount(totalAmount, 'USD')}
             </span>
           </div>
         </div>

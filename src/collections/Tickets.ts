@@ -1,6 +1,8 @@
 import type { CollectionConfig } from 'payload'
 import { randomUUID } from 'crypto'
 
+import { DEFAULT_CURRENCY } from '@/lib/finance'
+
 export const Tickets: CollectionConfig = {
   slug: 'tickets',
   admin: {
@@ -187,8 +189,9 @@ export const Tickets: CollectionConfig = {
     },
     {
       name: 'currency',
-      type: 'text',
-      defaultValue: 'IDR',
+      type: 'select',
+      defaultValue: DEFAULT_CURRENCY,
+      options: [{ label: 'USD', value: DEFAULT_CURRENCY }],
       label: 'Currency',
       admin: {
         readOnly: true,

@@ -1,5 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
+import { DEFAULT_CURRENCY } from '@/lib/finance'
+
 function isAdminUser(user: any) {
   if (!user) return false
 
@@ -71,12 +73,12 @@ export const FinanceSettings: CollectionConfig = {
           settingsData.taxLabel = 'Tax'
         }
 
-        if (!settingsData.defaultProvider) {
+        if (settingsData.defaultProvider !== 'stripe' && settingsData.defaultProvider !== 'auto') {
           settingsData.defaultProvider = 'auto'
         }
 
-        if (!settingsData.currency) {
-          settingsData.currency = 'IDR'
+        if (!settingsData.currency || String(settingsData.currency).toUpperCase() !== DEFAULT_CURRENCY) {
+          settingsData.currency = DEFAULT_CURRENCY
         }
 
         return settingsData
@@ -126,18 +128,18 @@ export const FinanceSettings: CollectionConfig = {
       options: [
         { label: 'Auto', value: 'auto' },
         { label: 'Stripe', value: 'stripe' },
-        { label: 'PayPal', value: 'paypal' },
       ],
       label: 'Default Checkout Provider',
     },
     {
       name: 'currency',
-      type: 'text',
+      type: 'select',
       required: true,
-      defaultValue: 'IDR',
+      defaultValue: DEFAULT_CURRENCY,
+      options: [{ label: DEFAULT_CURRENCY, value: DEFAULT_CURRENCY }],
       label: 'Currency',
       admin: {
-        description: 'Default currency used in checkout calculations',
+        description: 'Checkout currency is locked to USD',
       },
     },
   ],
