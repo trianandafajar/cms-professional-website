@@ -46,6 +46,7 @@ interface EventsState {
   totalPages: number
   page: number
   isLoading: boolean
+  hasFetched: boolean
   error: string | null
   search: string
   statusFilter: EventStatus
@@ -68,11 +69,16 @@ export const useEventsStore = create<EventsState>((set, get) => ({
   totalPages: 0,
   page: 1,
   isLoading: false,
+  hasFetched: false,
   error: null,
   search: '',
   statusFilter: 'all',
 
   fetchEvents: async () => {
+    if (get().isLoading) {
+      return
+    }
+
     set({ isLoading: true, error: null })
     try {
       const { search, statusFilter, page } = get()
@@ -108,9 +114,10 @@ export const useEventsStore = create<EventsState>((set, get) => ({
         totalPages: response.totalPages,
         page: response.page,
         isLoading: false,
+        hasFetched: true,
       })
     } catch (err: any) {
-      set({ error: err.message || 'Failed to fetch events', isLoading: false })
+      set({ error: err.message || 'Failed to fetch events', isLoading: false, hasFetched: true })
     }
   },
 
@@ -168,6 +175,10 @@ export const useEventsStore = create<EventsState>((set, get) => ({
   },
 
   fetchAllEvents: async () => {
+    if (get().isLoading) {
+      return
+    }
+
     set({ isLoading: true, error: null })
     try {
       const response = await apiClient.get<{
@@ -177,9 +188,10 @@ export const useEventsStore = create<EventsState>((set, get) => ({
       set({
         allEvents: response.docs,
         isLoading: false,
+        hasFetched: true,
       })
     } catch (err: any) {
-      set({ error: err.message || 'Failed to fetch events', isLoading: false })
+      set({ error: err.message || 'Failed to fetch events', isLoading: false, hasFetched: true })
     }
   },
 

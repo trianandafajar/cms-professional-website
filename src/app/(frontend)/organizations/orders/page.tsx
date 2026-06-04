@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { useAuthStore } from '@/stores/authStore'
 import { useOrdersStore } from '@/stores/ordersStore'
 import { formatMoneyAmount } from '@/lib/finance'
+import { OrdersPageSkeleton } from '@/components/organizations/orders/orders-skeleton'
 
 const statusOptions = ['All', 'Completed', 'Pending', 'Cancelled', 'Refunded']
 
@@ -134,13 +135,7 @@ export default function OrdersPage() {
     URL.revokeObjectURL(url)
   }
 
-  if (isLoading && orders.length === 0) {
-    return (
-      <div className="flex items-center justify-center rounded-xl border border-zinc-200 bg-white py-20">
-        <p className="text-sm text-zinc-500">Loading orders...</p>
-      </div>
-    )
-  }
+  if (isLoading && orders.length === 0) return <OrdersPageSkeleton />
 
   if (error && orders.length === 0) {
     return (

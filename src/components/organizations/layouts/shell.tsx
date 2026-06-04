@@ -47,7 +47,7 @@ const sidebarItems = [
   { icon: FileText, href: '/organizations/orders', label: 'Orders', isBottom: false, alias: '/organizations/orders' },
   { icon: Palette, href: '/organizations/ticket-designer', label: 'Ticket Designer', isBottom: false, alias: '/organizations/ticket-designer' },
   { icon: QrCode, href: '/organizations/check-in', label: 'Check-In', isBottom: false, alias: '/organizations/check-in' },
-  { icon: Megaphone, href: '/organizations/marketing', label: 'Marketing', isBottom: false, alias: '/organizations/marketing' },
+  { icon: Megaphone, href: '/organizations/marketing/dashboard', label: 'Marketing', isBottom: false, alias: '/organizations/marketing' },
   { icon: BarChart3, href: '/organizations/finance', label: 'Finance', isBottom: false, alias: '/organizations/finance' },
   { icon: Settings, href: '/organizations/settings', label: 'Settings', isBottom: true, alias: '/organizations/settings' },
 ]

@@ -6,9 +6,18 @@ import { X } from 'lucide-react'
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
+  filters: {
+    dateRange: 'all' | '30d' | '90d' | 'year'
+    status: 'all' | 'Scheduled' | 'Ready'
+    paymentMethod: 'all' | 'stripe' | 'paypal'
+    payoutId: string
+    eventName: string
+  }
+  onChange: (next: Partial<Props['filters']>) => void
+  onReset: () => void
 }
 
-export default function PayoutFilterDrawer({ open, onOpenChange }: Props) {
+export default function PayoutFilterDrawer({ open, onOpenChange, filters, onChange, onReset }: Props) {
   return (
     <Drawer direction="right" open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="h-screen max-w-[380px]! border-l border-zinc-200 bg-white">
@@ -30,11 +39,15 @@ export default function PayoutFilterDrawer({ open, onOpenChange }: Props) {
               <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
                 Date range
               </label>
-              <select className="mt-2 h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm text-zinc-700 outline-none focus:border-[#5151eb]">
-                <option>All time</option>
-                <option>Last 30 days</option>
-                <option>Last 90 days</option>
-                <option>This year</option>
+              <select
+                value={filters.dateRange}
+                onChange={(e) => onChange({ dateRange: e.target.value as Props['filters']['dateRange'] })}
+                className="mt-2 h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm text-zinc-700 outline-none focus:border-[#5151eb]"
+              >
+                <option value="all">All time</option>
+                <option value="30d">Last 30 days</option>
+                <option value="90d">Last 90 days</option>
+                <option value="year">This year</option>
               </select>
             </div>
 
@@ -42,12 +55,14 @@ export default function PayoutFilterDrawer({ open, onOpenChange }: Props) {
               <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
                 Status
               </label>
-              <select className="mt-2 h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm text-zinc-700 outline-none focus:border-[#5151eb]">
-                <option>All</option>
-                <option>Paid</option>
-                <option>Pending</option>
-                <option>Processing</option>
-                <option>Scheduled</option>
+              <select
+                value={filters.status}
+                onChange={(e) => onChange({ status: e.target.value as Props['filters']['status'] })}
+                className="mt-2 h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm text-zinc-700 outline-none focus:border-[#5151eb]"
+              >
+                <option value="all">All</option>
+                <option value="Scheduled">Scheduled</option>
+                <option value="Ready">Ready</option>
               </select>
             </div>
 
@@ -55,10 +70,16 @@ export default function PayoutFilterDrawer({ open, onOpenChange }: Props) {
               <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
                 Payment method
               </label>
-              <select className="mt-2 h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm text-zinc-700 outline-none focus:border-[#5151eb]">
-                <option>All</option>
-                <option>Bank Transfer</option>
-                <option>Manual Transfer</option>
+              <select
+                value={filters.paymentMethod}
+                onChange={(e) =>
+                  onChange({ paymentMethod: e.target.value as Props['filters']['paymentMethod'] })
+                }
+                className="mt-2 h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm text-zinc-700 outline-none focus:border-[#5151eb]"
+              >
+                <option value="all">All</option>
+                <option value="stripe">Stripe</option>
+                <option value="paypal">PayPal</option>
               </select>
             </div>
 
@@ -68,6 +89,8 @@ export default function PayoutFilterDrawer({ open, onOpenChange }: Props) {
               </label>
               <input
                 placeholder="e.g: PO-2026-001"
+                value={filters.payoutId}
+                onChange={(e) => onChange({ payoutId: e.target.value })}
                 className="mt-2 h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-[#5151eb]"
               />
             </div>
@@ -78,6 +101,8 @@ export default function PayoutFilterDrawer({ open, onOpenChange }: Props) {
               </label>
               <input
                 placeholder="Search event..."
+                value={filters.eventName}
+                onChange={(e) => onChange({ eventName: e.target.value })}
                 className="mt-2 h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-[#5151eb]"
               />
             </div>
@@ -92,7 +117,12 @@ export default function PayoutFilterDrawer({ open, onOpenChange }: Props) {
               >
                 Cancel
               </button>
-              <button className="flex-1 rounded-lg bg-[#5151eb] py-2.5 text-sm font-medium text-white transition hover:bg-[#3d3dcc]">
+              <button
+                onClick={() => {
+                  onOpenChange(false)
+                }}
+                className="flex-1 rounded-lg bg-[#5151eb] py-2.5 text-sm font-medium text-white transition hover:bg-[#3d3dcc]"
+              >
                 Apply
               </button>
             </div>

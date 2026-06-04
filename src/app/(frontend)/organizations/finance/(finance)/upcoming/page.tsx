@@ -1,149 +1,155 @@
-'use client'
+import { headers as getHeaders } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { getPayload } from 'payload'
 
-import { useState } from 'react'
-import PayoutFilterDrawer from '@/components/finance/payout-filter-drawer'
-import PayoutEmpty from '@/components/finance/payout-empty'
+import UpcomingPayoutsClient, {
+  type UpcomingPayoutRow,
+} from '@/components/organizations/finance/upcoming-payouts-client'
+import { buildPaymentProviderLabel, type PaymentProvider } from '@/lib/finance'
+import config from '@/payload.config'
 
-const upcomingPayouts = [
-  {
-    id: 'UP-2026-001',
-    event: 'React Conference 2026',
-    gross: 5000000,
-    fees: 250000,
-    net: 4750000,
-    status: 'Scheduled',
-    date: '20 Jun 2026',
-  },
-  {
-    id: 'UP-2026-002',
-    event: 'Laravel Meetup',
-    gross: 2500000,
-    fees: 125000,
-    net: 2375000,
-    status: 'Scheduled',
-    date: '25 Jun 2026',
-  },
-  {
-    id: 'UP-2026-003',
-    event: 'Vue.js Workshop',
-    gross: 2500000,
-    fees: 125000,
-    net: 2375000,
-    status: 'Scheduled',
-    date: '25 Jun 2026',
-  },
-  {
-    id: 'UP-2026-004',
-    event: 'Next.js Summit',
-    gross: 2500000,
-    fees: 125000,
-    net: 2375000,
-    status: 'Scheduled',
-    date: '25 Jun 2026',
-  },
-  {
-    id: 'UP-2026-005',
-    event: 'Tailwind CSS Conf',
-    gross: 2500000,
-    fees: 125000,
-    net: 2375000,
-    status: 'Scheduled',
-    date: '25 Jun 2026',
-  },
-]
+function getOrganizerId(user: any) {
+  return user ? String(user.id) : null
+}
 
-export default function UpcomingPayoutPage() {
-  const [drawerOpen, setDrawerOpen] = useState(false)
+function addBusinessDays(date: Date, days: number) {
+  const result = new Date(date)
+  let added = 0
 
-  const totalUpcoming = upcomingPayouts.reduce((sum, item) => sum + item.net, 0)
+  while (added < days) {
+    result.setDate(result.getDate() + 1)
+    const day = result.getDay()
+    if (day !== 0 && day !== 6) {
+      added += 1
+    }
+  }
 
-  return (
-    <div className="space-y-5">
-      {/* Summary */}
-      <div className="rounded-xl border border-zinc-200 bg-white p-5">
-        <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">Total Upcoming</p>
-        <p className="mt-2 text-2xl font-bold text-zinc-900">
-          Rp {totalUpcoming.toLocaleString('id-ID')}
-        </p>
-        <p className="mt-1 text-sm text-zinc-500">
-          {upcomingPayouts.length} scheduled payout{upcomingPayouts.length !== 1 ? 's' : ''}
-        </p>
-      </div>
+  return result
+}
 
-      {/* Actions */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-zinc-500">Payouts scheduled to be transferred to your account</p>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setDrawerOpen(true)}
-            className="flex h-9 items-center rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
-          >
-            Filters
-          </button>
-          <button className="flex h-9 items-center rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50">
-            Export
-          </button>
-        </div>
-      </div>
+function formatPayoutId(label: string, index: number) {
+  const slug = label
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 24)
 
-      {upcomingPayouts.length === 0 ? (
-        <PayoutEmpty />
-      ) : (
-        <div className="overflow-hidden rounded-xl border border-zinc-200">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-zinc-100 bg-zinc-50/80">
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  ID
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Event
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Gross
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Fees
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Net
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Status
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Expected Date
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100 bg-white">
-              {upcomingPayouts.map((item) => (
-                <tr key={item.id} className="transition hover:bg-zinc-50/50">
-                  <td className="px-4 py-3.5 text-sm font-medium text-zinc-900">{item.id}</td>
-                  <td className="px-4 py-3.5 text-sm text-zinc-700">{item.event}</td>
-                  <td className="px-4 py-3.5 text-right text-sm text-zinc-700">
-                    Rp {item.gross.toLocaleString('id-ID')}
-                  </td>
-                  <td className="px-4 py-3.5 text-right text-sm text-zinc-400">
-                    Rp {item.fees.toLocaleString('id-ID')}
-                  </td>
-                  <td className="px-4 py-3.5 text-right text-sm font-semibold text-zinc-900">
-                    Rp {item.net.toLocaleString('id-ID')}
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
-                      {item.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5 text-sm text-zinc-500">{item.date}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+  return `UP-${String(index + 1).padStart(3, '0')}-${slug || 'event'}`
+}
 
-      <PayoutFilterDrawer open={drawerOpen} onOpenChange={setDrawerOpen} />
-    </div>
+function getRowProvider(ticket: any, fallback: PaymentProvider | null): PaymentProvider {
+  const provider = String(ticket?.paymentProvider ?? fallback ?? 'stripe').toLowerCase()
+  return provider === 'paypal' ? 'paypal' : 'stripe'
+}
+
+export default async function UpcomingPayoutPage() {
+  const headers = await getHeaders()
+  const payload = await getPayload({ config: await config })
+  const { user } = await payload.auth({ headers })
+
+  if (!user) {
+    redirect('/auth/signin')
+  }
+
+  if (!user.isOrganizer) {
+    redirect('/')
+  }
+
+  const organizerId = getOrganizerId(user)
+  if (!organizerId) {
+    redirect('/')
+  }
+
+  const [settingsResult, connectionsResult, ticketsResult] = await Promise.all([
+    payload.find({
+      collection: 'finance-settings',
+      where: {
+        organizer: { equals: organizerId },
+      },
+      limit: 1,
+      depth: 0,
+      overrideAccess: false,
+      user,
+    }),
+    payload.find({
+      collection: 'payment-connections',
+      where: {
+        organizer: { equals: organizerId },
+      },
+      depth: 0,
+      sort: '-updatedAt',
+      limit: 10,
+      overrideAccess: false,
+      user,
+    }),
+    payload.find({
+      collection: 'tickets',
+      where: {
+        status: { equals: 'completed' },
+        'event.organizer': { equals: organizerId },
+      },
+      depth: 2,
+      limit: 1000,
+      sort: '-paidAt',
+      overrideAccess: false,
+      user,
+    }),
+  ])
+
+  const settingsDoc = settingsResult.docs[0] ?? null
+  const connectedProvider = connectionsResult.docs.find(
+    (connection) => connection.status === 'connected',
+  )?.provider as PaymentProvider | undefined
+  const defaultProvider = (settingsDoc?.defaultProvider === 'auto'
+    ? connectedProvider ?? null
+    : settingsDoc?.defaultProvider ?? null) as PaymentProvider | null
+
+  const rowsMap = new Map<string, UpcomingPayoutRow>()
+
+  for (const ticket of ticketsResult.docs as any[]) {
+    const event = ticket?.event && typeof ticket.event === 'object' ? ticket.event : null
+    if (!event) continue
+
+    const provider = getRowProvider(ticket, defaultProvider)
+    const eventLabel = String(event.title ?? 'Untitled Event')
+    const rowKey = `${event.id ?? event.slug ?? eventLabel}-${provider}`
+    const gross = Math.max(0, Number(ticket.totalAmount ?? ticket.price ?? 0))
+    const fees = Math.max(0, Number(ticket.serviceFeeAmount ?? 0))
+    const current = rowsMap.get(rowKey)
+    const paidAtValue = ticket.paidAt ?? ticket.createdAt
+    const paidAt = paidAtValue ? new Date(paidAtValue) : new Date()
+    const expectedDate = addBusinessDays(paidAt, provider === 'stripe' ? 2 : 3)
+
+    if (!current) {
+      rowsMap.set(rowKey, {
+        id: formatPayoutId(String(event.slug ?? eventLabel), rowsMap.size),
+        event: eventLabel,
+        gross,
+        fees,
+        net: Math.max(0, gross - fees),
+        status: expectedDate.getTime() > Date.now() ? 'Scheduled' : 'Ready',
+        expectedDate: expectedDate.toISOString(),
+        paymentProvider: provider,
+        ticketCount: 1,
+        updatedAt: paidAt.toISOString(),
+      })
+      continue
+    }
+
+    current.gross += gross
+    current.fees += fees
+    current.net = Math.max(0, current.gross - current.fees)
+    current.ticketCount += 1
+    if (paidAt.getTime() > new Date(current.updatedAt).getTime()) {
+      current.updatedAt = paidAt.toISOString()
+      current.expectedDate = expectedDate.toISOString()
+      current.status = expectedDate.getTime() > Date.now() ? 'Scheduled' : 'Ready'
+    }
+  }
+
+  const rows = Array.from(rowsMap.values()).sort(
+    (left, right) => new Date(left.expectedDate).getTime() - new Date(right.expectedDate).getTime(),
   )
+
+  return <UpcomingPayoutsClient rows={rows} defaultProvider={defaultProvider} />
 }

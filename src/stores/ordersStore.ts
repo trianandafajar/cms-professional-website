@@ -36,6 +36,7 @@ export interface OrderRow {
 interface OrdersState {
   orders: OrderRow[]
   isLoading: boolean
+  hasFetched: boolean
   error: string | null
   fetchOrders: (userId?: string | null) => Promise<void>
   getOrderById: (orderId: string) => OrderRow | null
@@ -154,9 +155,14 @@ function groupTicketsToOrders(tickets: Ticket[]): OrderRow[] {
 export const useOrdersStore = create<OrdersState>((set, get) => ({
   orders: [],
   isLoading: false,
+  hasFetched: false,
   error: null,
 
   fetchOrders: async (userId) => {
+    if (get().isLoading) {
+      return
+    }
+
     set({ isLoading: true, error: null })
 
     try {
@@ -175,9 +181,10 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
       set({
         orders: groupTicketsToOrders(response.docs),
         isLoading: false,
+        hasFetched: true,
       })
     } catch (err: any) {
-      set({ error: err.message || 'Failed to fetch orders', isLoading: false })
+      set({ error: err.message || 'Failed to fetch orders', isLoading: false, hasFetched: true })
     }
   },
 
