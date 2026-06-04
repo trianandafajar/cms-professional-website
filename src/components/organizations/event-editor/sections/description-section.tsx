@@ -121,7 +121,7 @@ export default function DescriptionSection() {
       className="overflow-hidden rounded-xl border border-zinc-200 bg-white transition"
     >
       {!expanded && (
-        <button onClick={() => setExpanded(true)} className="w-full">
+        <button onClick={() => setExpanded(true)} className="w-full cursor-pointer">
           <div className="relative p-5">
             <div>
               <h2 className="text-start text-lg font-bold text-zinc-900">Description</h2>
@@ -175,7 +175,7 @@ export default function DescriptionSection() {
 
             <button
               onClick={() => setExpanded(false)}
-              className="rounded-lg p-1.5 transition hover:bg-zinc-100"
+              className="rounded-lg p-1.5 transition hover:bg-zinc-100 cursor-pointer"
             >
               <ChevronDown size={18} className="rotate-180 text-zinc-400" />
             </button>
@@ -185,7 +185,7 @@ export default function DescriptionSection() {
             <button
               type="button"
               onClick={() => setActiveTab('editor')}
-              className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition ${
+              className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition cursor-pointer ${
                 activeTab === 'editor'
                   ? 'border-[#5151eb] text-[#5151eb]'
                   : 'border-transparent text-zinc-500 hover:text-zinc-700'
@@ -198,7 +198,7 @@ export default function DescriptionSection() {
             <button
               type="button"
               onClick={() => setActiveTab('preview')}
-              className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition ${
+              className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition cursor-pointer ${
                 activeTab === 'preview'
                   ? 'border-[#5151eb] text-[#5151eb]'
                   : 'border-transparent text-zinc-500 hover:text-zinc-700'
@@ -384,7 +384,7 @@ function ToolbarButton({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className={`flex h-7 w-7 items-center justify-center rounded-md transition ${
+      className={`flex h-7 w-7 items-center justify-center rounded-md transition cursor-pointer ${
         isActive
           ? 'bg-[#5151eb] text-white'
           : disabled

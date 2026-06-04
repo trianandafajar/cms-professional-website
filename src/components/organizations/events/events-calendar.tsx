@@ -11,6 +11,7 @@ import { ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 
 import { useEventsStore } from '@/stores/eventsStore'
+import { EventsCalendarSkeleton } from './events-skeletons'
 
 const localizer = momentLocalizer(moment)
 
@@ -58,6 +59,10 @@ export default function EventsCalendar() {
     )
   }
 
+  if (isLoading && allEvents.length === 0) {
+    return <EventsCalendarSkeleton />
+  }
+
   return (
     <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white">
       {/* Header */}
@@ -65,21 +70,21 @@ export default function EventsCalendar() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setDate(new Date())}
-            className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium transition hover:bg-gray-50"
+            className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium transition hover:bg-gray-50 cursor-pointer"
           >
             Today
           </button>
 
           <button
             onClick={() => setDate(moment(date).subtract(1, view).toDate())}
-            className="rounded-xl border border-gray-200 p-2 transition hover:bg-gray-50"
+            className="rounded-xl border border-gray-200 p-2 transition hover:bg-gray-50 cursor-pointer"
           >
             <ChevronLeft size={18} />
           </button>
 
           <button
             onClick={() => setDate(moment(date).add(1, view).toDate())}
-            className="rounded-xl border border-gray-200 p-2 transition hover:bg-gray-50"
+            className="rounded-xl border border-gray-200 p-2 transition hover:bg-gray-50 cursor-pointer"
           >
             <ChevronRight size={18} />
           </button>
@@ -93,7 +98,7 @@ export default function EventsCalendar() {
           <div className="flex rounded-xl border border-gray-200 bg-white p-1">
             <button
               onClick={() => setView(Views.MONTH)}
-              className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition cursor-pointer ${
                 view === Views.MONTH
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-gray-700 hover:bg-gray-100'
@@ -104,7 +109,7 @@ export default function EventsCalendar() {
 
             <button
               onClick={() => setView(Views.WEEK)}
-              className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition cursor-pointer ${
                 view === Views.WEEK
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-gray-700 hover:bg-gray-100'
@@ -118,11 +123,6 @@ export default function EventsCalendar() {
 
       {/* Calendar */}
       <div className="calendar-modern h-212.5 p-6">
-        {isLoading && allEvents.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-sm text-zinc-500">
-            Loading events...
-          </div>
-        ) : (
         <Calendar
           localizer={localizer}
           events={calendarEvents}
@@ -152,7 +152,6 @@ export default function EventsCalendar() {
             height: '100%',
           }}
         />
-        )}
       </div>
     </div>
   )

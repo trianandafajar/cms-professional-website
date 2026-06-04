@@ -45,7 +45,7 @@ export default function OverviewSection() {
       {!expanded && (
         <button
           onClick={() => setExpanded(true)}
-          className="w-full"
+          className="w-full cursor-pointer"
         >
           <div className="flex items-start justify-between p-5">
             <div className="text-left">
@@ -87,7 +87,7 @@ export default function OverviewSection() {
 
             <button
               onClick={() => setExpanded(false)}
-              className="rounded-lg p-1.5 transition hover:bg-zinc-100"
+              className="rounded-lg p-1.5 transition hover:bg-zinc-100 cursor-pointer"
             >
               <ChevronDown
                 size={18}

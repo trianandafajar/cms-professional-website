@@ -147,7 +147,7 @@ export default function MediaSection() {
 
             <button
               onClick={() => setExpanded(false)}
-              className="rounded-lg p-1.5 hover:bg-zinc-100"
+              className="rounded-lg p-1.5 hover:bg-zinc-100 cursor-pointer"
             >
               <X size={18} className="text-zinc-500" />
             </button>
@@ -248,7 +248,7 @@ export default function MediaSection() {
                         <button
                           type="button"
                           onClick={() => handleDelete(image.id)}
-                          className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white"
+                          className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white cursor-pointer"
                         >
                           <X size={10} />
                         </button>

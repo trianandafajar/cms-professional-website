@@ -7,7 +7,6 @@ import {
   Copy,
   Edit3,
   ImageIcon,
-  Loader2,
   MoreVertical,
   Trash2,
 } from 'lucide-react'
@@ -20,6 +19,7 @@ import { useEventsStore } from '@/stores/eventsStore'
 import { useAuthStore } from '@/stores/authStore'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import type { Event, Media } from '@/payload-types'
+import { EventsListSkeleton } from './events-skeletons'
 
 export default function EventsList() {
   const router = useRouter()
@@ -61,14 +61,7 @@ export default function EventsList() {
   }
 
   // Loading state
-  if (isLoading && events.length === 0) {
-    return (
-      <div className="flex items-center justify-center rounded-xl border border-zinc-200 bg-white py-20">
-        <Loader2 size={24} className="animate-spin text-[#5151eb]" />
-        <span className="ml-2 text-sm text-zinc-500">Loading events...</span>
-      </div>
-    )
-  }
+  if (isLoading && events.length === 0) return <EventsListSkeleton />
 
   // Error state
   if (error) {
@@ -265,7 +258,7 @@ function EventRow({
         <div className="col-span-1 flex justify-end">
           <Popover open={menuOpen} onOpenChange={setMenuOpen}>
             <PopoverTrigger asChild>
-              <button className="rounded-lg p-1.5 transition hover:bg-zinc-100">
+              <button className="rounded-lg p-1.5 transition hover:bg-zinc-100 cursor-pointer">
                 <MoreVertical size={16} className="text-zinc-400" />
               </button>
             </PopoverTrigger>
@@ -278,7 +271,7 @@ function EventRow({
                   setMenuOpen(false)
                   onEdit()
                 }}
-                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50 cursor-pointer"
               >
                 <Edit3 size={14} />
                 Edit
@@ -288,7 +281,7 @@ function EventRow({
                   setMenuOpen(false)
                   void onDuplicate()
                 }}
-                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50"
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50 cursor-pointer"
               >
                 <Copy size={14} />
                 Duplicate
@@ -299,7 +292,7 @@ function EventRow({
                   setMenuOpen(false)
                   setShowDeleteConfirm(true)
                 }}
-                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-red-600 transition hover:bg-red-50"
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-red-600 transition hover:bg-red-50 cursor-pointer"
               >
                 <Trash2 size={14} />
                 Delete
@@ -321,7 +314,7 @@ function EventRow({
             <div className="mt-5 flex items-center justify-end gap-2">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+                className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 cursor-pointer"
               >
                 Cancel
               </button>
@@ -330,7 +323,7 @@ function EventRow({
                   setShowDeleteConfirm(false)
                   onDelete()
                 }}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700"
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 cursor-pointer"
               >
                 Delete
               </button>
