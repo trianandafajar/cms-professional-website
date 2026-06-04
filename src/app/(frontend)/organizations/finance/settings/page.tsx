@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Loader2, CreditCard, Landmark, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useFinanceStore } from '@/stores/financeStore'
-import { DEFAULT_CURRENCY, type PaymentProvider } from '@/lib/finance'
+import type { PaymentProvider } from '@/lib/finance'
 
 const PROVIDER_META: Record<
   PaymentProvider,
@@ -30,26 +30,14 @@ const PROVIDER_META: Record<
 export default function PaymentAccountsPage() {
   const searchParams = useSearchParams()
   const {
-    settings,
     connections,
-    supportedProviders,
     defaultCheckoutProvider,
     isLoading,
-    isSaving,
     error,
     fetchWorkspace,
-    saveSettings,
     disconnectProvider,
     clearError,
   } = useFinanceStore()
-
-  const [form, setForm] = useState({
-    serviceFeePercent: 5,
-    taxPercent: 0,
-    taxLabel: 'Tax',
-    defaultProvider: 'auto' as 'auto' | PaymentProvider,
-    currency: DEFAULT_CURRENCY,
-  })
 
   useEffect(() => {
     fetchWorkspace()
@@ -60,18 +48,6 @@ export default function PaymentAccountsPage() {
       fetchWorkspace()
     }
   }, [fetchWorkspace, searchParams])
-
-  useEffect(() => {
-    if (!settings) return
-
-    setForm({
-      serviceFeePercent: Number(settings.serviceFeePercent ?? 5),
-      taxPercent: Number(settings.taxPercent ?? 0),
-      taxLabel: settings.taxLabel || 'Tax',
-      defaultProvider: settings.defaultProvider === 'paypal' ? 'auto' : settings.defaultProvider,
-      currency: DEFAULT_CURRENCY,
-    })
-  }, [settings])
 
   const connectionMap = useMemo(
     () => new Map(connections.map((connection) => [connection.provider, connection])),
@@ -85,10 +61,6 @@ export default function PaymentAccountsPage() {
       : routeError === 'paypal_onboarding_failed'
         ? 'PayPal is not active yet.'
         : null
-
-  async function handleSave() {
-    await saveSettings(form)
-  }
 
   function handleConnect(provider: PaymentProvider) {
     clearError()
@@ -109,7 +81,7 @@ export default function PaymentAccountsPage() {
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-zinc-900">Payment Settings</h2>
         <p className="mt-1 text-sm text-zinc-500">
-          Stripe is the active checkout provider. PayPal is shown as upcoming until the next phase.
+          Manage your payout providers here. Tax and finance rules are handled directly by Stripe.
         </p>
       </div>
 
@@ -119,254 +91,165 @@ export default function PaymentAccountsPage() {
         </div>
       )}
 
-      <section className="grid gap-6 lg:grid-cols-[1.3fr_0.9fr]">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h3 className="text-base font-semibold text-zinc-900">Finance rules</h3>
-              <p className="text-sm text-zinc-500">
-                Service fee and tax are stored centrally and applied to every checkout.
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={fetchWorkspace}
-              className="rounded-xl"
-              disabled={isLoading}
-            >
-              {isLoading ? <Loader2 className="mr-2 size-4 animate-spin" /> : <RefreshCw className="mr-2 size-4" />}
-              Refresh
-            </Button>
-          </div>
-
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+      {isLoading && connections.length === 0 ? (
+        <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="space-y-2">
-              <label htmlFor="serviceFeePercent" className="text-sm font-medium text-zinc-700">
-                Service fee (%)
-              </label>
-              <Input
-                id="serviceFeePercent"
-                type="number"
-                min={0}
-                max={100}
-                value={form.serviceFeePercent}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, serviceFeePercent: Number(e.target.value || 0) }))
-                }
-              />
+              <Skeleton className="h-5 w-36" />
+              <Skeleton className="h-4 w-72" />
             </div>
-
-            <div className="space-y-2">
-              <label htmlFor="taxPercent" className="text-sm font-medium text-zinc-700">
-                Tax (%)
-              </label>
-              <Input
-                id="taxPercent"
-                type="number"
-                min={0}
-                max={100}
-                value={form.taxPercent}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, taxPercent: Number(e.target.value || 0) }))
-                }
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="taxLabel" className="text-sm font-medium text-zinc-700">
-                Tax label
-              </label>
-              <Input
-                id="taxLabel"
-                value={form.taxLabel}
-                onChange={(e) => setForm((prev) => ({ ...prev, taxLabel: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="currency" className="text-sm font-medium text-zinc-700">
-                Currency
-              </label>
-              <select
-                id="currency"
-                value={DEFAULT_CURRENCY}
-                disabled
-                className="h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-600 outline-none"
-              >
-                <option value={DEFAULT_CURRENCY}>{DEFAULT_CURRENCY}</option>
-              </select>
-              <p className="text-xs text-zinc-400">Currency is locked to USD.</p>
-            </div>
-
-            <div className="space-y-2 sm:col-span-2">
-              <label htmlFor="defaultProvider" className="text-sm font-medium text-zinc-700">
-                Default checkout provider
-              </label>
-              <select
-                id="defaultProvider"
-                value={form.defaultProvider}
-                onChange={(e) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    defaultProvider: e.target.value as 'auto' | PaymentProvider,
-                  }))
-                }
-                className="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm outline-none transition focus:border-[#5151eb]"
-              >
-                <option value="auto">Auto</option>
-                <option value="stripe">Stripe</option>
-              </select>
-              <p className="text-xs text-zinc-400">
-                Auto picks your default connected provider. If only one is connected, checkout uses
-                that provider automatically.
-              </p>
-            </div>
+            <Skeleton className="h-10 w-28 rounded-xl" />
           </div>
-
-          <div className="mt-6 flex items-center justify-end">
-            <Button
-              type="button"
-              onClick={handleSave}
-              disabled={isSaving}
-              className="rounded-xl bg-[#5151eb] px-5 text-sm font-semibold text-white hover:bg-[#3d3dcc]"
-            >
-              {isSaving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-              Save settings
-            </Button>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="size-5 text-emerald-600" />
-            <h3 className="text-base font-semibold text-zinc-900">Provider status</h3>
-          </div>
-          <p className="mt-1 text-sm text-zinc-500">
-            Connect one or both providers. Checkout will only show supported options.
-          </p>
 
           <div className="mt-5 space-y-3">
-            {(Object.keys(PROVIDER_META) as PaymentProvider[]).map((provider) => {
-              const connection = connectionMap.get(provider) ?? null
-              const meta = PROVIDER_META[provider]
-              const Icon = meta.icon
-              const isConnected = connection?.status === 'connected'
-              const isUpcoming = provider === 'paypal'
-
-              return (
-                <div
-                  key={provider}
-                  className="rounded-2xl border border-zinc-200 p-4 transition hover:border-zinc-300"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex size-10 items-center justify-center rounded-xl bg-zinc-50">
-                        <Icon className={`size-5 ${meta.accent}`} />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold text-zinc-900">{meta.name}</p>
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                              isUpcoming
-                                ? 'bg-amber-50 text-amber-700'
-                                : isConnected
-                                ? 'bg-emerald-50 text-emerald-700'
-                                : 'bg-zinc-100 text-zinc-500'
-                            }`}
-                          >
-                            {isUpcoming
-                              ? 'Upcoming'
-                              : isConnected
-                                ? 'Connected'
-                                : connection
-                                  ? connection.status
-                                  : 'Not connected'}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-sm text-zinc-500">{meta.description}</p>
-                        {!isUpcoming && connection?.accountEmail && (
-                          <p className="mt-2 text-xs text-zinc-400">{connection.accountEmail}</p>
-                        )}
-                        {!isUpcoming && defaultCheckoutProvider === provider && (
-                          <p className="mt-2 text-xs font-semibold text-[#5151eb]">
-                            Default checkout provider
-                          </p>
-                        )}
-                      </div>
+            {[1, 2].map((item) => (
+              <div key={item} className="rounded-2xl border border-zinc-200 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <Skeleton className="size-10 rounded-xl" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-4 w-56" />
+                      <Skeleton className="h-3 w-32" />
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton className="h-9 w-24 rounded-lg" />
+                    <Skeleton className="h-9 w-28 rounded-lg" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
-                    <div className="flex shrink-0 flex-col gap-2">
-                      {isUpcoming ? (
-                        <span className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
-                          Upcoming
+      {!isLoading || connections.length > 0 ? (
+      <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="size-5 text-emerald-600" />
+              <h3 className="text-base font-semibold text-zinc-900">Provider status</h3>
+            </div>
+            <p className="mt-1 text-sm text-zinc-500">
+              Connect your payout providers here. Checkout only shows supported providers.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={fetchWorkspace}
+            className="rounded-xl"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <Loader2 className="mr-2 size-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 size-4" />
+            )}
+            Refresh
+          </Button>
+        </div>
+
+        <div className="mt-5 space-y-3">
+          {(Object.keys(PROVIDER_META) as PaymentProvider[]).map((provider) => {
+            const connection = connectionMap.get(provider) ?? null
+            const meta = PROVIDER_META[provider]
+            const Icon = meta.icon
+            const isConnected = connection?.status === 'connected'
+            const isUpcoming = provider === 'paypal'
+
+            return (
+              <div
+                key={provider}
+                className="rounded-2xl border border-zinc-200 p-4 transition hover:border-zinc-300"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex size-10 items-center justify-center rounded-xl bg-zinc-50">
+                      <Icon className={`size-5 ${meta.accent}`} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-zinc-900">{meta.name}</p>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                            isUpcoming
+                              ? 'bg-amber-50 text-amber-700'
+                              : isConnected
+                                ? 'bg-emerald-50 text-emerald-700'
+                                : connection
+                                  ? 'bg-zinc-100 text-zinc-500'
+                                  : 'bg-zinc-100 text-zinc-500'
+                          }`}
+                        >
+                          {isUpcoming
+                            ? 'Upcoming'
+                            : isConnected
+                              ? 'Connected'
+                              : connection
+                                ? connection.status
+                                : 'Not connected'}
                         </span>
-                      ) : (
-                        <>
-                          <Button
-                            type="button"
-                            size="sm"
-                            className="rounded-lg bg-[#5151eb] text-white hover:bg-[#3d3dcc]"
-                            onClick={() => handleConnect(provider)}
-                          >
-                            {isConnected ? 'Reconnect' : 'Connect'}
-                          </Button>
-
-                          {isConnected && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              className="rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-600"
-                              onClick={() => handleDisconnect(provider)}
-                            >
-                              <Trash2 className="mr-1.5 size-4" />
-                              Disconnect
-                            </Button>
-                          )}
-                        </>
+                      </div>
+                      <p className="mt-1 text-sm text-zinc-500">{meta.description}</p>
+                      {!isUpcoming && connection?.accountEmail && (
+                        <p className="mt-2 text-xs text-zinc-400">{connection.accountEmail}</p>
+                      )}
+                      {!isUpcoming && defaultCheckoutProvider === provider && (
+                        <p className="mt-2 text-xs font-semibold text-[#5151eb]">
+                          Default checkout provider
+                        </p>
                       )}
                     </div>
                   </div>
+
+                  <div className="flex shrink-0 flex-col gap-2">
+                    {isUpcoming ? (
+                      <span className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
+                        Upcoming
+                      </span>
+                    ) : (
+                      <>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="rounded-lg bg-[#5151eb] text-white hover:bg-[#3d3dcc]"
+                          onClick={() => handleConnect(provider)}
+                        >
+                          {isConnected ? 'Reconnect' : 'Connect'}
+                        </Button>
+
+                        {isConnected && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-600"
+                            onClick={() => handleDisconnect(provider)}
+                          >
+                            <Trash2 className="mr-1.5 size-4" />
+                            Disconnect
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
-              )
-            })}
-          </div>
+              </div>
+            )
+          })}
         </div>
       </section>
+      ) : null}
 
-      <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-base font-semibold text-zinc-900">Checkout support</h3>
-            <p className="text-sm text-zinc-500">
-              Supported providers: {supportedProviders.length > 0 ? supportedProviders.join(', ') : 'none yet'}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs uppercase tracking-wider text-zinc-400">Default</p>
-            <p className="text-sm font-semibold text-zinc-900">
-              {defaultCheckoutProvider ? PROVIDER_META[defaultCheckoutProvider].name : 'Auto'}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl bg-zinc-50 p-4">
-            <p className="text-xs uppercase tracking-wider text-zinc-400">Service fee</p>
-            <p className="mt-1 text-lg font-bold text-zinc-900">{form.serviceFeePercent}%</p>
-          </div>
-          <div className="rounded-2xl bg-zinc-50 p-4">
-            <p className="text-xs uppercase tracking-wider text-zinc-400">{form.taxLabel}</p>
-            <p className="mt-1 text-lg font-bold text-zinc-900">{form.taxPercent}%</p>
-          </div>
-          <div className="rounded-2xl bg-zinc-50 p-4">
-            <p className="text-xs uppercase tracking-wider text-zinc-400">Currency</p>
-            <p className="mt-1 text-lg font-bold text-zinc-900">{form.currency}</p>
-          </div>
-        </div>
-      </section>
+      {/* <div className="rounded-2xl border border-zinc-200 bg-white p-5 text-sm text-zinc-500 shadow-sm">
+        Supported providers:{' '}
+        <span className="font-medium text-zinc-800">
+          {supportedProviders.length > 0 ? supportedProviders.join(', ') : 'none yet'}
+        </span>
+      </div> */}
     </div>
   )
 }
