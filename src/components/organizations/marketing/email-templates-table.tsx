@@ -13,10 +13,29 @@ import { useEmailTemplatesStore } from '@/stores/emailTemplatesStore'
 export function EmailTemplatesTable() {
   const { templates, isLoading, error, fetchTemplates, resetAllTemplates } = useEmailTemplatesStore()
   const [isResettingAll, setIsResettingAll] = useState(false)
+  const [isBootstrapping, setIsBootstrapping] = useState(true)
 
   useEffect(() => {
-    void fetchTemplates()
+    let mounted = true
+
+    async function load() {
+      try {
+        await fetchTemplates()
+      } finally {
+        if (mounted) {
+          setIsBootstrapping(false)
+        }
+      }
+    }
+
+    void load()
+
+    return () => {
+      mounted = false
+    }
   }, [fetchTemplates])
+
+  const showSkeleton = isBootstrapping || (isLoading && templates.length === 0)
 
   async function handleResetAll() {
     if (!window.confirm('Set all organization templates back to the admin default version?')) {
@@ -84,15 +103,35 @@ export function EmailTemplatesTable() {
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100 bg-white">
-            {isLoading ? (
-              <tr>
-                <td className="px-4 py-8 text-center text-sm text-zinc-500" colSpan={6}>
-                  Loading templates...
-                </td>
-              </tr>
+            {showSkeleton ? (
+              Array.from({ length: 5 }).map((_, index) => (
+                <tr key={`skeleton-${index}`} className="animate-pulse">
+                  <td className="px-4 py-4">
+                    <div className="space-y-2">
+                      <div className="h-4 w-36 rounded bg-zinc-200" />
+                      <div className="h-3 w-52 rounded bg-zinc-100" />
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="h-4 w-24 rounded bg-zinc-100" />
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="h-4 w-24 rounded bg-zinc-100" />
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="h-6 w-20 rounded-full bg-zinc-100" />
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="h-6 w-24 rounded-full bg-zinc-100" />
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="ml-auto h-4 w-12 rounded bg-zinc-100" />
+                  </td>
+                </tr>
+              ))
             ) : null}
 
-            {!isLoading && templates.length === 0 ? (
+            {!showSkeleton && !isLoading && templates.length === 0 ? (
               <tr>
                 <td className="px-4 py-8 text-center text-sm text-zinc-500" colSpan={6}>
                   No email templates available right now.
@@ -100,7 +139,8 @@ export function EmailTemplatesTable() {
               </tr>
             ) : null}
 
-            {!isLoading &&
+            {!showSkeleton &&
+              !isLoading &&
               templates.map((template) => (
                 <tr key={template.id} className="transition hover:bg-zinc-50/50">
                   <td className="px-4 py-3.5">

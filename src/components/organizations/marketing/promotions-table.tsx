@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ChevronDown, Edit3, Plus, Share2, Trash2 } from 'lucide-react'
 
@@ -22,9 +22,26 @@ import { usePromotionsStore } from '@/stores/promotionsStore'
 export function PromotionsTable() {
   const { promotions, isLoading, error, fetchPromotions, deletePromotionBySlug } =
     usePromotionsStore()
+  const [isBootstrapping, setIsBootstrapping] = useState(true)
 
   useEffect(() => {
-    fetchPromotions()
+    let mounted = true
+
+    async function load() {
+      try {
+        await fetchPromotions()
+      } finally {
+        if (mounted) {
+          setIsBootstrapping(false)
+        }
+      }
+    }
+
+    void load()
+
+    return () => {
+      mounted = false
+    }
   }, [fetchPromotions])
 
   async function removeRow(slug: string) {
@@ -33,6 +50,7 @@ export function PromotionsTable() {
   }
 
   const hasRows = promotions.length > 0
+  const showSkeleton = isBootstrapping || (isLoading && !hasRows)
 
   return (
     <div>
@@ -117,15 +135,38 @@ export function PromotionsTable() {
           </thead>
 
           <tbody className="divide-y divide-zinc-100 bg-white">
-            {isLoading && !hasRows ? (
-              <tr>
-                <td className="px-4 py-8 text-center text-sm text-zinc-500" colSpan={7}>
-                  Loading promotions...
-                </td>
-              </tr>
+            {showSkeleton ? (
+              Array.from({ length: 5 }).map((_, index) => (
+                <tr key={`promotion-skeleton-${index}`} className="animate-pulse">
+                  <td className="px-4 py-4">
+                    <div className="space-y-2">
+                      <div className="h-4 w-36 rounded bg-zinc-200" />
+                      <div className="h-3 w-24 rounded bg-zinc-100" />
+                    </div>
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="h-4 w-24 rounded bg-zinc-100" />
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="h-4 w-20 rounded bg-zinc-100" />
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="h-4 w-24 rounded bg-zinc-100" />
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="h-4 w-20 rounded bg-zinc-100" />
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="h-6 w-24 rounded-full bg-zinc-100" />
+                  </td>
+                  <td className="px-4 py-4">
+                    <div className="ml-auto h-4 w-28 rounded bg-zinc-100" />
+                  </td>
+                </tr>
+              ))
             ) : null}
 
-            {!isLoading && !hasRows ? (
+            {!showSkeleton && !isLoading && !hasRows ? (
               <tr>
                 <td className="px-4 py-8 text-center text-sm text-zinc-500" colSpan={7}>
                   No promotions yet.
@@ -133,7 +174,8 @@ export function PromotionsTable() {
               </tr>
             ) : null}
 
-            {promotions.map((item) => (
+            {!showSkeleton &&
+              promotions.map((item) => (
               <tr key={item.id} className="transition hover:bg-zinc-50/50">
                 <td className="px-4 py-3.5">
                   <p className="text-sm font-semibold text-zinc-900">{item.name}</p>
