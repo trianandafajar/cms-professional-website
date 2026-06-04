@@ -1,4 +1,5 @@
 import { postgresAdapter } from '@payloadcms/db-postgres'
+import { resendAdapter } from '@payloadcms/email-resend'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import path from 'path'
 import { buildConfig } from 'payload'
@@ -28,6 +29,7 @@ import { meEndpoint } from './endpoints/me'
 import { notificationsBootstrapEndpoint } from './endpoints/notifications-bootstrap'
 import {
   emailTemplateWorkspaceDetailEndpoint,
+  emailTemplatesSendTestEndpoint,
   emailTemplatesResetAllEndpoint,
   emailTemplatesResetOneEndpoint,
   emailTemplatesWorkspaceEndpoint,
@@ -76,6 +78,11 @@ export default buildConfig({
     Comments,
   ],
   editor: lexicalEditor(),
+  email: resendAdapter({
+    apiKey: process.env.RESEND_API_KEY || '',
+    defaultFromAddress: process.env.RESEND_DEFAULT_FROM_EMAIL || 'onboarding@resend.dev',
+    defaultFromName: process.env.RESEND_DEFAULT_FROM_NAME || 'Eventbro',
+  }),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),
@@ -99,6 +106,7 @@ export default buildConfig({
     notificationsBootstrapEndpoint,
     emailTemplatesWorkspaceEndpoint,
     emailTemplateWorkspaceDetailEndpoint,
+    emailTemplatesSendTestEndpoint,
     emailTemplatesResetOneEndpoint,
     emailTemplatesResetAllEndpoint,
     financeWorkspaceEndpoint,

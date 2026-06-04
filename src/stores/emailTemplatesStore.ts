@@ -45,6 +45,12 @@ interface EmailTemplatesState {
   fetchTemplates: () => Promise<void>
   fetchTemplateById: (id: string) => Promise<EmailTemplateRecord | null>
   updateTemplate: (id: number | string, data: EmailTemplateUpdateInput) => Promise<EmailTemplateRecord>
+  sendTestEmail: (args: {
+    id: number | string
+    to?: string
+    data?: EmailTemplateUpdateInput
+    tokenValues?: Record<string, string>
+  }) => Promise<{ success: true; to: string; subject?: string }>
   resetTemplateByKey: (key: string) => Promise<EmailTemplateRecord>
   resetAllTemplates: () => Promise<EmailTemplateRecord[]>
   getTemplateById: (id: string) => EmailTemplateRecord | null
@@ -110,6 +116,18 @@ export const useEmailTemplatesStore = create<EmailTemplatesState>((set, get) => 
     }))
 
     return template
+  },
+
+  sendTestEmail: async ({ id, to, data, tokenValues }) => {
+    return apiClient.post<{ success: true; to: string; subject?: string }>(
+      '/api/email-templates/send-test',
+      {
+        id,
+        to,
+        data,
+        tokenValues,
+      },
+    )
   },
 
   resetTemplateByKey: async (key) => {

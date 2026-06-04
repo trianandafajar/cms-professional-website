@@ -14,8 +14,9 @@ import {
   Text,
 } from '@react-email/components'
 import { render } from '@react-email/render'
-import { Eye, Loader2, Palette, RotateCcw, Variable } from 'lucide-react'
+import { ChevronDown, Eye, Loader2, Palette, RotateCcw, Send, Variable } from 'lucide-react'
 
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   EMAIL_TEMPLATE_TOKEN_OPTIONS,
   INITIAL_TOKEN_DEFAULTS,
@@ -98,7 +99,7 @@ function buildFormState(template: EmailTemplateRecord): FormState {
 }
 
 export function EmailTemplateEditor({ templateId }: Props) {
-  const { getTemplateById, fetchTemplateById, updateTemplate, resetTemplateByKey } =
+  const { getTemplateById, fetchTemplateById, updateTemplate, sendTestEmail, resetTemplateByKey } =
     useEmailTemplatesStore()
 
   const existingTemplate = getTemplateById(templateId)
@@ -112,6 +113,10 @@ export function EmailTemplateEditor({ templateId }: Props) {
   const [isLoading, setIsLoading] = useState(!existingTemplate)
   const [isSaving, setIsSaving] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
+  const [isSendingTest, setIsSendingTest] = useState(false)
+  const [isTestPopoverOpen, setIsTestPopoverOpen] = useState(false)
+  const [testRecipient, setTestRecipient] = useState('')
+  const [testStatus, setTestStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [savedAt, setSavedAt] = useState<string | null>(null)
 
@@ -248,6 +253,30 @@ export function EmailTemplateEditor({ templateId }: Props) {
     }
   }
 
+  async function handleSendTest() {
+    if (!template || !form) return
+
+    setIsSendingTest(true)
+    setError(null)
+    setTestStatus(null)
+
+    try {
+      const response = await sendTestEmail({
+        id: template.id,
+        to: testRecipient.trim() || undefined,
+        data: form,
+        tokenValues: tokenDefaults,
+      })
+
+      setTestStatus(`Test email sent to ${response.to}`)
+      setIsTestPopoverOpen(false)
+    } catch (nextError: any) {
+      setError(nextError.message || 'Failed to send test email')
+    } finally {
+      setIsSendingTest(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex min-h-[360px] items-center justify-center rounded-xl border border-zinc-200 bg-white">
@@ -275,6 +304,67 @@ export function EmailTemplateEditor({ templateId }: Props) {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <Popover open={isTestPopoverOpen} onOpenChange={setIsTestPopoverOpen}>
+              <div className="inline-flex overflow-hidden rounded-lg border border-zinc-200 bg-white">
+                <button
+                  type="button"
+                  onClick={handleSendTest}
+                  disabled={isSendingTest}
+                  className="inline-flex h-10 items-center gap-2 border-r border-zinc-200 px-4 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Send size={15} />
+                  {isSendingTest ? 'Sending test...' : 'Send test'}
+                </button>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Open test email options"
+                    className="inline-flex h-10 items-center px-3 text-zinc-600 transition hover:bg-zinc-50 hover:text-zinc-900"
+                  >
+                    <ChevronDown
+                      size={15}
+                      className={`transition ${isTestPopoverOpen ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                </PopoverTrigger>
+              </div>
+              <PopoverContent
+                align="end"
+                className="w-[360px] rounded-xl border border-zinc-200 bg-white p-4 shadow-xl"
+              >
+                <div className="space-y-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-zinc-900">Send test email</h3>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      Leave it blank to send the test email to your currently logged-in organizer
+                      account email.
+                    </p>
+                  </div>
+                  <label className="block">
+                    <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                      Recipient Email
+                    </span>
+                    <input
+                      type="email"
+                      value={testRecipient}
+                      onChange={(event) => setTestRecipient(event.target.value)}
+                      placeholder="you@example.com"
+                      className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-800 outline-none transition focus:border-[#5151eb]"
+                    />
+                  </label>
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleSendTest}
+                      disabled={isSendingTest}
+                      className="inline-flex h-10 items-center justify-center rounded-lg bg-[#5151eb] px-4 text-sm font-semibold text-white transition hover:bg-[#4040d9] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isSendingTest ? 'Sending...' : 'Send now'}
+                    </button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
             <button
               type="button"
               onClick={handleReset}
@@ -297,6 +387,11 @@ export function EmailTemplateEditor({ templateId }: Props) {
         {savedAt ? (
           <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
             Saved at {savedAt}
+          </p>
+        ) : null}
+        {testStatus ? (
+          <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+            {testStatus}
           </p>
         ) : null}
         {error ? (

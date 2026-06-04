@@ -2,6 +2,7 @@ import type { Endpoint } from 'payload'
 import { randomUUID } from 'crypto'
 import Stripe from 'stripe'
 
+import { sendTemplateEmail } from '@/lib/email/send-template-email'
 import {
   calculateCheckoutTotals,
   createAuthState,
@@ -183,6 +184,102 @@ function queueOrderNotification(
       provider,
     },
   })
+}
+
+function formatEventDate(date: string | null | undefined) {
+  if (!date) return ''
+
+  return new Intl.DateTimeFormat('id-ID', {
+    dateStyle: 'long',
+    timeZone: 'Asia/Jakarta',
+  }).format(new Date(date))
+}
+
+function formatEventTime(date: string | null | undefined) {
+  if (!date) return ''
+
+  return new Intl.DateTimeFormat('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Jakarta',
+  }).format(new Date(date))
+}
+
+function buildBuyerOrderUrl(orderId: string) {
+  return `${getServerURL()}/my/orders/${encodeURIComponent(orderId)}`
+}
+
+function buildBuyerTicketsUrl() {
+  return `${getServerURL()}/my/tickets`
+}
+
+function buildEventsUrl() {
+  return `${getServerURL()}/events`
+}
+
+function buildOrderEmailTokenValues({
+  event,
+  buyer,
+  orderId,
+}: {
+  event: any
+  buyer: { name: string; email: string }
+  orderId: string
+}) {
+  return {
+    attendeeName: buyer.name,
+    organizerName:
+      typeof event?.organizer === 'object' && event.organizer?.name
+        ? String(event.organizer.name)
+        : 'Eventbro',
+    eventName: String(event?.title ?? ''),
+    eventSlug: String(event?.slug ?? ''),
+    orderId,
+    orderUrl: buildBuyerOrderUrl(orderId),
+    ticketsUrl: buildBuyerTicketsUrl(),
+    eventsUrl: buildEventsUrl(),
+    eventDate: formatEventDate(event?.startDate),
+    eventTime: formatEventTime(event?.startDate),
+    eventLocation: String(event?.venue ?? event?.address ?? ''),
+  }
+}
+
+async function sendOrderLifecycleEmail({
+  payload,
+  event,
+  buyer,
+  orderId,
+  templateKey,
+}: {
+  payload: any
+  event: any
+  buyer: { name: string; email: string }
+  orderId: string
+  templateKey: 'order_created' | 'checkout_completed'
+}) {
+  const organizerId = getEventOrganizerId(event)
+
+  try {
+    await sendTemplateEmail({
+      payload,
+      organizerId,
+      templateKey,
+      to: buyer.email,
+      tokenValues: buildOrderEmailTokenValues({
+        event,
+        buyer,
+        orderId,
+      }),
+    })
+  } catch (error) {
+    payload.logger.error({
+      msg: `Failed to send ${templateKey} email`,
+      orderId,
+      organizerId,
+      buyerEmail: buyer.email,
+      error: error instanceof Error ? error.message : String(error),
+    })
+  }
 }
 
 async function findConnection(payload: any, organizerId: string, provider: 'stripe' | 'paypal') {
@@ -568,6 +665,19 @@ async function createTicketsForOrder({
     items.map((item) => ({ ticketTypeId: item.ticketTypeId, quantity: item.quantity })),
   )
 
+  if (status === 'pending') {
+    await sendOrderLifecycleEmail({
+      payload,
+      event,
+      buyer: {
+        name: String(buyer.name),
+        email: String(buyer.email),
+      },
+      orderId,
+      templateKey: 'order_created',
+    })
+  }
+
   if (status !== 'pending') {
     queueOrderNotification(
       payload,
@@ -577,6 +687,17 @@ async function createTicketsForOrder({
       ticketDocs.length,
       paymentProvider ?? 'stripe',
     )
+
+    await sendOrderLifecycleEmail({
+      payload,
+      event,
+      buyer: {
+        name: String(buyer.name),
+        email: String(buyer.email),
+      },
+      orderId,
+      templateKey: 'checkout_completed',
+    })
   }
 
   return ticketDocs
@@ -1182,20 +1303,28 @@ export const financeCheckoutCompleteEndpoint: Endpoint = {
           existingTickets.length,
           'stripe',
         )
+
+        await sendOrderLifecycleEmail({
+          payload,
+          event,
+          buyer: completedBuyer,
+          orderId,
+          templateKey: 'checkout_completed',
+        })
       }
 
-    return Response.json({
-      success: true,
-      orderId,
-      buyerEmail: String(existingTickets[0].purchaserEmail ?? metadata.buyerEmail ?? ''),
-      tickets: existingTickets.map((doc: any) => ({
-        id: doc.id,
-        order: doc.order,
-        status: ticketsAlreadyCompleted ? doc.status : 'completed',
-      })),
-      alreadyProcessed: ticketsAlreadyCompleted,
-    })
-  }
+      return Response.json({
+        success: true,
+        orderId,
+        buyerEmail: String(existingTickets[0].purchaserEmail ?? metadata.buyerEmail ?? ''),
+        tickets: existingTickets.map((doc: any) => ({
+          id: doc.id,
+          order: doc.order,
+          status: ticketsAlreadyCompleted ? doc.status : 'completed',
+        })),
+        alreadyProcessed: ticketsAlreadyCompleted,
+      })
+    }
 
     const items = JSON.parse(metadata.items ?? '[]') as Array<{
       ticketTypeId: string

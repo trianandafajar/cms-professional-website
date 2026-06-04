@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 
+import { sendTemplateEmail } from '@/lib/email/send-template-email'
 import { ensureOrganizerEmailTemplates } from '@/lib/marketing/email-template-sync'
 
 export const Users: CollectionConfig = {
@@ -107,9 +108,29 @@ export const Users: CollectionConfig = {
       },
     ],
     afterChange: [
-      async ({ doc, req }) => {
+      async ({ doc, req, operation }) => {
         if (doc.isOrganizer) {
           await ensureOrganizerEmailTemplates(req.payload, doc.id)
+        }
+
+        if (operation === 'create' && doc.email) {
+          void sendTemplateEmail({
+            payload: req.payload,
+            templateKey: 'welcome',
+            to: doc.email,
+            tokenValues: {
+              attendeeName: doc.name,
+              organizerName: 'Eventbro',
+              eventSlug: '',
+              eventsUrl: `${process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'}/events`,
+            },
+          }).catch((error) => {
+            req.payload.logger.error({
+              msg: 'Failed to send welcome email',
+              error: error instanceof Error ? error.message : String(error),
+              userId: doc.id,
+            })
+          })
         }
 
         return doc
