@@ -55,6 +55,9 @@ export default buildConfig({
   serverURL: process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000',
   admin: {
     user: Users.slug,
+    components: {
+      Nav: '/components/payload/admin-nav#AdminNav',
+    },
     importMap: {
       baseDir: path.resolve(dirname),
     },
@@ -73,7 +76,7 @@ export default buildConfig({
     PaymentConnections,
     Promotions,
     EmailTemplateDefaults,
-    OrganizationEmailTemplates,
+    OrganizationEmailTemplates, 
     Posts,
     Comments,
   ],
