@@ -20,7 +20,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useMemo } from 'react'
 import { useConfig } from '@payloadcms/ui'
-import '@/app/(frontend)/styles.css'
 
 const icons = {
   BarChart3,
@@ -114,50 +113,46 @@ export function AdminNav() {
   }, [config?.collections])
 
   return (
-    <aside className="sticky top-0 flex h-screen w-[290px] shrink-0 flex-col border-r border-zinc-200 bg-white text-zinc-950">
-      <div className="shrink-0 border-b border-zinc-200 px-4 py-4">
-        <Link href="/admin" className="ml-10 flex items-center gap-3">
+    <aside className="admin-nav">
+      <div className="admin-nav__brand">
+        <Link href="/admin" className="admin-nav__brand-link">
           <Image
             src="/icon.png"
             alt="Eventbro"
             width={36}
             height={36}
-            className="size-9 rounded-lg object-contain"
+            className="admin-nav__brand-image"
             priority
           />
 
-          <div className="min-w-0">
-            <p className="truncate text-lg font-bold leading-none text-[#4f46e5]">
-              eventbro
-            </p>
-            <p className="truncate text-[11px] uppercase tracking-[0.22em] text-zinc-400">
-              Payload Admin
-            </p>
+          <div className="admin-nav__brand-copy">
+            <p className="admin-nav__brand-name">eventbro</p>
+            <p className="admin-nav__brand-subtitle">Payload Admin</p>
           </div>
         </Link>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
+      <nav className="admin-nav__scroll">
         <Link
           href="/admin"
-          className={`mb-4 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
+          className={`admin-nav__dashboard ${
             pathname === '/admin'
-              ? 'bg-[#4f46e5] text-white'
-              : 'text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950'
+              ? 'admin-nav__dashboard--active'
+              : 'admin-nav__dashboard--idle'
           }`}
         >
-          <Home className="size-4 shrink-0" />
-          <span>Dashboard</span>
+          <Home className="admin-nav__icon" />
+          <span className="admin-nav__label">Dashboard</span>
         </Link>
 
-        <div className="space-y-5">
+        <div className="admin-nav__groups">
           {groups.map((group) => (
-            <section key={group.label} className="space-y-2">
-              <div className="px-2 text-[12px] font-medium uppercase tracking-[0.18em] text-zinc-400">
+            <section key={group.label} className="admin-nav__group">
+              <div className="admin-nav__group-title">
                 {group.label}
               </div>
 
-              <div className="space-y-1">
+              <div className="admin-nav__group-items">
                 {group.items.map((item) => {
                   const isActive =
                     pathname === item.href || pathname.startsWith(`${item.href}/`)
@@ -168,14 +163,14 @@ export function AdminNav() {
                     <Link
                       key={item.slug}
                       href={item.href}
-                      className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition ${
+                      className={`admin-nav__item ${
                         isActive
-                          ? 'bg-[#4f46e5] text-white'
-                          : 'text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950'
+                          ? 'admin-nav__item--active'
+                          : 'admin-nav__item--idle'
                       }`}
                     >
-                      <Icon className="size-4 shrink-0" />
-                      <span className="min-w-0 truncate">{item.label}</span>
+                      <Icon className="admin-nav__icon" />
+                      <span className="admin-nav__item-label">{item.label}</span>
                     </Link>
                   )
                 })}
@@ -185,10 +180,10 @@ export function AdminNav() {
         </div>
       </nav>
 
-      <div className="shrink-0 border-t border-zinc-200 px-3 py-4">
+      <div className="admin-nav__footer">
         <Link
           href="/"
-          className="flex items-center rounded-xl px-3 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-950"
+          className="admin-nav__footer-link"
         >
           Back to site
         </Link>

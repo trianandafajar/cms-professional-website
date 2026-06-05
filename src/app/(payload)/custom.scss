@@ -1,23 +1,111 @@
+@import "tailwindcss";
+
 :root {
-    
+  --theme-bg: #ffffff;
+  --theme-text: #18181b;
+
+  --theme-elevation-0: #ffffff;
+  --theme-elevation-50: #fafafa;
+  --theme-elevation-100: #f4f4f5;
+  --theme-elevation-150: #e4e4e7;
+  --theme-elevation-200: #d4d4d8;
+  --theme-elevation-300: #a1a1aa;
+  --theme-elevation-400: #71717a;
+  --theme-elevation-500: #52525b;
+  --theme-elevation-600: #3f3f46;
+  --theme-elevation-700: #27272a;
+  --theme-elevation-800: #18181b;
+  --theme-elevation-900: #09090b;
 }
 
-.hamburger {
-  background-color: #4f46e5 !important;
-  &__close-icon {
-    .icon,
-    .icon * {
-      color: #fff !important;
-      fill: #fff !important;
-      stroke: #fff !important;
+.app-header {
+  @apply px-4 border-b border-gray-200 sticky top-0 z-10 bg-white py-4;
+}
+
+.admin-nav {
+  @apply sticky top-0 flex h-screen w-[290px] shrink-0 flex-col border-r border-zinc-200 bg-white text-zinc-950;
+
+  &__brand {
+    @apply shrink-0 border-b border-zinc-200 px-4 py-4;
+  }
+
+  &__brand-link {
+    @apply ml-10 flex items-center gap-3;
+  }
+
+  &__brand-image {
+    @apply size-9 rounded-lg object-contain;
+  }
+
+  &__brand-copy {
+    @apply min-w-0;
+  }
+
+  &__brand-name {
+    @apply truncate text-lg font-bold leading-none text-[#4f46e5];
+  }
+
+  &__brand-subtitle {
+    @apply truncate text-[11px] uppercase tracking-[0.22em] text-zinc-400;
+  }
+
+  &__scroll {
+    @apply flex-1 overflow-y-auto px-3 py-4;
+  }
+
+  &__dashboard {
+    @apply mb-4 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition;
+
+    &--active {
+      @apply bg-[#4f46e5] text-white;
+    }
+
+    &--idle {
+      @apply text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950;
     }
   }
-  &__close-icon {
-    .icon,
-    .icon * {
-      color: #fff !important;
-      fill: #fff !important;
-      stroke: #fff !important;
+
+  &__groups {
+    @apply space-y-5;
+  }
+
+  &__group {
+    @apply space-y-2;
+  }
+
+  &__group-title {
+    @apply px-2 text-[12px] font-medium uppercase tracking-[0.18em] text-zinc-400;
+  }
+
+  &__group-items {
+    @apply space-y-1;
+  }
+
+  &__item {
+    @apply flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition;
+
+    &--active {
+      @apply bg-[#4f46e5] text-white;
     }
+
+    &--idle {
+      @apply text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950;
+    }
+  }
+
+  &__icon {
+    @apply size-4 shrink-0;
+  }
+
+  &__item-label {
+    @apply min-w-0 truncate;
+  }
+
+  &__footer {
+    @apply shrink-0 border-t border-zinc-200 px-3 py-4;
+  }
+
+  &__footer-link {
+    @apply flex items-center rounded-xl px-3 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-950;
   }
 }

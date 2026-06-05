@@ -57,6 +57,9 @@ export default buildConfig({
     user: Users.slug,
     components: {
       Nav: '/components/payload/admin-nav#AdminNav',
+      graphics: {
+        Icon:'/components/payload/graphics-icon#default'
+      },
     },
     importMap: {
       baseDir: path.resolve(dirname),
