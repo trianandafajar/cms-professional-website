@@ -127,7 +127,6 @@ export function AdminNav() {
 
           <div className="admin-nav__brand-copy">
             <p className="admin-nav__brand-name">eventbro</p>
-            <p className="admin-nav__brand-subtitle">Payload Admin</p>
           </div>
         </Link>
       </div>
