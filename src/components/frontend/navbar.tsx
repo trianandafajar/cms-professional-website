@@ -142,6 +142,8 @@ function getAvatarUrl(avatar: unknown): string | null {
 export function FrontendNavbar({ user, userName }: NavbarProps) {
   const router = useRouter()
   const { logout, user: authUser } = useAuthStore()
+  const authExpiresAt = useAuthStore((state) => state.authExpiresAt)
+  const hasHydrated = useAuthStore((state) => state._hasHydrated)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [locationOpen, setLocationOpen] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
@@ -155,8 +157,31 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
   const dropdownRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLFormElement>(null)
 
-  // Always prefer authUser from store for real-time updates
-  const resolvedUser: NavbarUser | null = authUser ?? user ?? (userName ? { name: userName } : null)
+  useEffect(() => {
+    if (!hasHydrated) return
+
+    const isExpired = !!authExpiresAt && authExpiresAt <= Date.now()
+    const hasInvalidStoredAuth = !authExpiresAt && Boolean(authUser || user || userName)
+
+    if (authUser && (isExpired || !authExpiresAt)) {
+      useAuthStore.setState({
+        user: null,
+        authExpiresAt: null,
+      })
+    }
+
+    if (hasInvalidStoredAuth && !authUser) {
+      useAuthStore.setState({
+        user: null,
+        authExpiresAt: null,
+      })
+    }
+  }, [authExpiresAt, authUser, hasHydrated, user, userName])
+
+  // Prefer hydrated auth state; only fall back to server-provided user before hydration.
+  const resolvedUser: NavbarUser | null = hasHydrated
+    ? authUser ?? null
+    : authUser ?? user ?? (userName ? { name: userName } : null)
   const displayName = resolvedUser?.name || resolvedUser?.email || ''
   const displayEmail = resolvedUser?.email || ''
   const initials = getInitials(resolvedUser?.name || resolvedUser?.email)
@@ -310,7 +335,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                   {loadingSuggestions && suggestions.length === 0 && (
                     <div className="flex items-center gap-2 px-4 py-3 text-sm text-zinc-400">
                       <div className="size-4 animate-spin rounded-full border-2 border-zinc-300 border-t-[#5151eb]" />
-                      Mencari...
+                      Searching...
                     </div>
                   )}
                   {suggestions.length > 0 && (
@@ -356,7 +381,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                           }}
                           className="text-xs font-medium text-[#5151eb] hover:underline"
                         >
-                          Lihat semua hasil untuk &ldquo;{searchQuery.trim()}&rdquo;
+                          view all results for &ldquo;{searchQuery.trim()}&rdquo;
                         </button>
                       </div>
                     </div>

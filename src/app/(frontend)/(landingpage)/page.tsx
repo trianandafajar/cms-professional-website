@@ -22,7 +22,6 @@ import { FeaturedOrganizers } from '@/components/frontend/featured-organizers'
 import { buildEventWhere } from '@/lib/eventQueries'
 import type { Location, Category } from '@/payload-types'
 import config from '@/payload.config'
-import './styles.css'
 
 export default async function HomePage() {
   const headers = await getHeaders()
