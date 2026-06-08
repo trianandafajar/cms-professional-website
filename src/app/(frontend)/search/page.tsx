@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { Suspense, useState, useEffect, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Search, CalendarDays, MapPin, Crown, Loader2 } from 'lucide-react'
@@ -40,6 +40,25 @@ function formatDate(dateStr: string) {
 }
 
 export default function SearchPage() {
+  return (
+    <Suspense fallback={<SearchPageFallback />}>
+      <SearchPageClient />
+    </Suspense>
+  )
+}
+
+function SearchPageFallback() {
+  return (
+    <div className="min-h-screen bg-[#fafafa]">
+      <FrontendNavbar />
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="size-8 animate-spin text-[#5151eb]" />
+      </div>
+    </div>
+  )
+}
+
+function SearchPageClient() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const initialQuery = searchParams.get('q') || ''
