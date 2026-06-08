@@ -2,18 +2,25 @@
 
 import {
   BarChart3,
+  Bell,
   CalendarDays,
+  CreditCard,
   Database,
   FileText,
+  FolderKanban,
   Home,
   ImageIcon,
   Mail,
+  MapPinned,
+  Megaphone,
+  MessagesSquare,
   Settings,
   Shield,
-  ShoppingCart,
-  Tag,
+  ShieldCheck,
+  SlidersHorizontal,
   Ticket,
   Users,
+  Wallet,
 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -23,30 +30,45 @@ import { useConfig } from '@payloadcms/ui'
 
 const icons = {
   BarChart3,
+  Bell,
   CalendarDays,
+  CreditCard,
   Database,
   FileText,
+  FolderKanban,
   Home,
   ImageIcon,
   Mail,
+  MapPinned,
+  Megaphone,
+  MessagesSquare,
   Settings,
   Shield,
-  ShoppingCart,
-  Tag,
+  ShieldCheck,
+  SlidersHorizontal,
   Ticket,
   Users,
+  Wallet,
 } as const
 
 type IconName = keyof typeof icons
 
 type GroupedCollection = {
   label: string
+  order: number
   items: Array<{
     label: string
     slug: string
     href: string
     icon?: IconName
   }>
+}
+
+type CollectionNavMeta = {
+  groupLabel?: string
+  groupOrder?: number
+  label?: string
+  icon?: IconName
 }
 
 function resolveGroupLabel(group: unknown) {
@@ -76,6 +98,23 @@ function resolveIcon(value: unknown): IconName {
   return 'Database'
 }
 
+function resolveGroupOrder(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
+  }
+
+  return 999
+}
+
+function prettifySlug(value: string) {
+  return value
+    .replace(/^payload-/, '')
+    .split('-')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
 export function AdminNav() {
   const pathname = usePathname()
   const { config } = useConfig()
@@ -89,27 +128,36 @@ export function AdminNav() {
       const isExcluded = collection.admin?.group === false
       if (isExcluded) continue
 
-      const groupLabel = resolveGroupLabel(collection.admin?.group)
+      const navMeta = (((collection as any)?.custom ?? {})?.nav ?? {}) as CollectionNavMeta
+      const fallbackGroup = collection.slug.startsWith('payload-') ? 'System' : 'Collections'
+      const groupLabel = navMeta.groupLabel ?? resolveGroupLabel(collection.admin?.group ?? fallbackGroup)
       const entry = grouped.get(groupLabel) ?? {
         label: groupLabel,
+        order: resolveGroupOrder(navMeta.groupOrder),
         items: [],
       }
 
       entry.items.push({
-        label: resolveLabel(collection.labels?.singular, collection.slug),
+        label:
+          navMeta.label ??
+          resolveLabel(
+            collection.labels?.plural,
+            resolveLabel(collection.labels?.singular, prettifySlug(collection.slug)),
+          ),
         slug: collection.slug,
         href: `/admin/collections/${collection.slug}`,
-        icon: resolveIcon((collection as any)?.custom?.icon),
+        icon: resolveIcon(navMeta.icon ?? (collection as any)?.custom?.icon),
       })
 
       grouped.set(groupLabel, entry)
     }
 
-    return Array.from(grouped.values()).sort((left, right) => {
-      if (left.label === 'Collections') return -1
-      if (right.label === 'Collections') return 1
-      return left.label.localeCompare(right.label)
-    })
+    return Array.from(grouped.values())
+      .map((group) => ({
+        ...group,
+        items: group.items.sort((left, right) => left.label.localeCompare(right.label)),
+      }))
+      .sort((left, right) => left.order - right.order || left.label.localeCompare(right.label))
   }, [config?.collections])
 
   return (

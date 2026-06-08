@@ -5,7 +5,15 @@ export const Categories: CollectionConfig = {
   slug: 'categories',
   admin: {
     useAsTitle: 'name',
-    group: 'Event Management',
+    group: 'Master Data',
+  },
+  custom: {
+    nav: {
+      groupLabel: 'Master Data',
+      groupOrder: 20,
+      label: 'Categories',
+      icon: 'FolderKanban',
+    },
   },
   access: {
     read: () => true,

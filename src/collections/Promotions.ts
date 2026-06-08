@@ -60,6 +60,14 @@ export const Promotions: CollectionConfig = {
     group: 'Marketing',
     defaultColumns: ['name', 'code', 'type', 'status', 'scopeType', 'updatedAt'],
   },
+  custom: {
+    nav: {
+      groupLabel: 'Marketing',
+      groupOrder: 70,
+      label: 'Promotions',
+      icon: 'Megaphone',
+    },
+  },
   access: {
     read: ({ req }) => {
       if (!req.user) return false

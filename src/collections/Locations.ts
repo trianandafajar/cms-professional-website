@@ -5,8 +5,16 @@ export const Locations: CollectionConfig = {
   slug: 'locations',
   admin: {
     useAsTitle: 'name',
-    group: 'Event Management',
+    group: 'Master Data',
     defaultColumns: ['name', 'code', 'region', 'featured'],
+  },
+  custom: {
+    nav: {
+      groupLabel: 'Master Data',
+      groupOrder: 20,
+      label: 'Locations',
+      icon: 'MapPinned',
+    },
   },
   access: {
     read: () => true,

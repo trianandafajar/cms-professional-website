@@ -22,6 +22,16 @@ const serverFunction: ServerFunctionClient = async function (args) {
   })
 }
 
+export const metadata = {
+  description: 'Eventbro - Discover and manage events with a cleaner ticketing experience.',
+  title: 'Eventbro',
+  icons: {
+    icon: [{ url: '/icon.png', type: 'image/png' }],
+    shortcut: '/icon.png',
+    apple: '/icon.png',
+  },
+}
+
 const Layout = ({ children }: Args) => (
   <RootLayout config={config} importMap={importMap} serverFunction={serverFunction}>
     {children}

@@ -17,6 +17,14 @@ export const PaymentConnections: CollectionConfig = {
     group: 'Finance',
     defaultColumns: ['provider', 'status', 'accountEmail', 'connectedAt'],
   },
+  custom: {
+    nav: {
+      groupLabel: 'Finance',
+      groupOrder: 60,
+      label: 'Payment Connections',
+      icon: 'CreditCard',
+    },
+  },
   access: {
     read: ({ req }) => {
       if (!req.user) return false

@@ -6,6 +6,14 @@ export const Roles: CollectionConfig = {
   admin: {
     useAsTitle: 'name',
   },
+  custom: {
+    nav: {
+      groupLabel: 'Access Control',
+      groupOrder: 10,
+      label: 'Roles',
+      icon: 'Shield',
+    },
+  },
 
   access: {
     read: () => true,

@@ -11,6 +11,14 @@ export const Events: CollectionConfig = {
     group: 'Event Management',
     defaultColumns: ['title', 'organizer', 'status', 'startDate', 'location'],
   },
+  custom: {
+    nav: {
+      groupLabel: 'Event Management',
+      groupOrder: 40,
+      label: 'Events',
+      icon: 'CalendarDays',
+    },
+  },
   access: {
     read: () => true,
     create: ({ req }) => Boolean(req.user),

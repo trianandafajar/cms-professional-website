@@ -9,6 +9,14 @@ export const Users: CollectionConfig = {
     useAsTitle: 'email',
     hideAPIURL: true,
   },
+  custom: {
+    nav: {
+      groupLabel: 'Access Control',
+      groupOrder: 10,
+      label: 'Users',
+      icon: 'Users',
+    },
+  },
   auth: true,
   access: {
     create: () => true,

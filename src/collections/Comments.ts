@@ -6,6 +6,14 @@ export const Comments: CollectionConfig = {
     useAsTitle: 'content',
     defaultColumns: ['author', 'post', 'createdAt'],
   },
+  custom: {
+    nav: {
+      groupLabel: 'Content Management',
+      groupOrder: 30,
+      label: 'Comments',
+      icon: 'MessagesSquare',
+    },
+  },
   access: {
     read: () => true,
     create: ({ req }) => Boolean(req.user),

@@ -19,6 +19,14 @@ export const FinanceSettings: CollectionConfig = {
     group: 'Finance',
     defaultColumns: ['organizer', 'serviceFeePercent', 'taxPercent', 'defaultProvider'],
   },
+  custom: {
+    nav: {
+      groupLabel: 'Finance',
+      groupOrder: 60,
+      label: 'Finance Settings',
+      icon: 'Wallet',
+    },
+  },
   access: {
     read: ({ req }) => {
       if (!req.user) return false

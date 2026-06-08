@@ -30,6 +30,14 @@ export const OrganizationEmailTemplates: CollectionConfig = {
     group: 'Marketing',
     defaultColumns: ['name', 'key', 'organizer', 'status', 'isCustomized', 'updatedAt'],
   },
+  custom: {
+    nav: {
+      groupLabel: 'Marketing',
+      groupOrder: 70,
+      label: 'Organization Email Templates',
+      icon: 'Mail',
+    },
+  },
   access: {
     read: ({ req }) => {
       if (!req.user) return false

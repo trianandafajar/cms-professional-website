@@ -23,6 +23,14 @@ export const EmailTemplateDefaults: CollectionConfig = {
     group: 'Marketing',
     defaultColumns: ['name', 'key', 'status', 'updatedAt'],
   },
+  custom: {
+    nav: {
+      groupLabel: 'Marketing',
+      groupOrder: 70,
+      label: 'Default Email Templates',
+      icon: 'Mail',
+    },
+  },
   access: {
     read: ({ req }) => Boolean(req.user && isAdminUser(req.user)),
     create: ({ req }) => Boolean(req.user && isAdminUser(req.user)),

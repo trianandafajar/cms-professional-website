@@ -26,6 +26,14 @@ export const Notifications: CollectionConfig = {
     group: 'Engagement',
     defaultColumns: ['title', 'recipient', 'type', 'isRead', 'createdAt'],
   },
+  custom: {
+    nav: {
+      groupLabel: 'Engagement',
+      groupOrder: 50,
+      label: 'Notifications',
+      icon: 'Bell',
+    },
+  },
   access: {
     read: ({ req }) => {
       if (!req.user) return false

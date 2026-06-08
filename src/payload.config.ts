@@ -3,6 +3,7 @@ import { resendAdapter } from '@payloadcms/email-resend'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import path from 'path'
 import { buildConfig } from 'payload'
+import { en } from 'payload/i18n/en'
 import { fileURLToPath } from 'url'
 import sharp from 'sharp'
 
@@ -53,12 +54,25 @@ const dirname = path.dirname(filename)
 
 export default buildConfig({
   serverURL: process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000',
+  i18n: {
+    fallbackLanguage: 'en',
+    supportedLanguages: {
+      en
+    },
+  },
   admin: {
     user: Users.slug,
+    theme: 'light',
     components: {
       Nav: '/components/payload/admin-nav#AdminNav',
+      views: {
+        dashboard: {
+          Component: '/components/payload/admin-dashboard#AdminDashboard',
+        },
+      },
       graphics: {
-        Icon:'/components/payload/graphics-icon#default'
+        Icon:'/components/payload/graphics-icon#default',
+        Logo:'/components/payload/graphics-logo#default'
       },
     },
     importMap: {

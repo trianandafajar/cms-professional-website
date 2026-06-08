@@ -6,6 +6,14 @@ export const Posts: CollectionConfig = {
     useAsTitle: 'content',
     defaultColumns: ['author', 'content', 'createdAt'],
   },
+  custom: {
+    nav: {
+      groupLabel: 'Content Management',
+      groupOrder: 30,
+      label: 'Posts',
+      icon: 'FileText',
+    },
+  },
   access: {
     read: () => true,
     create: ({ req }) => {

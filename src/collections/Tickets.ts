@@ -10,6 +10,14 @@ export const Tickets: CollectionConfig = {
     group: 'Event Management',
     defaultColumns: ['purchaserName', 'event', 'ticketType', 'status', 'checkedInAt'],
   },
+  custom: {
+    nav: {
+      groupLabel: 'Event Management',
+      groupOrder: 40,
+      label: 'Tickets',
+      icon: 'Ticket',
+    },
+  },
   access: {
     read: ({ req }) => Boolean(req.user),
     create: ({ req }) => Boolean(req.user),

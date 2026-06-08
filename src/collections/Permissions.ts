@@ -6,6 +6,14 @@ export const Permissions: CollectionConfig = {
   admin: {
     useAsTitle: 'name',
   },
+  custom: {
+    nav: {
+      groupLabel: 'Access Control',
+      groupOrder: 10,
+      label: 'Permissions',
+      icon: 'ShieldCheck',
+    },
+  },
 
   access: {
     read: () => true,
