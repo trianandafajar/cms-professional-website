@@ -83,8 +83,8 @@ export function EventDetailActions({
       <div className="border-b border-zinc-100 px-5 py-4">
         <div className="flex items-baseline justify-between">
           <div>
-            <p className="text-2xl font-extrabold text-[#12192f]">{isFree ? 'Free' : price}</p>
-            {!isFree && <p className="text-xs text-zinc-400 mt-0.5">per ticket</p>}
+            <p className="text-2xl font-extrabold text-[#12192f]">{price}</p>
+            <p className="text-xs text-zinc-400 mt-0.5">per ticket</p>
           </div>
           {isFree && (
             <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
@@ -129,7 +129,7 @@ export function EventDetailActions({
           <button
             type="button"
             onClick={handleGetTickets}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#5151eb] py-3.5 text-sm font-bold text-white transition hover:bg-[#4040d0] active:scale-[0.98]"
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#5151eb] py-3.5 text-sm font-bold text-white transition hover:bg-[#4040d0] active:scale-[0.98]"
           >
             <Ticket className="size-4" />
             Get Tickets
@@ -141,7 +141,7 @@ export function EventDetailActions({
           <button
             type="button"
             onClick={gate(() => setInterested((v) => !v))}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-semibold transition ${
+            className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-semibold transition ${
               interested
                 ? 'border-[#5151eb] bg-indigo-50 text-[#5151eb]'
                 : 'border-zinc-200 text-zinc-600 hover:border-zinc-300'
@@ -158,7 +158,7 @@ export function EventDetailActions({
             type="button"
             onClick={handleShare}
             aria-label="Share event"
-            className="flex items-center justify-center gap-2 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-600 transition hover:border-zinc-300"
+            className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-semibold text-zinc-600 transition hover:border-zinc-300"
           >
             {copied ? <Check className="size-4 text-emerald-500" /> : <Share2 className="size-4" />}
           </button>
@@ -167,7 +167,7 @@ export function EventDetailActions({
 
       {/* No-fee note */}
       <div className="border-t border-zinc-100 px-5 py-3 text-center">
-        <p className="text-xs text-zinc-400">No extra fees from Eventbro</p>
+        <p className="text-xs text-zinc-400">Fees are shown before checkout</p>
       </div>
     </div>
   )

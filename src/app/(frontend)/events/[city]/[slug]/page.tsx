@@ -6,7 +6,6 @@ import {
   Calendar,
   Clock,
   MapPin,
-  Share2,
   Users,
   Globe,
   ChevronRight,
@@ -28,6 +27,13 @@ import type { Event, Media, User, Location, Category } from '@/payload-types'
 
 type Props = {
   params: Promise<{ city: string; slug: string }>
+}
+
+type TicketTypeLike = {
+  price?: number | null
+  currency?: string | null
+  quantity?: number | null
+  sold?: number | null
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -102,6 +108,73 @@ function slugToDisplayName(slug: string): string {
     .split('-')
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ')
+}
+
+function getEventTicketTypes(event: Event | null): TicketTypeLike[] {
+  if (!event || !Array.isArray(event.ticketTypes)) return []
+  return event.ticketTypes as TicketTypeLike[]
+}
+
+function formatTicketAmount(amount: number, currency = 'USD'): string {
+  if (amount <= 0) return 'Free'
+
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency.toUpperCase(),
+    maximumFractionDigits: 2,
+  }).format(amount)
+}
+
+function getTicketPriceSummary(
+  ticketTypes: TicketTypeLike[],
+  fallbackPrice: string | number | null | undefined,
+  fallbackIsFree: boolean,
+) {
+  const prices = ticketTypes
+    .map((ticketType) => Number(ticketType.price ?? 0))
+    .filter((price) => Number.isFinite(price) && price >= 0)
+
+  if (prices.length === 0) {
+    return {
+      label: fallbackIsFree ? 'Free' : String(fallbackPrice ?? 'See tickets'),
+      isFree: fallbackIsFree,
+    }
+  }
+
+  const minPrice = Math.min(...prices)
+  const maxPrice = Math.max(...prices)
+  const currency = ticketTypes.find((ticketType) => ticketType.currency)?.currency ?? 'USD'
+
+  if (minPrice === maxPrice) {
+    return {
+      label: formatTicketAmount(minPrice, currency),
+      isFree: maxPrice <= 0,
+    }
+  }
+
+  return {
+    label: `${formatTicketAmount(minPrice, currency)} - ${formatTicketAmount(maxPrice, currency)}`,
+    isFree: maxPrice <= 0,
+  }
+}
+
+function getLowInventoryNotice(ticketTypes: TicketTypeLike[]): string | null {
+  const totalTickets = ticketTypes.reduce(
+    (total, ticketType) => total + Math.max(0, Number(ticketType.quantity ?? 0)),
+    0,
+  )
+  const soldTickets = ticketTypes.reduce(
+    (total, ticketType) => total + Math.max(0, Number(ticketType.sold ?? 0)),
+    0,
+  )
+  const remainingTickets = Math.max(0, totalTickets - soldTickets)
+
+  if (totalTickets <= 0 || remainingTickets <= 0) return null
+
+  const remainingPercent = remainingTickets / totalTickets
+  if (remainingPercent > 0.2) return null
+
+  return remainingTickets <= 10 ? `Only ${remainingTickets} tickets left` : 'Few tickets left'
 }
 
 // ─── Dummy event (shown when no real event found in Payload) ─────────────────
@@ -259,6 +332,9 @@ export default async function EventDetailPage({ params }: Props) {
 
   const isCancelled = ev.status === 'cancelled'
   const isCompleted = ev.status === 'completed'
+  const ticketTypes = getEventTicketTypes(realEvent)
+  const priceSummary = getTicketPriceSummary(ticketTypes, ev.price, ev.isFree)
+  const lowInventoryNotice = getLowInventoryNotice(ticketTypes)
 
   return (
     <div className="min-h-screen bg-[#f8f9fc]">
@@ -290,22 +366,12 @@ export default async function EventDetailPage({ params }: Props) {
         )}
 
         {/* Ticket availability hint */}
-        {!isCancelled && !isCompleted && (
+        {!isCancelled && !isCompleted && lowInventoryNotice && (
           <div className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full bg-amber-500 px-3 py-1">
             <AlertCircle className="size-3.5 text-white" />
-            <span className="text-xs font-bold text-white">Few tickets left</span>
+            <span className="text-xs font-bold text-white">{lowInventoryNotice}</span>
           </div>
         )}
-
-        {/* Share button */}
-        <button
-          type="button"
-          aria-label="Share event"
-          className="absolute right-4 top-4 flex items-center gap-2 rounded-full bg-white/90 px-3 py-1.5 text-sm font-semibold text-zinc-700 backdrop-blur-sm hover:bg-white transition"
-        >
-          <Share2 className="size-4" />
-          Share
-        </button>
       </div>
 
       {/* ── Breadcrumb ─────────────────────────────────────────────────────── */}
@@ -626,8 +692,8 @@ export default async function EventDetailPage({ params }: Props) {
             <div className="sticky top-24 space-y-4">
               <EventDetailActions
                 eventTitle={ev.title}
-                price={ev.price}
-                isFree={ev.isFree}
+                price={priceSummary.label}
+                isFree={priceSummary.isFree}
                 isCancelled={isCancelled}
                 isCompleted={isCompleted}
                 interestedCount={ev.interestedCount}

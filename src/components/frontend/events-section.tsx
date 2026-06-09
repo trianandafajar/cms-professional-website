@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { EventCard } from './event-card'
 import { formatEventDate, formatEventTime, locationToSlug } from '@/lib/eventQueries'
 import type { Event, Category, Location, Media, User } from '@/payload-types'
@@ -20,13 +20,8 @@ type Props = {
   forYouEvents: ResolvedEvent[]
   /** Whether the user is logged in (controls "For you" tab visibility) */
   isLoggedIn: boolean
-}
-
-const BASE_TABS = ['All', 'Today', 'This weekend', 'Free', 'Music', 'Food & Drink', 'Business']
-
-function getTabLabel(tab: string, isLoggedIn: boolean): string[] {
-  if (isLoggedIn) return ['For you', ...BASE_TABS]
-  return BASE_TABS
+  /** Active homepage city filter */
+  activeCity?: string | null
 }
 
 function getEventImage(event: ResolvedEvent): string {
@@ -78,15 +73,65 @@ function isWeekend(isoDate: string): boolean {
   return day === 0 || day === 6
 }
 
-export function EventsSection({ allEvents, forYouEvents, isLoggedIn }: Props) {
-  const tabs = getTabLabel('', isLoggedIn)
+export function EventsSection({ allEvents, forYouEvents, isLoggedIn, activeCity }: Props) {
+  const cityFilteredAllEvents = useMemo(
+    () =>
+      allEvents.filter((event) => {
+        if (!activeCity) return true
+        if (typeof event.location !== 'object' || !event.location) return false
+
+        return (
+          String((event.location as Location).name ?? '').trim().toLowerCase() ===
+          activeCity.trim().toLowerCase()
+        )
+      }),
+    [activeCity, allEvents],
+  )
+
+  const categoryTabs = useMemo(() => {
+    const counts = new Map<string, number>()
+
+    for (const event of cityFilteredAllEvents) {
+      if (typeof event.category !== 'object' || !event.category) continue
+      const name = String((event.category as Category).name ?? '').trim()
+      if (!name) continue
+      counts.set(name, (counts.get(name) ?? 0) + 1)
+    }
+
+    return Array.from(counts.entries())
+      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+      .slice(0, 4)
+      .map(([name]) => name)
+  }, [cityFilteredAllEvents])
+
+  const tabs = useMemo(() => {
+    const baseTabs = ['All', 'Today', 'This weekend', 'Free', ...categoryTabs]
+    return isLoggedIn ? ['For you', ...baseTabs] : baseTabs
+  }, [categoryTabs, isLoggedIn])
+
   const [activeTab, setActiveTab] = useState(isLoggedIn ? 'For you' : 'All')
 
+  const cityFilteredForYouEvents = useMemo(
+    () =>
+      forYouEvents.filter((event) => {
+        if (!activeCity) return true
+        if (typeof event.location !== 'object' || !event.location) return false
+
+        return (
+          String((event.location as Location).name ?? '').trim().toLowerCase() ===
+          activeCity.trim().toLowerCase()
+        )
+      }),
+    [activeCity, forYouEvents],
+  )
+
   const filteredEvents = (() => {
-    if (activeTab === 'For you') return forYouEvents
-    const pool = allEvents
+    const pool = activeTab === 'For you' ? cityFilteredForYouEvents : cityFilteredAllEvents
+
     switch (activeTab) {
       case 'All':
+        return cityFilteredAllEvents
+      case 'For you':
         return pool
       case 'Today':
         return pool.filter((e) => isToday(e.startDate))
@@ -94,29 +139,13 @@ export function EventsSection({ allEvents, forYouEvents, isLoggedIn }: Props) {
         return pool.filter((e) => isWeekend(e.startDate))
       case 'Free':
         return pool.filter((e) => e.isFree)
-      case 'Music':
-        return pool.filter(
-          (e) =>
-            typeof e.category === 'object' &&
-            e.category !== null &&
-            (e.category as Category).name === 'Music',
-        )
-      case 'Food & Drink':
-        return pool.filter(
-          (e) =>
-            typeof e.category === 'object' &&
-            e.category !== null &&
-            (e.category as Category).name === 'Food & Drink',
-        )
-      case 'Business':
-        return pool.filter(
-          (e) =>
-            typeof e.category === 'object' &&
-            e.category !== null &&
-            (e.category as Category).name === 'Business',
-        )
       default:
-        return pool
+        return pool.filter(
+          (e) =>
+            typeof e.category === 'object' &&
+            e.category !== null &&
+            String((e.category as Category).name ?? '').trim() === activeTab,
+        )
     }
   })()
 
@@ -132,7 +161,7 @@ export function EventsSection({ allEvents, forYouEvents, isLoggedIn }: Props) {
               activeTab === tab
                 ? 'border-[#5151eb] text-[#5151eb]'
                 : 'border-transparent text-zinc-500 hover:text-zinc-800'
-            }`}
+            } focus:outline-none focus-visible:text-[#5151eb]`}
             type="button"
           >
             {tab}

@@ -1,22 +1,11 @@
 import { headers as getHeaders } from 'next/headers.js'
 import { getPayload } from 'payload'
-import {
-  Music,
-  Palette,
-  PartyPopper,
-  Sparkles,
-  Users,
-  Utensils,
-  Gamepad2,
-  Heart,
-} from 'lucide-react'
 
 import { FrontendNavbar } from '@/components/frontend/navbar'
 import { HeroSlider } from '@/components/frontend/hero-slider'
 import { DestinationsScroll } from '@/components/frontend/destinations-scroll'
 import { PopularCities } from '@/components/frontend/popular-cities'
-import { EventsSection } from '@/components/frontend/events-section'
-import { CityPicker } from '@/components/frontend/city-picker'
+import { HomeEventsBrowser } from '@/components/frontend/home-events-browser'
 import { VideoSection } from '@/components/frontend/video-section'
 import { FeaturedOrganizers } from '@/components/frontend/featured-organizers'
 import { buildEventWhere } from '@/lib/eventQueries'
@@ -59,7 +48,7 @@ export default async function HomePage() {
     collection: 'events',
     where: buildEventWhere({ publishedOnly: true }),
     depth: 1,
-    limit: 16,
+    limit: 48,
     sort: '-interestedCount',
   })
 
@@ -82,42 +71,54 @@ export default async function HomePage() {
         collection: 'events',
         where: buildEventWhere({
           publishedOnly: true,
-          locationId,
-          preferredCategoryIds,
+          preferredCategoryIds: preferredCategoryIds.length > 0 ? preferredCategoryIds : undefined,
+          locationId: preferredCategoryIds.length === 0 ? locationId : undefined,
         }),
         depth: 1,
-        limit: 16,
+        limit: 48,
         sort: '-interestedCount',
       })
       forYouEvents = docs
     }
   }
 
-  // Determine the user's default city slug for category links
-  const userCitySlug =
+  const { docs: homepageCategories } = await payload.find({
+    collection: 'categories',
+    depth: 0,
+    limit: 8,
+    sort: 'name',
+  })
+
+  const distinctCities = Array.from(
+    new Set(
+      allEvents
+        .map((event) =>
+          typeof event.location === 'object' && event.location
+            ? String((event.location as Location).name ?? '').trim()
+            : '',
+        )
+        .filter(Boolean),
+    ),
+  )
+
+  const explicitUserCity =
     user?.defaultLocation != null && typeof user.defaultLocation === 'object'
-      ? (user.defaultLocation as Location).name
-          .toLowerCase()
-          .replace(/[^a-z0-9\s-]/g, '')
-          .trim()
-          .replace(/\s+/g, '-')
+      ? String((user.defaultLocation as Location).name ?? '').trim()
       : null
 
-  const categories = [
-    { name: 'Music', icon: Music },
-    { name: 'Nightlife', icon: Sparkles },
-    { name: 'Arts', icon: Palette },
-    { name: 'Holidays', icon: PartyPopper },
-    { name: 'Dating', icon: Heart },
-    { name: 'Hobbies', icon: Gamepad2 },
-    { name: 'Business', icon: Users },
-    { name: 'Food & Drink', icon: Utensils },
-  ].map((cat) => ({
-    ...cat,
-    href: userCitySlug
-      ? `/events/${userCitySlug}?category=${encodeURIComponent(cat.name)}`
-      : `/events?category=${encodeURIComponent(cat.name)}`,
-  }))
+  const fallbackCities = distinctCities.length > 0
+    ? distinctCities
+    : allLocations
+        .map((loc) => String(loc?.name ?? '').trim())
+        .filter(Boolean)
+
+  const randomFallbackCity =
+    fallbackCities.length > 0
+      ? fallbackCities[new Date().getDate() % fallbackCities.length]!
+      : null
+
+  const initialCity = explicitUserCity || randomFallbackCity
+  const cityOptions = fallbackCities.length > 0 ? fallbackCities : (initialCity ? [initialCity] : [])
 
   return (
     <div className="min-h-screen bg-white">
@@ -131,43 +132,18 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* Event Types / Categories */}
-        <section className="border-b border-zinc-100 py-6">
-          <div className="mx-auto max-w-[1400px] px-4 lg:px-8">
-            <div className="grid grid-cols-4 gap-4 md:grid-cols-8">
-              {categories.map((cat) => (
-                <a
-                  key={cat.name}
-                  href={cat.href}
-                  className="group flex flex-col items-center gap-2.5"
-                >
-                  <div className="flex size-14 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 transition group-hover:border-[#5151eb] group-hover:text-[#5151eb]">
-                    <cat.icon className="size-6" />
-                  </div>
-                  <span className="text-center text-sm font-medium text-zinc-600 group-hover:text-[#5151eb]">
-                    {cat.name}
-                  </span>
-                </a>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Browsing Events + Filter + Cards */}
-        <section className="py-8">
-          <div className="mx-auto max-w-[1400px] px-4 lg:px-8">
-            <h2 className="text-2xl font-bold text-[#12192f] md:text-3xl">
-              Events in <CityPicker />
-            </h2>
-            <div className="mt-5">
-              <EventsSection
-                allEvents={allEvents as any}
-                forYouEvents={forYouEvents as any}
-                isLoggedIn={Boolean(user)}
-              />
-            </div>
-          </div>
-        </section>
+        <HomeEventsBrowser
+          allEvents={allEvents as any}
+          forYouEvents={forYouEvents as any}
+          isLoggedIn={Boolean(user)}
+          cities={cityOptions}
+          initialCity={initialCity}
+          categories={homepageCategories.map((category) => ({
+            id: category.id,
+            name: category.name,
+            group: category.group,
+          }))}
+        />
 
         {/* Event Highlights */}
         <section className="bg-[#fdfdfd] py-12">

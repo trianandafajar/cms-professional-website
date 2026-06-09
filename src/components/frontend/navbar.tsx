@@ -49,24 +49,6 @@ type NavbarProps = {
   userName?: string
 }
 
-const locations = [
-  'New York',
-  'Los Angeles',
-  'Chicago',
-  'San Francisco',
-  'Miami',
-  'Austin',
-  'Seattle',
-  'Atlanta',
-  'Boston',
-  'Denver',
-  'Nashville',
-  'Dallas',
-  'Houston',
-  'Orlando',
-  'Philadelphia',
-]
-
 const trendingSearches = [
   'Music Festival',
   'Food & Wine',
@@ -150,6 +132,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedLocation, setSelectedLocation] = useState('All Locations')
   const [locationSearch, setLocationSearch] = useState('')
+  const [locations, setLocations] = useState<string[]>([])
   const [loggingOut, setLoggingOut] = useState(false)
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([])
   const [loadingSuggestions, setLoadingSuggestions] = useState(false)
@@ -205,6 +188,38 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  useEffect(() => {
+    let active = true
+
+    async function loadLocations() {
+      try {
+        const response = await fetch('/api/locations?limit=100&sort=name&depth=0')
+        if (!response.ok) return
+
+        const data = await response.json()
+        const nextLocations = Array.isArray(data?.docs)
+          ? data.docs
+              .map((doc: { name?: string | null }) => String(doc?.name ?? '').trim())
+              .filter(Boolean)
+          : []
+
+        if (active) {
+          setLocations(nextLocations)
+        }
+      } catch {
+        if (active) {
+          setLocations([])
+        }
+      }
+    }
+
+    void loadLocations()
+
+    return () => {
+      active = false
+    }
   }, [])
 
   const filteredLocations = locations.filter((loc) =>
@@ -442,7 +457,9 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                     </button>
                   ))}
                   {filteredLocations.length === 0 && (
-                    <p className="px-3 py-2 text-sm text-zinc-400">No locations found</p>
+                    <p className="px-3 py-2 text-sm text-zinc-400">
+                      {locations.length === 0 ? 'No locations available yet' : 'No locations found'}
+                    </p>
                   )}
                 </div>
               </div>
