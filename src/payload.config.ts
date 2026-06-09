@@ -15,6 +15,7 @@ import { Categories } from './collections/Categories'
 import { Locations } from './collections/Locations'
 import { Events } from './collections/Events'
 import { Tickets } from './collections/Tickets'
+import { TicketDesignPresets } from './collections/TicketDesignPresets'
 import { Notifications } from './collections/Notifications'
 import { FinanceSettings } from './collections/FinanceSettings'
 import { PaymentConnections } from './collections/PaymentConnections'
@@ -93,6 +94,7 @@ export default buildConfig({
     Locations,
     Events,
     Tickets,
+    TicketDesignPresets,
     Notifications,
     FinanceSettings,
     PaymentConnections,

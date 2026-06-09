@@ -30,10 +30,7 @@ export const Events: CollectionConfig = {
       async ({ data, req, operation, originalDoc }) => {
         const eventData = data ?? {}
 
-        if (
-          operation === 'create' &&
-          req.user
-        ) {
+        if (operation === 'create' && req.user) {
           eventData.organizer = req.user.id
         }
 
@@ -70,7 +67,9 @@ export const Events: CollectionConfig = {
         }
 
         if (!eventData.coverImage) {
-          const galleryImages = Array.isArray(eventData.galleryImages) ? eventData.galleryImages : []
+          const galleryImages = Array.isArray(eventData.galleryImages)
+            ? eventData.galleryImages
+            : []
           const firstGalleryImage = galleryImages[0]?.image
 
           if (eventData.bannerImage) {
@@ -86,7 +85,7 @@ export const Events: CollectionConfig = {
 
         return eventData
       },
-    ]
+    ],
   },
   fields: [
     {
@@ -265,7 +264,7 @@ export const Events: CollectionConfig = {
         position: 'sidebar',
       },
     },
-     // ─── Ticket Types (set by organizer) ─────────────────────────────────────
+    // ─── Ticket Types (set by organizer) ─────────────────────────────────────
     {
       name: 'ticketTypes',
       type: 'array',
@@ -400,6 +399,26 @@ export const Events: CollectionConfig = {
           label: 'Sort Order',
           admin: {
             description: 'Lower numbers appear first',
+          },
+        },
+        {
+          name: 'designSource',
+          type: 'select',
+          defaultValue: 'designer',
+          options: [
+            { label: 'Ticket Designer', value: 'designer' },
+            { label: 'Built-in Preset', value: 'preset' },
+          ],
+          admin: {
+            description: 'Where the selected ticket design comes from',
+          },
+        },
+        {
+          name: 'designId',
+          type: 'text',
+          label: 'Design ID',
+          admin: {
+            description: 'Saved ticket design key or built-in preset key',
           },
         },
       ],

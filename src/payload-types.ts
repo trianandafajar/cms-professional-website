@@ -75,6 +75,7 @@ export interface Config {
     locations: Location;
     events: Event;
     tickets: Ticket;
+    'ticket-design-presets': TicketDesignPreset;
     notifications: Notification;
     'finance-settings': FinanceSetting;
     'payment-connections': PaymentConnection;
@@ -98,6 +99,7 @@ export interface Config {
     locations: LocationsSelect<false> | LocationsSelect<true>;
     events: EventsSelect<false> | EventsSelect<true>;
     tickets: TicketsSelect<false> | TicketsSelect<true>;
+    'ticket-design-presets': TicketDesignPresetsSelect<false> | TicketDesignPresetsSelect<true>;
     notifications: NotificationsSelect<false> | NotificationsSelect<true>;
     'finance-settings': FinanceSettingsSelect<false> | FinanceSettingsSelect<true>;
     'payment-connections': PaymentConnectionsSelect<false> | PaymentConnectionsSelect<true>;
@@ -420,6 +422,14 @@ export interface Event {
          * Lower numbers appear first
          */
         sortOrder?: number | null;
+        /**
+         * Where the selected ticket design comes from
+         */
+        designSource?: ('designer' | 'preset') | null;
+        /**
+         * Saved ticket design key or built-in preset key
+         */
+        designId?: string | null;
         id?: string | null;
       }[]
     | null;
@@ -459,6 +469,28 @@ export interface Ticket {
   subtotalAmount?: number | null;
   totalAmount?: number | null;
   currency?: 'USD' | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ticket-design-presets".
+ */
+export interface TicketDesignPreset {
+  id: number;
+  owner: number | User;
+  designKey: string;
+  ownerDesignKey?: string | null;
+  name: string;
+  config:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -786,6 +818,10 @@ export interface PayloadLockedDocument {
         value: number | Ticket;
       } | null)
     | ({
+        relationTo: 'ticket-design-presets';
+        value: number | TicketDesignPreset;
+      } | null)
+    | ({
         relationTo: 'notifications';
         value: number | Notification;
       } | null)
@@ -1018,6 +1054,8 @@ export interface EventsSelect<T extends boolean = true> {
         salesEnd?: T;
         isHidden?: T;
         sortOrder?: T;
+        designSource?: T;
+        designId?: T;
         id?: T;
       };
   updatedAt?: T;
@@ -1052,6 +1090,19 @@ export interface TicketsSelect<T extends boolean = true> {
   subtotalAmount?: T;
   totalAmount?: T;
   currency?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "ticket-design-presets_select".
+ */
+export interface TicketDesignPresetsSelect<T extends boolean = true> {
+  owner?: T;
+  designKey?: T;
+  ownerDesignKey?: T;
+  name?: T;
+  config?: T;
   updatedAt?: T;
   createdAt?: T;
 }

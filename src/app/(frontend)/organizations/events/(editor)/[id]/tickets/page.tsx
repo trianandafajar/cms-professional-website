@@ -1,17 +1,19 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { useEventEditorStore, type EventTicketType } from '@/stores/eventEditorStore'
 import { Plus, Trash2, GripVertical, ChevronDown, ChevronUp, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import TicketPreviewCard from '@/components/organizations/ticket-preview'
 import {
   type TicketConfig,
+  type TicketDesign,
   defaultConfig,
   presets,
   initialDesigns,
   getTicketBackground,
 } from '@/lib/ticket-designs'
+import { apiClient } from '@/lib/apiClient'
 import { DEFAULT_CURRENCY, formatMoneyAmount } from '@/lib/finance'
 
 function toDatetimeLocalValue(date = new Date()) {
@@ -44,16 +46,59 @@ export default function EventTicketsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(tickets[0]?.id || null)
 
   const [saved, setSaved] = useState(false)
+  const [savedDesigns, setSavedDesigns] = useState<TicketDesign[]>([])
+  const [isLoadingDesigns, setIsLoadingDesigns] = useState(true)
 
   // Drag and drop state
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
   const dragCounter = useRef(0)
 
+  useEffect(() => {
+    async function loadSavedDesigns() {
+      setIsLoadingDesigns(true)
+
+      try {
+        const response = await apiClient.get<{
+          docs: Array<{ id: number; designKey: string; name: string; config: TicketConfig }>
+        }>('/api/ticket-design-presets?limit=100&sort=name')
+
+        setSavedDesigns(
+          (response.docs ?? []).map((doc) => ({
+            id: doc.designKey,
+            name: doc.name,
+            config: { ...defaultConfig, ...doc.config },
+          })),
+        )
+      } catch (error) {
+        console.error('Failed to load ticket design presets:', error)
+        setSavedDesigns([])
+      } finally {
+        setIsLoadingDesigns(false)
+      }
+    }
+
+    loadSavedDesigns()
+  }, [])
+
+  const designerDesigns = useMemo(() => {
+    const merged = new Map<string, TicketDesign>()
+
+    for (const design of initialDesigns) {
+      merged.set(design.id, design)
+    }
+
+    for (const design of savedDesigns) {
+      merged.set(design.id, design)
+    }
+
+    return Array.from(merged.values())
+  }, [savedDesigns])
+
   function getDesignConfig(ticket: EventTicketType): TicketConfig | null {
     if (!ticket.designId) return null
     if (ticket.designSource === 'designer') {
-      const design = initialDesigns.find((d) => d.id === ticket.designId)
+      const design = designerDesigns.find((d) => d.id === ticket.designId)
       return design?.config || null
     } else {
       const preset = presets.find((p) => p.id === ticket.designId)
@@ -65,7 +110,7 @@ export default function EventTicketsPage() {
   function getDesignName(ticket: EventTicketType): string {
     if (!ticket.designId) return ''
     if (ticket.designSource === 'designer') {
-      return initialDesigns.find((d) => d.id === ticket.designId)?.name || ''
+      return designerDesigns.find((d) => d.id === ticket.designId)?.name || ''
     }
     return presets.find((p) => p.id === ticket.designId)?.name || ''
   }
@@ -227,9 +272,7 @@ export default function EventTicketsPage() {
                     )}
                   </div>
                   <div className="mt-0.5 flex items-center gap-4 text-xs text-zinc-400">
-                    <span>
-                      {formatMoneyAmount(ticket.price ?? 0, DEFAULT_CURRENCY)}
-                    </span>
+                    <span>{formatMoneyAmount(ticket.price ?? 0, DEFAULT_CURRENCY)}</span>
                     <span>{ticket.quantity} available</span>
                     {ticket.designId && (
                       <span>
@@ -291,9 +334,7 @@ export default function EventTicketsPage() {
                           onChange={(e) =>
                             updateTicket(ticket.id, {
                               price:
-                                e.target.value === ''
-                                  ? null
-                                  : Math.max(0, Number(e.target.value)),
+                                e.target.value === '' ? null : Math.max(0, Number(e.target.value)),
                             })
                           }
                           placeholder="0"
@@ -503,7 +544,7 @@ export default function EventTicketsPage() {
                     {/* Design grid */}
                     <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
                       {ticket.designSource === 'designer'
-                        ? initialDesigns.map((design) => {
+                        ? designerDesigns.map((design) => {
                             const isSelected = ticket.designId === design.id
                             return (
                               <button
@@ -565,6 +606,10 @@ export default function EventTicketsPage() {
                             )
                           })}
                     </div>
+
+                    {ticket.designSource === 'designer' && isLoadingDesigns && (
+                      <p className="mt-2 text-xs text-zinc-400">Loading saved ticket designs...</p>
+                    )}
 
                     {!ticket.designId && (
                       <p className="mt-2 text-xs text-amber-600">

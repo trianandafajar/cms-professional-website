@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, useCallback, ChangeEvent } from 'react'
+import { useEffect, useRef, useState, useCallback, ChangeEvent } from 'react'
 import {
   Calendar,
   Clock,
@@ -26,6 +26,8 @@ import {
 } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { toPng } from 'html-to-image'
+import { apiClient } from '@/lib/apiClient'
+import { useAuthStore } from '@/stores/authStore'
 
 // ─── Types ───
 interface TicketConfig {
@@ -59,6 +61,14 @@ interface TicketConfig {
 
 interface TicketDesign {
   id: string
+  dbId?: number
+  name: string
+  config: TicketConfig
+}
+
+type SavedTicketDesignPreset = {
+  id: number
+  designKey: string
   name: string
   config: TicketConfig
 }
@@ -214,28 +224,6 @@ const presets: { id: string; name: string; config: Partial<TicketConfig> }[] = [
   },
 ]
 
-// ─── Initial designs ───
-const initialDesigns: TicketDesign[] = [
-  {
-    id: 'general-admission',
-    name: 'General Admission',
-    config: {
-      ...defaultConfig,
-      bgGradientFrom: '#0891b2',
-      bgGradientTo: '#1e40af',
-      labelColor: '#a5f3fc',
-      badgeBg: '#0e7490',
-      badgeText: '#cffafe',
-      qrFgColor: '#164e63',
-    },
-  },
-  {
-    id: 'vip',
-    name: 'VIP',
-    config: { ...defaultConfig },
-  },
-]
-
 const sampleEvent = {
   name: 'Indonesia Creative Summit 2026',
   date: '28 June 2026',
@@ -243,20 +231,92 @@ const sampleEvent = {
   venue: 'JCC, Jakarta',
 }
 
+function createEmptyDesign(index: number): TicketDesign {
+  return {
+    id: `design-${Date.now()}`,
+    name: `New Design ${index}`,
+    config: { ...defaultConfig },
+  }
+}
+
 export default function TicketDesignerPage() {
-  const [designs, setDesigns] = useState<TicketDesign[]>(initialDesigns)
-  const [activeDesignId, setActiveDesignId] = useState(initialDesigns[0].id)
+  const user = useAuthStore((state) => state.user)
+  const hasHydrated = useAuthStore((state) => state._hasHydrated)
+  const [designs, setDesigns] = useState<TicketDesign[]>([])
+  const [activeDesignId, setActiveDesignId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'presets' | 'layout' | 'style' | 'qr'>('presets')
   const [downloading, setDownloading] = useState(false)
+  const [isLoadingDesigns, setIsLoadingDesigns] = useState(true)
+  const [isSavingPreset, setIsSavingPreset] = useState(false)
+  const [isDeletingPreset, setIsDeletingPreset] = useState(false)
+  const [isRenamingPreset, setIsRenamingPreset] = useState(false)
+  const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const [editingName, setEditingName] = useState<string | null>(null)
   const [tempName, setTempName] = useState('')
   const ticketRef = useRef<HTMLDivElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const saveMessageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const activeDesign = designs.find((d) => d.id === activeDesignId) || designs[0]
-  const config = activeDesign.config
+  const activeDesign = designs.find((d) => d.id === activeDesignId) ?? null
+  const config = activeDesign?.config ?? defaultConfig
+
+  const showSaveMessage = (message: string) => {
+    if (saveMessageTimeoutRef.current) {
+      clearTimeout(saveMessageTimeoutRef.current)
+    }
+
+    setSaveMessage(message)
+    saveMessageTimeoutRef.current = setTimeout(() => {
+      setSaveMessage(null)
+      saveMessageTimeoutRef.current = null
+    }, 2500)
+  }
+
+  useEffect(() => {
+    if (!hasHydrated) return
+
+    async function loadSavedDesigns() {
+      if (!user?.id) {
+        setIsLoadingDesigns(false)
+        return
+      }
+
+      setIsLoadingDesigns(true)
+
+      try {
+        const response = await apiClient.get<{ docs: SavedTicketDesignPreset[] }>(
+          '/api/ticket-design-presets?limit=100&sort=name',
+        )
+        const savedDesigns = (response.docs ?? []).map((doc) => ({
+          id: doc.designKey,
+          dbId: doc.id,
+          name: doc.name,
+          config: { ...defaultConfig, ...doc.config },
+        }))
+
+        setDesigns(savedDesigns)
+        setActiveDesignId((current) => current ?? savedDesigns[0]?.id ?? null)
+      } catch (error) {
+        console.error('Failed to load ticket design presets:', error)
+      } finally {
+        setIsLoadingDesigns(false)
+      }
+    }
+
+    loadSavedDesigns()
+  }, [hasHydrated, user?.id])
+
+  useEffect(() => {
+    return () => {
+      if (saveMessageTimeoutRef.current) {
+        clearTimeout(saveMessageTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const updateConfig = (partial: Partial<TicketConfig>) => {
+    if (!activeDesignId) return
+
     setDesigns((prev) =>
       prev.map((d) =>
         d.id === activeDesignId ? { ...d, config: { ...d.config, ...partial } } : d,
@@ -272,14 +332,9 @@ export default function TicketDesignerPage() {
   const resetConfig = () => updateConfig(defaultConfig)
 
   const addDesign = () => {
-    const id = `design-${Date.now()}`
-    const newDesign: TicketDesign = {
-      id,
-      name: `New Design ${designs.length + 1}`,
-      config: { ...defaultConfig },
-    }
+    const newDesign = createEmptyDesign(designs.length + 1)
     setDesigns((prev) => [...prev, newDesign])
-    setActiveDesignId(id)
+    setActiveDesignId(newDesign.id)
   }
 
   const duplicateDesign = (designId: string) => {
@@ -295,11 +350,38 @@ export default function TicketDesignerPage() {
     setActiveDesignId(id)
   }
 
-  const deleteDesign = (designId: string) => {
+  const deleteDesign = async (designId: string) => {
     if (designs.length <= 1) return
-    setDesigns((prev) => prev.filter((d) => d.id !== designId))
-    if (activeDesignId === designId) {
-      setActiveDesignId(designs.find((d) => d.id !== designId)?.id || designs[0].id)
+
+    const design = designs.find((d) => d.id === designId)
+    if (!design) return
+
+    const confirmed = window.confirm(`Delete preset "${design.name}"?`)
+    if (!confirmed) return
+
+    setSaveMessage(null)
+
+    try {
+      if (design.dbId) {
+        setIsDeletingPreset(true)
+        await apiClient.delete(`/api/ticket-design-presets/${design.dbId}`)
+      }
+
+      setDesigns((prev) => {
+        const next = prev.filter((d) => d.id !== designId)
+
+        if (activeDesignId === designId) {
+          setActiveDesignId(next[0]?.id ?? null)
+        }
+
+        return next
+      })
+      showSaveMessage('Preset deleted')
+    } catch (error) {
+      console.error('Failed to delete ticket design preset:', error)
+      showSaveMessage('Failed to delete preset')
+    } finally {
+      setIsDeletingPreset(false)
     }
   }
 
@@ -310,13 +392,76 @@ export default function TicketDesignerPage() {
     setTempName(design.name)
   }
 
-  const confirmRename = () => {
+  const confirmRename = async () => {
     if (!editingName || !tempName.trim()) return
-    setDesigns((prev) =>
-      prev.map((d) => (d.id === editingName ? { ...d, name: tempName.trim() } : d)),
-    )
-    setEditingName(null)
-    setTempName('')
+
+    const nextName = tempName.trim()
+    const design = designs.find((d) => d.id === editingName)
+    if (!design) return
+
+    setSaveMessage(null)
+
+    try {
+      if (design.dbId) {
+        setIsRenamingPreset(true)
+        await apiClient.patch(`/api/ticket-design-presets/${design.dbId}`, {
+          name: nextName,
+        })
+      }
+
+      setDesigns((prev) =>
+        prev.map((d) => (d.id === editingName ? { ...d, name: nextName } : d)),
+      )
+      setEditingName(null)
+      setTempName('')
+      showSaveMessage('Preset updated')
+    } catch (error) {
+      console.error('Failed to rename ticket design preset:', error)
+      showSaveMessage('Failed to update preset')
+    } finally {
+      setIsRenamingPreset(false)
+    }
+  }
+
+  const saveActiveDesignAsPreset = async () => {
+    if (!activeDesign) return
+
+    setIsSavingPreset(true)
+    setSaveMessage(null)
+
+    try {
+      const data = {
+        designKey: activeDesign.id,
+        name: activeDesign.name,
+        config: activeDesign.config,
+      }
+
+      const response = activeDesign.dbId
+        ? await apiClient.patch<{ doc: SavedTicketDesignPreset }>(
+            `/api/ticket-design-presets/${activeDesign.dbId}`,
+            data,
+          )
+        : await apiClient.post<{ doc: SavedTicketDesignPreset }>('/api/ticket-design-presets', data)
+
+      setDesigns((prev) =>
+        prev.map((design) =>
+          design.id === activeDesign.id
+            ? {
+                ...design,
+                dbId: response.doc.id,
+                name: response.doc.name,
+                config: { ...defaultConfig, ...response.doc.config },
+              }
+            : design,
+        ),
+      )
+      showSaveMessage('Preset saved')
+    } catch (error) {
+      console.error('Failed to save ticket design preset:', error)
+      showSaveMessage('Failed to save preset')
+    } finally {
+      setIsSavingPreset(false)
+    }
   }
 
   const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
@@ -336,7 +481,7 @@ export default function TicketDesignerPage() {
 
   const downloadTicket = useCallback(async () => {
     const el = ticketRef.current
-    if (!el) return
+    if (!el || !activeDesign) return
     setDownloading(true)
     try {
       const dataUrl = await toPng(el, {
@@ -352,9 +497,11 @@ export default function TicketDesignerPage() {
     } finally {
       setDownloading(false)
     }
-  }, [activeDesign.name])
+  }, [activeDesign])
 
   const downloadAllDesigns = useCallback(async () => {
+    if (designs.length === 0) return
+
     setDownloading(true)
     for (const design of designs) {
       setActiveDesignId(design.id)
@@ -421,7 +568,8 @@ export default function TicketDesignerPage() {
             </div>
             <button
               onClick={resetConfig}
-              className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-700"
+              disabled={!activeDesign}
+              className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-700 disabled:opacity-50"
             >
               <RotateCcw size={12} />
               Reset
@@ -443,63 +591,71 @@ export default function TicketDesignerPage() {
               </button>
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {designs.map((design) => (
-                <div key={design.id} className="group relative">
-                  {editingName === design.id ? (
-                    <div className="flex items-center gap-1">
-                      <input
-                        value={tempName}
-                        onChange={(e) => setTempName(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && confirmRename()}
-                        className="h-7 w-24 rounded-md border border-[#5151eb] px-2 text-[10px] font-medium outline-none"
-                        autoFocus
-                      />
-                      <button
-                        onClick={confirmRename}
-                        className="rounded-md bg-[#5151eb] p-1 text-white"
-                      >
-                        <Check size={10} />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setActiveDesignId(design.id)}
-                      className={`rounded-lg px-3 py-1.5 text-[11px] font-medium transition ${
-                        activeDesignId === design.id
-                          ? 'bg-[#5151eb] text-white shadow-sm'
-                          : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-                      }`}
-                    >
-                      {design.name}
-                    </button>
-                  )}
-                  {/* Actions on hover */}
-                  {activeDesignId === design.id && editingName !== design.id && (
-                    <div className="absolute -right-1 -top-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition">
-                      <button
-                        onClick={() => startRename(design.id)}
-                        className="rounded-full bg-white p-0.5 shadow border border-zinc-200 hover:bg-zinc-50"
-                      >
-                        <Pencil size={8} className="text-zinc-500" />
-                      </button>
-                      <button
-                        onClick={() => duplicateDesign(design.id)}
-                        className="rounded-full bg-white p-0.5 shadow border border-zinc-200 hover:bg-zinc-50"
-                      >
-                        <Copy size={8} className="text-zinc-500" />
-                      </button>
-                      {designs.length > 1 && (
+              {designs.length === 0 ? (
+                <p className="text-xs text-zinc-400">Belum ada preset tersimpan.</p>
+              ) : (
+                designs.map((design) => (
+                  <div key={design.id} className="group relative">
+                    {editingName === design.id ? (
+                      <div className="flex items-center gap-1">
+                        <input
+                          value={tempName}
+                          onChange={(e) => setTempName(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && confirmRename()}
+                          disabled={isRenamingPreset}
+                          className="h-7 w-24 rounded-md border border-[#5151eb] px-2 text-[10px] font-medium outline-none"
+                          autoFocus
+                        />
                         <button
-                          onClick={() => deleteDesign(design.id)}
-                          className="rounded-full bg-white p-0.5 shadow border border-red-200 hover:bg-red-50"
+                          onClick={confirmRename}
+                          disabled={isRenamingPreset}
+                          className="rounded-md bg-[#5151eb] p-1 text-white disabled:opacity-50"
                         >
-                          <Trash2 size={8} className="text-red-500" />
+                          <Check size={10} />
                         </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setActiveDesignId(design.id)}
+                        className={`rounded-lg px-3 py-1.5 text-[11px] font-medium transition ${
+                          activeDesignId === design.id
+                            ? 'bg-[#5151eb] text-white shadow-sm'
+                            : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                        }`}
+                      >
+                        {design.name}
+                      </button>
+                    )}
+                    {activeDesignId === design.id && editingName !== design.id && (
+                      <div className="absolute -right-1 -top-1 flex gap-0.5 opacity-0 transition group-hover:opacity-100">
+                        <button
+                          onClick={() => startRename(design.id)}
+                          disabled={isRenamingPreset || isDeletingPreset}
+                          className="rounded-full border border-zinc-200 bg-white p-0.5 shadow hover:bg-zinc-50 disabled:opacity-50"
+                        >
+                          <Pencil size={8} className="text-zinc-500" />
+                        </button>
+                        <button
+                          onClick={() => duplicateDesign(design.id)}
+                          disabled={isRenamingPreset || isDeletingPreset}
+                          className="rounded-full border border-zinc-200 bg-white p-0.5 shadow hover:bg-zinc-50 disabled:opacity-50"
+                        >
+                          <Copy size={8} className="text-zinc-500" />
+                        </button>
+                        {designs.length > 1 && (
+                          <button
+                            onClick={() => deleteDesign(design.id)}
+                            disabled={isDeletingPreset || isRenamingPreset}
+                            className="rounded-full border border-red-200 bg-white p-0.5 shadow hover:bg-red-50 disabled:opacity-50"
+                          >
+                            <Trash2 size={8} className="text-red-500" />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -838,14 +994,45 @@ export default function TicketDesignerPage() {
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Ticket Designer</h1>
               <p className="mt-0.5 text-sm text-zinc-500">
-                Editing: <span className="font-semibold text-[#5151eb]">{activeDesign.name}</span> •{' '}
-                {designs.length} design{designs.length > 1 ? 's' : ''} total
+                Editing:{' '}
+                <span className="font-semibold text-[#5151eb]">
+                  {activeDesign?.name ?? 'No design selected'}
+                </span>{' '}
+                •{' '}
+                {isLoadingDesigns
+                  ? 'loading saved designs'
+                  : `${designs.length} design${designs.length > 1 ? 's' : ''} total`}
               </p>
             </div>
             <div className="flex items-center gap-2">
+              {saveMessage && (
+                <span
+                  className={`text-sm font-medium ${
+                    saveMessage.includes('Failed') ? 'text-red-600' : 'text-emerald-600'
+                  }`}
+                >
+                  {saveMessage}
+                </span>
+              )}
+              <button
+                onClick={saveActiveDesignAsPreset}
+                disabled={
+                  isSavingPreset || isDeletingPreset || isRenamingPreset || !user || !activeDesign
+                }
+                className="flex items-center gap-2 rounded-xl border border-[#5151eb]/30 bg-white px-4 py-2.5 text-sm font-semibold text-[#5151eb] transition hover:bg-indigo-50 disabled:opacity-50"
+              >
+                <Check size={15} />
+                {isSavingPreset
+                  ? 'Saving...'
+                  : isDeletingPreset
+                    ? 'Deleting...'
+                    : isRenamingPreset
+                      ? 'Updating...'
+                      : 'Save Preset'}
+              </button>
               <button
                 onClick={downloadAllDesigns}
-                disabled={downloading}
+                disabled={downloading || designs.length === 0}
                 className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50"
               >
                 <Download size={15} />
@@ -853,7 +1040,7 @@ export default function TicketDesignerPage() {
               </button>
               <button
                 onClick={downloadTicket}
-                disabled={downloading}
+                disabled={downloading || !activeDesign}
                 className="flex items-center gap-2 rounded-xl bg-[#5151eb] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#4040d9] disabled:opacity-50"
               >
                 <Download size={16} />
@@ -864,20 +1051,38 @@ export default function TicketDesignerPage() {
 
           {/* Preview */}
           <div className="flex items-center justify-center rounded-2xl border border-zinc-200 bg-white p-10 shadow-sm min-h-[500px]">
-            <div
-              ref={ticketRef}
-              style={{
-                ...getTicketBackground(),
-                width: `${config.width}px`,
-                height:
-                  config.orientation === 'vertical'
-                    ? `${config.height + 200}px`
-                    : `${config.height}px`,
-                borderRadius: `${config.borderRadius}px`,
-                padding: `${config.padding}px`,
-              }}
-              className="relative overflow-hidden shadow-2xl"
-            >
+            {!activeDesign ? (
+              <div className="flex max-w-md flex-col items-center text-center">
+                <div className="rounded-full bg-indigo-50 p-4 text-[#5151eb]">
+                  <Sliders size={24} />
+                </div>
+                <h2 className="mt-4 text-xl font-semibold text-zinc-900">Belum ada preset</h2>
+                <p className="mt-2 text-sm text-zinc-500">
+                  Tambahkan design baru untuk mulai membuat preset ticket.
+                </p>
+                <button
+                  onClick={addDesign}
+                  className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#5151eb] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#4040d9]"
+                >
+                  <Plus size={14} />
+                  Add Design
+                </button>
+              </div>
+            ) : (
+              <div
+                ref={ticketRef}
+                style={{
+                  ...getTicketBackground(),
+                  width: `${config.width}px`,
+                  height:
+                    config.orientation === 'vertical'
+                      ? `${config.height + 200}px`
+                      : `${config.height}px`,
+                  borderRadius: `${config.borderRadius}px`,
+                  padding: `${config.padding}px`,
+                }}
+                className="relative overflow-hidden shadow-2xl"
+              >
               {config.showDecoCircles && (
                 <>
                   <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/5" />
@@ -1031,7 +1236,8 @@ export default function TicketDesignerPage() {
                   </p>
                 </div>
               </div>
-            </div>
+              </div>
+            )}
           </div>
 
           {/* All designs preview */}

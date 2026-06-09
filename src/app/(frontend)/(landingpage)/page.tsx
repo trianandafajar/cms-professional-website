@@ -34,14 +34,29 @@ export default async function HomePage() {
     sort: 'name',
   })
 
-  // Fetch featured organizers for homepage section
-  const { docs: featuredOrganizers } = await payload.find({
-    collection: 'users',
-    where: { isOrganizer: { equals: true } },
-    depth: 1,
-    limit: 6,
-    sort: '-followersCount',
-  })
+  // Fetch featured organizers for homepage section. Keep the homepage usable
+  // while local databases are catching up to newer user relationship migrations.
+  let featuredOrganizers: Parameters<typeof FeaturedOrganizers>[0]['organizers'] = []
+  try {
+    const { docs } = await payload.find({
+      collection: 'users',
+      where: { isOrganizer: { equals: true } },
+      depth: 1,
+      limit: 6,
+      sort: '-followersCount',
+      select: {
+        name: true,
+        bio: true,
+        avatar: true,
+        followersCount: true,
+        instagram: true,
+        website: true,
+      },
+    })
+    featuredOrganizers = docs
+  } catch {
+    featuredOrganizers = []
+  }
 
   // Fetch upcoming published events for the homepage listing
   const { docs: allEvents } = await payload.find({
