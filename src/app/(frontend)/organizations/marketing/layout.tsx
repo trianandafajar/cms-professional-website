@@ -19,20 +19,20 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Marketing</h1>
+    <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-0 lg:py-0">
+      <div className="mb-5 sm:mb-6">
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">Marketing</h1>
         <p className="mt-1 text-sm text-zinc-500">Track campaigns, engagement, and promotions</p>
       </div>
 
-      <div className="flex items-center gap-1 border-b border-zinc-200">
+      <div className="flex items-center gap-1 overflow-x-auto border-b border-zinc-200 pb-0.5 [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         {tabs.map((tab) => {
           const active = pathname.startsWith(tab.href)
           return (
             <Link
               key={tab.href}
               href={tab.href}
-              className={`border-b-2 px-4 py-2.5 text-sm font-medium transition ${
+              className={`shrink-0 border-b-2 px-3 py-2.5 text-sm font-medium transition sm:px-4 ${
                 active
                   ? 'border-[#5151eb] text-[#5151eb]'
                   : 'border-transparent text-zinc-500 hover:text-zinc-700'

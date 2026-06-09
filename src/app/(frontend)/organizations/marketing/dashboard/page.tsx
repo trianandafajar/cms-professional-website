@@ -21,6 +21,13 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 import { DashboardStatsSkeleton, Skeleton, TableSkeleton } from '@/components/ui/skeleton'
 import type { EmailTemplateRecord } from '@/lib/marketing/email-templates'
@@ -255,10 +262,10 @@ export default function MarketingDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-5">
+      <div className="flex flex-col gap-4 rounded-xl border border-zinc-200 bg-white p-4 sm:p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-zinc-900">Marketing dashboard</h2>
+            <h2 className="text-lg font-semibold text-zinc-900 sm:text-xl">Marketing dashboard</h2>
             <p className="mt-1 text-sm text-zinc-500">
               Dynamic overview from promotions and organization email templates.
             </p>
@@ -267,7 +274,7 @@ export default function MarketingDashboardPage() {
             type="button"
             onClick={handleExportCsv}
             disabled={filteredPromotions.length === 0}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
             <Download size={16} />
             Export CSV
@@ -284,26 +291,42 @@ export default function MarketingDashboardPage() {
               className="h-11 w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-4 text-sm text-zinc-900 outline-none transition focus:border-[#5151eb]"
             />
           </div>
-          <select
+          <Select
             value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}
-            className="h-11 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none transition focus:border-[#5151eb]"
+            onValueChange={(value) => setStatusFilter(value as typeof statusFilter)}
           >
-            <option value="all">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="draft">Draft</option>
-            <option value="scheduled">Scheduled</option>
-            <option value="ended">Ended</option>
-          </select>
-          <select
+            <SelectTrigger
+              size="default"
+              className="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus-visible:border-[#5151eb] focus-visible:ring-2 focus-visible:ring-[#5151eb]/10 sm:w-[180px]"
+            >
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+
+            <SelectContent position="popper" align="start">
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="scheduled">Scheduled</SelectItem>
+              <SelectItem value="ended">Ended</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
             value={typeFilter}
-            onChange={(event) => setTypeFilter(event.target.value as typeof typeFilter)}
-            className="h-11 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none transition focus:border-[#5151eb]"
+            onValueChange={(value) => setTypeFilter(value as typeof typeFilter)}
           >
-            <option value="all">All Types</option>
-            <option value="code">Promo Code</option>
-            <option value="access">Access Code</option>
-          </select>
+            <SelectTrigger
+              size="default"
+              className="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus-visible:border-[#5151eb] focus-visible:ring-2 focus-visible:ring-[#5151eb]/10 sm:w-[180px]"
+            >
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+
+            <SelectContent position="popper" align="start">
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="code">Promo Code</SelectItem>
+              <SelectItem value="access">Access Code</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -311,19 +334,19 @@ export default function MarketingDashboardPage() {
         <>
           <DashboardStatsSkeleton />
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
-            <div className="rounded-xl border border-zinc-200 bg-white p-5">
+            <div className="rounded-xl border border-zinc-200 bg-white p-4 sm:p-5">
               <Skeleton className="h-5 w-40" />
               <Skeleton className="mt-2 h-4 w-72" />
               <Skeleton className="mt-5 h-[280px] w-full rounded-xl" />
             </div>
-            <div className="rounded-xl border border-zinc-200 bg-white p-5">
+            <div className="rounded-xl border border-zinc-200 bg-white p-4 sm:p-5">
               <Skeleton className="h-5 w-40" />
               <Skeleton className="mt-2 h-4 w-56" />
               <Skeleton className="mt-5 h-[280px] w-full rounded-xl" />
             </div>
           </div>
           <div className="grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
-            <div className="rounded-xl border border-zinc-200 bg-white p-5">
+            <div className="rounded-xl border border-zinc-200 bg-white p-4 sm:p-5">
               <Skeleton className="h-5 w-32" />
               <Skeleton className="mt-2 h-4 w-56" />
               <div className="mt-5 space-y-4">
@@ -351,7 +374,7 @@ export default function MarketingDashboardPage() {
 
       {(!isLoading || promotions.length > 0 || templates.length > 0) && !error ? (
         <>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard
               icon={TicketPercent}
               label="Active Promotions"
@@ -380,13 +403,13 @@ export default function MarketingDashboardPage() {
 
           {filteredPromotions.length > 0 ? (
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
-              <div className="rounded-xl border border-zinc-200 bg-white p-5">
+              <div className="rounded-xl border border-zinc-200 bg-white p-4 sm:p-5">
                 <h3 className="text-sm font-semibold text-zinc-900">Promotion usage trend</h3>
                 <p className="mt-1 text-xs text-zinc-500">
                   Usage count grouped by promotion update month from the current filtered set.
                 </p>
 
-                <div className="mt-5 h-[280px]">
+                <div className="mt-5 h-[240px] sm:h-[280px]">
                   {monthlyUsageData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={monthlyUsageData}>
@@ -422,13 +445,13 @@ export default function MarketingDashboardPage() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-zinc-200 bg-white p-5">
+              <div className="rounded-xl border border-zinc-200 bg-white p-4 sm:p-5">
                 <h3 className="text-sm font-semibold text-zinc-900">Promotion type split</h3>
                 <p className="mt-1 text-xs text-zinc-500">
                   Distribution between promo codes and access codes.
                 </p>
 
-                <div className="mt-5 h-[280px]">
+                <div className="mt-5 h-[240px] sm:h-[280px]">
                   {promotionTypeData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
@@ -482,7 +505,7 @@ export default function MarketingDashboardPage() {
 
           {filteredPromotions.length > 0 ? (
             <div className="grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
-              <div className="rounded-xl border border-zinc-200 bg-white p-5">
+              <div className="rounded-xl border border-zinc-200 bg-white p-4 sm:p-5">
                 <h3 className="text-sm font-semibold text-zinc-900">Promotion status</h3>
                 <p className="mt-1 text-xs text-zinc-500">
                   Current distribution for the filtered promotions.
@@ -507,7 +530,7 @@ export default function MarketingDashboardPage() {
               </div>
 
               <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
-                <div className="border-b border-zinc-100 px-5 py-3.5">
+                <div className="border-b border-zinc-100 px-4 py-3.5 sm:px-5">
                   <h3 className="text-sm font-semibold text-zinc-900">Promotions</h3>
                 </div>
                 <div className="overflow-x-auto">
@@ -590,7 +613,7 @@ export default function MarketingDashboardPage() {
           )}
 
           {templates.length > 0 ? (
-            <div className="rounded-xl border border-zinc-200 bg-white p-5">
+            <div className="rounded-xl border border-zinc-200 bg-white p-4 sm:p-5">
               <div className="mb-4">
                 <h3 className="text-sm font-semibold text-zinc-900">Email templates</h3>
                 <p className="mt-1 text-xs text-zinc-500">

@@ -232,7 +232,7 @@ export default function NotificationDrawer() {
               </div>
 
               <DrawerClose asChild>
-                <button className="rounded-xl p-2 text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-[#12192f]">
+                <button className="rounded-xl p-2 text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-[#12192f] cursor-pointer">
                   <X size={20} />
                 </button>
               </DrawerClose>
@@ -289,7 +289,7 @@ export default function NotificationDrawer() {
                               event.stopPropagation()
                               void deleteNotification(notification.id)
                             }}
-                            className="rounded-full p-1 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
+                            className="rounded-full p-1 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700 cursor-pointer"
                             aria-label="Delete notification"
                           >
                             <Trash2 size={14} />

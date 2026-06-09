@@ -23,6 +23,7 @@ import {
   Settings,
   Ticket,
   User as UserIcon,
+  X
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -153,10 +154,10 @@ export function OrganizationsShell({
                   <DrawerClose asChild>
                     <button
                       type="button"
-                      className="flex size-9 items-center justify-center rounded-xl border border-zinc-200 text-zinc-500 transition hover:bg-zinc-50"
+                      className="flex size-9 items-center justify-center rounded-xl border border-zinc-200 text-zinc-500 transition hover:bg-zinc-50 cursor-pointer"
                       aria-label="Close navigation"
                     >
-                      ×
+                      <X size={20} />
                     </button>
                   </DrawerClose>
                 </div>
