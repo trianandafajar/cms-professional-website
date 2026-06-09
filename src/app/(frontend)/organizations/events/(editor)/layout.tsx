@@ -280,7 +280,7 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
           <DrawerTrigger asChild>
             <button
               type="button"
-              className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700"
+              className="cursor-pointer inline-flex items-center gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700"
             >
               <Menu size={16} />
               Steps

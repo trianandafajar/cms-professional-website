@@ -19,6 +19,16 @@ import { useAuthStore } from '@/stores/authStore'
 import { useOrdersStore, type OrderRow } from '@/stores/ordersStore'
 import { formatMoneyAmount } from '@/lib/finance'
 
+function escapeCsv(value: string | number | boolean | null | undefined) {
+  const normalized = value === null || value === undefined ? '' : String(value)
+
+  if (/[",\n]/.test(normalized)) {
+    return `"${normalized.replace(/"/g, '""')}"`
+  }
+
+  return normalized
+}
+
 export default function OrderDetailPage() {
   const params = useParams()
   const orderId = String(params.id)
@@ -74,10 +84,48 @@ export default function OrderDetailPage() {
           ? 'border-zinc-200 bg-zinc-50 text-zinc-700'
           : 'border-red-200 bg-red-50 text-red-600'
 
+  function handleExportTicket() {
+    const rows = [
+      ['Section', 'Field', 'Value'],
+      ['Order', 'Order ID', activeOrder.id],
+      ['Order', 'Buyer', activeOrder.buyer],
+      ['Order', 'Email', activeOrder.email],
+      ['Order', 'Phone', activeOrder.phone || '-'],
+      ['Order', 'Event', activeOrder.event],
+      ['Order', 'Ticket', activeOrder.ticket],
+      ['Order', 'Quantity', activeOrder.qty],
+      ['Order', 'Total', activeOrder.total],
+      ['Order', 'Status', activeOrder.status],
+      ['Order', 'Date', activeOrder.date],
+      [],
+      ['Ticket ID', 'Type', 'Attendee', 'Price', 'Checked In', 'Seat', 'Gate'],
+      ...activeOrder.tickets.map((ticket) => [
+        ticket.ticketId,
+        ticket.type,
+        ticket.attendee,
+        ticket.price,
+        ticket.checkedIn ? 'Yes' : 'No',
+        ticket.seat || '-',
+        ticket.gate || '-',
+      ]),
+    ]
+
+    const csv = rows.map((row) => row.map((value) => escapeCsv(value)).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+
+    link.href = url
+    link.download = `order-${activeOrder.id.replace(/[^a-z0-9-_]+/gi, '-').toLowerCase()}.csv`
+    link.click()
+
+    URL.revokeObjectURL(url)
+  }
+
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
+    <div className="mx-auto max-w-5xl space-y-6 px-4 py-4 sm:px-6 lg:space-y-8 lg:px-0">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
           <Link
             href="/organizations/orders"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-[#5151eb] transition hover:text-[#4040d9]"
@@ -85,8 +133,10 @@ export default function OrderDetailPage() {
             <ArrowLeft size={15} />
             Back to orders
           </Link>
-          <h1 className="mt-3 text-3xl font-bold tracking-tight text-zinc-900">Order Detail</h1>
-          <div className="mt-1.5 flex items-center gap-3">
+          <h1 className="mt-3 text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">
+            Order Detail
+          </h1>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2 sm:gap-3">
             <span className="text-sm font-medium text-zinc-500">{activeOrder.id}</span>
             <span
               className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusColor}`}
@@ -95,8 +145,12 @@ export default function OrderDetailPage() {
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 rounded-xl bg-[#5151eb] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#4040d9]">
+        <div className="flex w-full items-stretch gap-2 lg:w-auto lg:items-center">
+          <button
+            type="button"
+            onClick={handleExportTicket}
+            className="cursor-pointer flex w-full items-center justify-center gap-2 rounded-xl bg-[#5151eb] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#4040d9] lg:w-auto"
+          >
             <Ticket size={16} />
             Export Ticket
           </button>
@@ -136,7 +190,7 @@ export default function OrderDetailPage() {
         />
       </div>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
         <div className="mb-4 flex items-center gap-2">
           <Ticket size={18} className="text-[#5151eb]" />
           <h2 className="text-lg font-bold text-zinc-900">
@@ -148,13 +202,13 @@ export default function OrderDetailPage() {
           {activeOrder.tickets.map((ticket) => (
             <div
               key={ticket.ticketId}
-              className="flex items-center justify-between rounded-xl border border-zinc-200 px-4 py-3"
+              className="flex flex-col gap-3 rounded-xl border border-zinc-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
             >
               <div>
                 <p className="text-sm font-semibold text-zinc-900">{ticket.type}</p>
                 <p className="text-xs text-zinc-500">{ticket.attendee}</p>
               </div>
-              <div className="text-right">
+              <div className="text-left sm:text-right">
                 <p className="text-sm font-semibold text-zinc-900">
                   {ticket.price === 0 ? 'Free' : formatMoneyAmount(ticket.price, 'USD')}
                 </p>
@@ -177,22 +231,6 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-        <button className="flex items-center gap-2 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50">
-          <Mail size={15} />
-          Resend Ticket
-        </button>
-        <button className="flex items-center gap-2 rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50">
-          <Phone size={15} />
-          Contact Buyer
-        </button>
-        <div className="flex-1" />
-        <button className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700">
-          <X size={15} />
-          Refund Order
-        </button>
-      </div>
-
       <p className="text-xs text-zinc-400">
         Showing {orders.length} grouped orders from the `tickets` collection.
       </p>
@@ -210,7 +248,7 @@ function InfoCard({
   rows: Array<{ label: string; value: string }>
 }) {
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
       <div className="flex items-center gap-2">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50">{icon}</div>
         <h2 className="text-sm font-bold text-zinc-900">{title}</h2>

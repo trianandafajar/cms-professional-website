@@ -119,7 +119,7 @@ export function OrganizationsShell({
             <DrawerTrigger asChild>
               <button
                 type="button"
-                className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-zinc-200 text-zinc-700 transition hover:bg-zinc-50 lg:hidden"
+                className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-zinc-200 text-zinc-700 transition hover:bg-zinc-50 lg:hidden cursor-pointer"
                 aria-label="Open navigation"
               >
                 <Menu className="size-5" />
