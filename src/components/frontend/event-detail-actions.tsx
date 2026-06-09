@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
-import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Heart, Share2, Ticket, Calendar, MapPin, Clock, Check } from 'lucide-react'
 import { useAuthGate } from '@/hooks/useAuthGate'
+import { useLikesStore } from '@/stores/likesStore'
 
 type Props = {
+  eventId: number
   eventTitle: string
   price: string
   isFree: boolean
@@ -39,6 +40,7 @@ function formatTime(dateStr: string): string {
 }
 
 export function EventDetailActions({
+  eventId,
   eventTitle,
   price,
   isFree,
@@ -52,10 +54,31 @@ export function EventDetailActions({
   citySlug,
   eventSlug,
 }: Props) {
+  const isInterestedFromStore = useLikesStore((state) => state.isLiked(eventId))
+  const toggleLike = useLikesStore((state) => state.toggleLike)
+  const fetchLikes = useLikesStore((state) => state.fetchLikes)
+  const likesHydrated = useLikesStore((state) => state.isHydrated)
+  const storeInterestedCount = useLikesStore((state) => state.interestedCounts[eventId])
+  const setStoreInterestedCount = useLikesStore((state) => state.setInterestedCount)
   const [interested, setInterested] = useState(false)
+  const [isTogglingInterested, setIsTogglingInterested] = useState(false)
   const [copied, setCopied] = useState(false)
   const router = useRouter()
   const { gate, isAuthenticated } = useAuthGate()
+
+  useEffect(() => {
+    setStoreInterestedCount(eventId, interestedCount)
+  }, [eventId, interestedCount, setStoreInterestedCount])
+
+  useEffect(() => {
+    if (!likesHydrated) {
+      void fetchLikes()
+    }
+  }, [fetchLikes, likesHydrated])
+
+  useEffect(() => {
+    setInterested(isInterestedFromStore)
+  }, [isInterestedFromStore])
 
   function handleShare() {
     if (navigator.share) {
@@ -75,6 +98,18 @@ export function EventDetailActions({
       return
     }
     router.push(ticketsPath)
+  }
+
+  async function handleInterestedToggle() {
+    if (isTogglingInterested) return
+
+    setIsTogglingInterested(true)
+    try {
+      const nextInterested = await toggleLike(eventId)
+      setInterested(nextInterested)
+    } finally {
+      setIsTogglingInterested(false)
+    }
   }
 
   return (
@@ -140,17 +175,18 @@ export function EventDetailActions({
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={gate(() => setInterested((v) => !v))}
+            onClick={gate(handleInterestedToggle)}
+            disabled={isTogglingInterested}
             className={`flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-semibold transition ${
               interested
                 ? 'border-[#5151eb] bg-indigo-50 text-[#5151eb]'
                 : 'border-zinc-200 text-zinc-600 hover:border-zinc-300'
-            }`}
+            } disabled:cursor-wait disabled:opacity-70`}
           >
             <Heart className={`size-4 ${interested ? 'fill-[#5151eb]' : ''}`} />
             {interested ? 'Interested' : "I'm interested"}
             <span className="text-xs text-zinc-400">
-              ({(interestedCount + (interested ? 1 : 0)).toLocaleString()})
+              ({(storeInterestedCount ?? interestedCount).toLocaleString()})
             </span>
           </button>
 

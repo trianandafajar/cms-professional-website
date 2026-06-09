@@ -252,6 +252,17 @@ export const Users: CollectionConfig = {
         position: 'sidebar',
       },
     },
+    {
+      name: 'followedOrganizers',
+      type: 'relationship',
+      relationTo: 'users',
+      hasMany: true,
+      label: 'Followed Organizers',
+      admin: {
+        description: 'Organizers followed by this user',
+        position: 'sidebar',
+      },
+    },
     // Liked / bookmarked events
     {
       name: 'likedEvents',

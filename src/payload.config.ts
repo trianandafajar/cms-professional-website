@@ -47,6 +47,11 @@ import {
   financeWorkspaceUpdateEndpoint,
   financeWebhookEndpoint,
 } from './endpoints/finance'
+import {
+  organizerFollowEndpoint,
+  organizerFollowToggleEndpoint,
+} from './endpoints/organizer-follow'
+import { likeEndpoint } from './endpoints/likes'
 import { financeConnectStripeReturnEndpoint } from './endpoints/finance-stripe-return'
 
 const filename = fileURLToPath(import.meta.url)
@@ -115,13 +120,9 @@ export default buildConfig({
   sharp,
   plugins: [],
   endpoints: [
-    // Check-in: validate ticket
     checkinValidateEndpoint,
-    // Check-in: confirm check-in
     checkinConfirmEndpoint,
-    // Check-in: statistics
     checkinStatsEndpoint,
-    // Toggle like/unlike an event for the authenticated user
     meEndpoint,
     notificationsBootstrapEndpoint,
     emailTemplatesWorkspaceEndpoint,
@@ -140,6 +141,9 @@ export default buildConfig({
     financeConnectStripeRefreshEndpoint,
     financeConnectStripeReturnEndpoint,
     financeWebhookEndpoint,
+    organizerFollowEndpoint,
+    organizerFollowToggleEndpoint,
+    likeEndpoint,
     {
       path: '/likes/toggle/:eventId',
       method: 'post',
@@ -192,41 +196,37 @@ export default buildConfig({
           data: {
             likedEvents: updatedLiked,
           },
+          overrideAccess: true,
+        })
+
+        const interestedUsers = await payload.count({
+          collection: 'users',
+          where: {
+            likedEvents: {
+              contains: eventId,
+            },
+          },
+        })
+
+        const interestedCount = interestedUsers.totalDocs
+
+        await payload.update({
+          collection: 'events',
+          id: eventId,
+          data: {
+            interestedCount,
+          },
+          overrideAccess: true,
         })
 
         return Response.json({
           liked: !isLiked,
           eventId,
+          interestedCount,
           totalLikes: updatedLiked.length,
         })
       },
     },
-    // Get all liked events for the authenticated user
-    {
-      path: '/likes',
-      method: 'get',
-      handler: async (req) => {
-        const { payload, user } = req
-
-        if (!user) {
-          return Response.json({ error: 'Unauthorized' }, { status: 401 })
-        }
-
-        const currentUser = await payload.findByID({
-          collection: 'users',
-          id: user.id,
-          depth: 1,
-        })
-
-        const likedEvents = currentUser.likedEvents ?? []
-
-        return Response.json({
-          docs: likedEvents,
-          totalDocs: Array.isArray(likedEvents) ? likedEvents.length : 0,
-        })
-      },
-    },
-    // Update organizer profile (own profile only)
     {
       path: '/organizer/profile',
       method: 'patch',

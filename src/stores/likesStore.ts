@@ -6,6 +6,8 @@ import { apiClient } from '@/lib/apiClient'
 interface LikesState {
   /** Set of liked event IDs (synced with server on init) */
   likedEventIds: Set<number>
+  /** Live interested counts per event, shared by detail widgets */
+  interestedCounts: Record<number, number>
   /** Whether the likes have been fetched from server */
   isHydrated: boolean
   /** Fetch liked events from server (call on app init or login) */
@@ -14,6 +16,8 @@ interface LikesState {
   toggleLike: (eventId: number) => Promise<boolean>
   /** Check if an event is liked */
   isLiked: (eventId: number) => boolean
+  /** Seed or sync the live interested count for an event */
+  setInterestedCount: (eventId: number, count: number) => void
   /** Clear all likes (call on logout) */
   clear: () => void
 }
@@ -22,6 +26,7 @@ export const useLikesStore = create<LikesState>()(
   persist(
     (set, get) => ({
       likedEventIds: new Set<number>(),
+      interestedCounts: {},
       isHydrated: false,
 
       fetchLikes: async () => {
@@ -40,7 +45,7 @@ export const useLikesStore = create<LikesState>()(
       },
 
       toggleLike: async (eventId: number) => {
-        const { likedEventIds } = get()
+        const { likedEventIds, interestedCounts } = get()
         const wasLiked = likedEventIds.has(eventId)
 
         // Optimistic update
@@ -50,12 +55,24 @@ export const useLikesStore = create<LikesState>()(
         } else {
           newSet.add(eventId)
         }
-        set({ likedEventIds: newSet })
+        const currentCount = interestedCounts[eventId]
+        set({
+          likedEventIds: newSet,
+          interestedCounts:
+            typeof currentCount === 'number'
+              ? {
+                  ...interestedCounts,
+                  [eventId]: Math.max(0, currentCount + (wasLiked ? -1 : 1)),
+                }
+              : interestedCounts,
+        })
 
         try {
-          const response = await apiClient.post<{ liked: boolean; eventId: number }>(
-            `/api/likes/toggle/${eventId}`,
-          )
+          const response = await apiClient.post<{
+            liked: boolean
+            eventId: number
+            interestedCount?: number
+          }>(`/api/likes/toggle/${eventId}`)
           // Sync with server response
           if (response.liked !== !wasLiked) {
             // Revert if server disagrees
@@ -67,6 +84,14 @@ export const useLikesStore = create<LikesState>()(
             }
             set({ likedEventIds: syncedSet })
           }
+          if (typeof response.interestedCount === 'number') {
+            set((state) => ({
+              interestedCounts: {
+                ...state.interestedCounts,
+                [eventId]: response.interestedCount ?? 0,
+              },
+            }))
+          }
           return response.liked
         } catch (err) {
           // Revert on error
@@ -76,7 +101,16 @@ export const useLikesStore = create<LikesState>()(
           } else {
             revertedSet.delete(eventId)
           }
-          set({ likedEventIds: revertedSet })
+          set((state) => ({
+            likedEventIds: revertedSet,
+            interestedCounts:
+              typeof currentCount === 'number'
+                ? {
+                    ...state.interestedCounts,
+                    [eventId]: currentCount,
+                  }
+                : state.interestedCounts,
+          }))
           console.error('Failed to toggle like:', err)
           return wasLiked
         }
@@ -86,8 +120,17 @@ export const useLikesStore = create<LikesState>()(
         return get().likedEventIds.has(eventId)
       },
 
+      setInterestedCount: (eventId: number, count: number) => {
+        set((state) => ({
+          interestedCounts: {
+            ...state.interestedCounts,
+            [eventId]: Math.max(0, count),
+          },
+        }))
+      },
+
       clear: () => {
-        set({ likedEventIds: new Set<number>(), isHydrated: false })
+        set({ likedEventIds: new Set<number>(), interestedCounts: {}, isHydrated: false })
       },
     }),
     {

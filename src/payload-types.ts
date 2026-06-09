@@ -177,6 +177,10 @@ export interface User {
   instagram?: string | null;
   followersCount?: number | null;
   /**
+   * Organizers followed by this user
+   */
+  followedOrganizers?: (number | User)[] | null;
+  /**
    * Events the user has bookmarked/saved
    */
   likedEvents?: (number | Event)[] | null;
@@ -433,6 +437,12 @@ export interface Ticket {
   purchaserName: string;
   purchaserEmail: string;
   purchaserPhone?: string | null;
+  /**
+   * Name checked by organizers at the venue. Defaults to purchaser name.
+   */
+  attendeeName: string;
+  attendeeEmail?: string | null;
+  attendeePhone?: string | null;
   ticketType: string;
   price: number;
   status: 'active' | 'pending' | 'completed' | 'checked_in' | 'cancelled' | 'refunded';
@@ -867,6 +877,7 @@ export interface UsersSelect<T extends boolean = true> {
   website?: T;
   instagram?: T;
   followersCount?: T;
+  followedOrganizers?: T;
   likedEvents?: T;
   updatedAt?: T;
   createdAt?: T;
@@ -1022,6 +1033,9 @@ export interface TicketsSelect<T extends boolean = true> {
   purchaserName?: T;
   purchaserEmail?: T;
   purchaserPhone?: T;
+  attendeeName?: T;
+  attendeeEmail?: T;
+  attendeePhone?: T;
   ticketType?: T;
   price?: T;
   status?: T;

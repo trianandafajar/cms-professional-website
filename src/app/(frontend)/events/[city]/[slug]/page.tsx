@@ -1,4 +1,4 @@
-import { headers as getHeaders } from 'next/headers.js'
+﻿import { headers as getHeaders } from 'next/headers.js'
 import { getPayload } from 'payload'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -6,7 +6,6 @@ import {
   Calendar,
   Clock,
   MapPin,
-  Users,
   Globe,
   ChevronRight,
   CheckCircle2,
@@ -20,10 +19,12 @@ import { OrganizerSuggestions } from '@/components/frontend/organizer-suggestion
 import { EventDetailActions } from '@/components/frontend/event-detail-actions'
 import { EventDetailDescription } from '@/components/frontend/event-detail-description'
 import { EventGallery } from '@/components/frontend/event-gallery'
+import { EventInterestStats } from '@/components/frontend/event-interest-stats'
+import { OrganizerFollowSummary } from '@/components/frontend/organizer-follow-summary'
 import config from '@/payload.config'
 import type { Event, Media, User, Location, Category } from '@/payload-types'
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type Props = {
   params: Promise<{ city: string; slug: string }>
@@ -36,7 +37,7 @@ type TicketTypeLike = {
   sold?: number | null
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function getMediaUrl(media: unknown): string | null {
   if (media && typeof media === 'object' && 'url' in media) return (media as Media).url ?? null
@@ -127,6 +128,15 @@ function getEventTicketTypes(event: Event | null): TicketTypeLike[] {
   return event.ticketTypes as TicketTypeLike[]
 }
 
+function getEventCapacity(ticketTypes: TicketTypeLike[], fallbackCapacity: number | null): number | null {
+  const ticketCapacity = ticketTypes.reduce(
+    (total, ticketType) => total + Math.max(0, Number(ticketType.quantity ?? 0)),
+    0,
+  )
+
+  return ticketCapacity > 0 ? ticketCapacity : fallbackCapacity
+}
+
 function formatTicketAmount(amount: number, currency = 'USD'): string {
   if (amount <= 0) return 'Free'
 
@@ -189,86 +199,7 @@ function getLowInventoryNotice(ticketTypes: TicketTypeLike[]): string | null {
   return remainingTickets <= 10 ? `Only ${remainingTickets} tickets left` : 'Few tickets left'
 }
 
-// ─── Dummy event (shown when no real event found in Payload) ─────────────────
-
-const DUMMY_GALLERY = [
-  'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&h=400&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=600&h=400&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=600&h=400&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=600&h=400&fit=crop&q=80',
-]
-
-const DUMMY_EVENT = {
-  id: 0,
-  title: 'RnB & Slow Jams Day Party — Jakarta',
-  slug: 'rnb-slow-jams-jakarta',
-  coverImage:
-    'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=1400&h=600&fit=crop&q=80',
-  startDate: '2026-06-14T16:00:00.000Z',
-  endDate: '2026-06-14T22:00:00.000Z',
-  venue: 'Jungle Jakarta',
-  address: 'Jl. Sudirman No. 88, Central Jakarta, DKI Jakarta 10220',
-  locationName: 'Jakarta',
-  categoryName: 'Music',
-  isFree: false,
-  isOnline: false,
-  price: 'From $150.00',
-  capacity: 600,
-  interestedCount: 2400,
-  status: 'published' as const,
-  tags: ['rnb', 'slow jams', 'day party', 'music'],
-  organizer: {
-    id: 1,
-    name: 'Soundwave Productions',
-    bio: "Indonesia's biggest music concerts & festivals. We deliver the best live music experiences for all audiences.",
-    followersCount: 48200,
-    avatarUrl:
-      'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=80&h=80&fit=crop&q=80',
-    instagram: '@soundwave.id',
-    website: 'https://soundwave.id',
-    totalEvents: 111,
-    yearsHosting: 2,
-    totalAttendees: 80500,
-  },
-  description: `Get ready for Jakarta's official RnB Day Party experience!
-
-Enjoy an evening packed with the hottest RnB & Slow Jams from the city's best DJs. A total celebration of music, food & culture 🍹🌴
-
-**What's waiting for you:**
-
-★ JAKARTA'S BEST DAY PARTY VENUE
-★ THE ULTIMATE UNIQUE EXPERIENCE
-★ AMAZING INSTAGRAMMABLE MOMENTS
-★ UP TO 600 GUESTS
-★ EXCLUSIVE DJ LINE-UP
-
-**MUSIC POLICY:** 100% Heat — RnB & Slow Jams
-
----
-
-**CELEBRATING A BIRTHDAY or SPECIAL OCCASION?**
-
-Contact us for exclusive VIP + Birthday packages!
-
----
-
-**TERMS & CONDITIONS**
-
-- 21+ with valid physical ID required
-- Doors close at 8:00 PM sharp. No exceptions.
-- No refunds except in the event of cancellation.
-- Please arrive on time as queues can be very long.`,
-  highlights: [
-    { icon: '⏱️', label: '6 hours' },
-    { icon: '📍', label: 'In-person' },
-    { icon: '🎵', label: 'Live DJ' },
-    { icon: '🍹', label: 'Bar available' },
-  ],
-  refundPolicy: 'No refunds',
-  mapsUrl: 'https://maps.google.com/?q=Jl.+Sudirman+No.+88+Jakarta+Pusat',
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export async function generateMetadata({ params }: Props) {
   const { city, slug } = await params
@@ -287,72 +218,88 @@ export default async function EventDetailPage({ params }: Props) {
   const payload = await getPayload({ config: payloadConfig })
   const { user: currentUser } = await payload.auth({ headers })
 
-  // Try to fetch real event from Payload
   let realEvent: Event | null = null
   try {
     const { docs } = await payload.find({
       collection: 'events',
-      where: { slug: { equals: slug } },
+      where: {
+        and: [{ slug: { equals: slug } }, { status: { equals: 'published' } }],
+      },
       depth: 2,
       limit: 1,
     })
     if (docs.length > 0) realEvent = docs[0] as Event
   } catch {
-    // fall through to dummy
+    notFound()
   }
 
-  // Build display data — real event takes priority, dummy as fallback
-  const ev = realEvent
-    ? {
-        id: realEvent.id,
-        title: realEvent.title,
-        slug: realEvent.slug ?? slug,
-        coverImage: getPrimaryEventImage(realEvent) ?? DUMMY_EVENT.coverImage,
-        bannerImage: getMediaUrl(realEvent.bannerImage) ?? null,
-        galleryImages: (realEvent.galleryImages ?? [])
-          .map((g) => getMediaUrl(g.image))
-          .filter((u): u is string => u !== null),
-        startDate: realEvent.startDate,
-        endDate: realEvent.endDate ?? null,
-        venue: realEvent.venue ?? '',
-        address: realEvent.address ?? '',
-        locationName: getLocationName(realEvent.location),
-        categoryName: getCategoryName(realEvent.category),
-        isFree: realEvent.isFree ?? false,
-        isOnline: realEvent.isOnline ?? false,
-        price: realEvent.price ?? 'Free',
-        capacity: realEvent.capacity ?? null,
-        interestedCount: realEvent.interestedCount ?? 0,
-        status: realEvent.status,
-        tags: (realEvent.tags ?? []).map((t) => t.tag ?? '').filter(Boolean),
-        organizer: getOrganizerData(realEvent.organizer) ?? DUMMY_EVENT.organizer,
-        description: null as string | null,
-        highlights: DUMMY_EVENT.highlights,
-        refundPolicy: DUMMY_EVENT.refundPolicy,
-        mapsUrl: DUMMY_EVENT.mapsUrl,
-      }
-    : { ...DUMMY_EVENT, bannerImage: null, galleryImages: DUMMY_GALLERY }
+  if (!realEvent) {
+    notFound()
+  }
+
+  const organizer = getOrganizerData(realEvent.organizer)
+  if (!organizer) {
+    notFound()
+  }
+
+  const ev = {
+    id: realEvent.id,
+    title: realEvent.title,
+    slug: realEvent.slug ?? slug,
+    coverImage: getPrimaryEventImage(realEvent),
+    bannerImage: getMediaUrl(realEvent.bannerImage) ?? null,
+    galleryImages: (realEvent.galleryImages ?? [])
+      .map((g) => getMediaUrl(g.image))
+      .filter((u): u is string => u !== null),
+    startDate: realEvent.startDate,
+    endDate: realEvent.endDate ?? null,
+    venue: realEvent.venue ?? '',
+    address: realEvent.address ?? '',
+    locationName: getLocationName(realEvent.location),
+    categoryName: getCategoryName(realEvent.category),
+    isFree: realEvent.isFree ?? false,
+    isOnline: realEvent.isOnline ?? false,
+    price: realEvent.price ?? 'Free',
+    capacity: realEvent.capacity ?? null,
+    interestedCount: realEvent.interestedCount ?? 0,
+    status: realEvent.status,
+    tags: (realEvent.tags ?? []).map((t) => t.tag ?? '').filter(Boolean),
+    organizer,
+  }
 
   const cityName = ev.locationName || slugToDisplayName(city)
-  const org = ev.organizer as typeof DUMMY_EVENT.organizer
+  const org = ev.organizer
   const orgInitials = org.name
     .split(' ')
     .map((w: string) => w[0])
     .join('')
     .toUpperCase()
     .slice(0, 2)
+  const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent(ev.address || ev.venue || cityName)}`
 
   const isCancelled = ev.status === 'cancelled'
   const isCompleted = ev.status === 'completed'
   const ticketTypes = getEventTicketTypes(realEvent)
   const priceSummary = getTicketPriceSummary(ticketTypes, ev.price, ev.isFree)
   const lowInventoryNotice = getLowInventoryNotice(ticketTypes)
+  const eventCapacity = getEventCapacity(ticketTypes, ev.capacity)
   const relatedOrganizers = new Map<
     number | string,
     Pick<User, 'id' | 'name' | 'avatar' | 'followersCount'> & { upcomingEvents: number }
   >()
+  let organizerEventCount = 0
 
   try {
+    const organizerEvents = await payload.count({
+      collection: 'events',
+      where: {
+        organizer: {
+          equals: org.id,
+        },
+      },
+    })
+    organizerEventCount = organizerEvents.totalDocs
+
     const locationId = realEvent ? getLocationId(realEvent.location) : null
 
     if (locationId) {
@@ -420,14 +367,22 @@ export default async function EventDetailPage({ params }: Props) {
         user={currentUser ? { name: currentUser.name, email: currentUser.email } : null}
       />
 
-      {/* ── Hero Image ─────────────────────────────────────────────────────── */}
+      {/* â”€â”€ Hero Image â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="relative w-full bg-zinc-900" style={{ maxHeight: 480 }}>
-        <img
-          src={typeof ev.coverImage === 'string' ? ev.coverImage : DUMMY_EVENT.coverImage}
-          alt={ev.title}
-          className="w-full object-cover"
-          style={{ maxHeight: 480, width: '100%' }}
-        />
+        {ev.coverImage ? (
+          <img
+            src={ev.coverImage}
+            alt={ev.title}
+            className="w-full object-cover"
+            style={{ maxHeight: 480, width: '100%' }}
+          />
+        ) : (
+          <div className="flex h-[360px] w-full items-center justify-center bg-linear-to-br from-indigo-950 via-zinc-900 to-slate-800 text-white">
+            <span className="text-sm font-semibold uppercase tracking-[0.3em] text-white/50">
+              Eventbro
+            </span>
+          </div>
+        )}
         <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent" />
 
         {/* Status badge */}
@@ -452,7 +407,7 @@ export default async function EventDetailPage({ params }: Props) {
         )}
       </div>
 
-      {/* ── Breadcrumb ─────────────────────────────────────────────────────── */}
+      {/* â”€â”€ Breadcrumb â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="bg-white border-b border-zinc-100">
         <div className="mx-auto max-w-[1200px] px-4 py-3 lg:px-8">
           <nav className="flex items-center gap-1.5 text-xs text-zinc-400">
@@ -475,10 +430,10 @@ export default async function EventDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {/* ── Main Layout ────────────────────────────────────────────────────── */}
+      {/* â”€â”€ Main Layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="mx-auto max-w-[1200px] px-4 py-8 lg:px-8">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
-          {/* ── LEFT COLUMN ─────────────────────────────────────────────── */}
+          {/* â”€â”€ LEFT COLUMN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <div className="min-w-0 flex-1 space-y-6">
             {/* Title + organizer quick info */}
             <div className="rounded-2xl bg-white p-6 shadow-sm">
@@ -525,8 +480,7 @@ export default async function EventDetailPage({ params }: Props) {
                   </div>
                   <p className="text-xs text-zinc-400">
                     {formatFollowers(org.followersCount)} followers
-                    {'totalEvents' in org &&
-                      ` · ${(org as typeof DUMMY_EVENT.organizer).totalEvents} events`}
+                    {organizerEventCount > 0 && ` · ${organizerEventCount} events`}
                   </p>
                 </div>
               </Link>
@@ -547,7 +501,7 @@ export default async function EventDetailPage({ params }: Props) {
                   <p className="text-sm font-bold text-[#12192f]">{formatFullDate(ev.startDate)}</p>
                   <p className="text-sm text-zinc-500">
                     {formatTime(ev.startDate)}
-                    {ev.endDate && ` – ${formatTime(ev.endDate)}`}
+                    {ev.endDate && ` â€“ ${formatTime(ev.endDate)}`}
                   </p>
                 </div>
               </div>
@@ -565,7 +519,7 @@ export default async function EventDetailPage({ params }: Props) {
                       <p className="text-sm font-bold text-[#12192f]">{ev.venue || cityName}</p>
                       {ev.address && <p className="text-sm text-zinc-500">{ev.address}</p>}
                       <a
-                        href={ev.mapsUrl}
+                        href={mapsUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#5151eb] hover:underline"
@@ -579,21 +533,11 @@ export default async function EventDetailPage({ params }: Props) {
               </div>
 
               {/* Capacity */}
-              {ev.capacity && (
-                <div className="flex items-start gap-4">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-[#5151eb]">
-                    <Users className="size-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-[#12192f]">
-                      Capacity: {ev.capacity.toLocaleString()} people
-                    </p>
-                    <p className="text-sm text-zinc-500">
-                      {ev.interestedCount.toLocaleString()} people interested
-                    </p>
-                  </div>
-                </div>
-              )}
+              <EventInterestStats
+                eventId={Number(ev.id)}
+                capacity={eventCapacity}
+                interestedCount={ev.interestedCount}
+              />
             </div>
 
             {/* Description */}
@@ -604,13 +548,7 @@ export default async function EventDetailPage({ params }: Props) {
               {realEvent?.description ? (
                 <EventDetailDescription content={realEvent.description} />
               ) : (
-                <div className="prose prose-sm max-w-none text-zinc-700">
-                  {DUMMY_EVENT.description.split('\n\n').map((para, i) => (
-                    <p key={i} className="mb-3 leading-relaxed whitespace-pre-line">
-                      {para}
-                    </p>
-                  ))}
-                </div>
+                <p className="text-sm text-zinc-500">No description has been added yet.</p>
               )}
             </div>
 
@@ -689,67 +627,14 @@ export default async function EventDetailPage({ params }: Props) {
                     </span>
                   </div>
 
-                  <div className="mt-2 flex flex-wrap gap-4 text-xs text-zinc-500">
-                    <span>
-                      <strong className="text-zinc-800">
-                        {formatFollowers(org.followersCount)}
-                      </strong>{' '}
-                      followers
-                    </span>
-                    {'totalEvents' in org && (
-                      <span>
-                        <strong className="text-zinc-800">
-                          {(org as typeof DUMMY_EVENT.organizer).totalEvents}
-                        </strong>{' '}
-                        events
-                      </span>
-                    )}
-                    {'yearsHosting' in org && (
-                      <span>
-                        <strong className="text-zinc-800">
-                          {(org as typeof DUMMY_EVENT.organizer).yearsHosting}y
-                        </strong>{' '}
-                        hosting
-                      </span>
-                    )}
-                    {'totalAttendees' in org && (
-                      <span>
-                        <strong className="text-zinc-800">
-                          {(org as typeof DUMMY_EVENT.organizer).totalAttendees.toLocaleString()}
-                        </strong>{' '}
-                        total attendees
-                      </span>
-                    )}
-                  </div>
-
                   {org.bio && <p className="mt-2 text-sm text-zinc-500 line-clamp-2">{org.bio}</p>}
 
-                  <div className="mt-3 flex items-center gap-3">
-                    <Link
-                      href={`/organizers/${org.id}`}
-                      className="rounded-lg border border-[#5151eb] px-4 py-1.5 text-xs font-bold text-[#5151eb] hover:bg-[#5151eb] hover:text-white transition"
-                    >
-                      Follow
-                    </Link>
-                    <Link
-                      href={`/organizers/${org.id}`}
-                      className="text-xs font-semibold text-zinc-500 hover:text-[#5151eb] transition"
-                    >
-                      View profile →
-                    </Link>
-                  </div>
+                  <OrganizerFollowSummary
+                    organizerId={Number(org.id)}
+                    initialFollowersCount={org.followersCount ?? 0}
+                    totalEvents={organizerEventCount || undefined}
+                  />
                 </div>
-              </div>
-            </div>
-
-            {/* Refund policy */}
-            <div className="rounded-2xl bg-white p-6 shadow-sm">
-              <h2 className="mb-3 text-base font-bold text-zinc-500 uppercase tracking-wide">
-                Refund Policy
-              </h2>
-              <div className="flex items-center gap-2 text-sm text-zinc-600">
-                <AlertCircle className="size-4 text-amber-500 shrink-0" />
-                <span>{ev.refundPolicy}</span>
               </div>
             </div>
 
@@ -765,10 +650,11 @@ export default async function EventDetailPage({ params }: Props) {
             </div>
           </div>
 
-          {/* ── RIGHT COLUMN (sticky) ────────────────────────────────────── */}
+          {/* â”€â”€ RIGHT COLUMN (sticky) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <div className="w-full shrink-0 space-y-4 lg:w-80 xl:w-96">
             <div className="sticky top-24 space-y-4">
               <EventDetailActions
+                eventId={Number(ev.id)}
                 eventTitle={ev.title}
                 price={priceSummary.label}
                 isFree={priceSummary.isFree}
@@ -793,7 +679,7 @@ export default async function EventDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {/* ── Footer ─────────────────────────────────────────────────────────── */}
+      {/* â”€â”€ Footer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <footer className="mt-8 bg-[#1d243a]">
         <div className="mx-auto max-w-[1400px] px-4 py-10 lg:px-8">
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
@@ -812,7 +698,7 @@ export default async function EventDetailPage({ params }: Props) {
                 Privacy
               </Link>
             </div>
-            <p className="text-sm text-zinc-500">© 2026 Eventbro</p>
+            <p className="text-sm text-zinc-500">Â© 2026 Eventbro</p>
           </div>
         </div>
       </footer>

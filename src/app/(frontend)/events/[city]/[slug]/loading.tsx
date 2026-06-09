@@ -149,14 +149,14 @@ export default function EventDetailLoading() {
               </div>
             </CardShell>
 
-            {/* Refund policy */}
+            {/* Refund policy
             <CardShell>
               <Skeleton className="h-4 w-28 mb-3" />
               <div className="flex items-center gap-2">
                 <Skeleton className="size-4 rounded-full shrink-0" />
                 <Skeleton className="h-3 w-32" />
               </div>
-            </CardShell>
+            </CardShell> */}
           </div>
 
           {/* ── RIGHT COLUMN ────────────────────────────────────────────── */}

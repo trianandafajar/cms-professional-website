@@ -10,6 +10,7 @@ import {
   type DummyOrganizer,
 } from '@/lib/dummy-organizers'
 import type { Media, User } from '@/payload-types'
+import { FollowButton } from '@/components/frontend/follow-button'
 
 type OrganizerSuggestionItem = Pick<User, 'id' | 'name' | 'avatar' | 'followersCount'> & {
   upcomingEvents?: number
@@ -94,7 +95,7 @@ function OrganizerRow({ org }: { org: DummyOrganizer }) {
 }
 
 function PayloadOrganizerRow({ org }: { org: OrganizerSuggestionItem }) {
-  const [followed, setFollowed] = useState(false)
+  const [followersCount, setFollowersCount] = useState(org.followersCount ?? 0)
   const avatarUrl = getAvatarUrl(org.avatar)
   const initials = org.name
     .split(' ')
@@ -128,7 +129,7 @@ function PayloadOrganizerRow({ org }: { org: OrganizerSuggestionItem }) {
             <CheckCircle2 className="size-3.5 shrink-0 text-[#5151eb]" aria-label="Verified" />
           </div>
           <p className="truncate text-xs text-zinc-400">
-            {formatFollowers(org.followersCount ?? 0)} followers
+            {formatFollowers(followersCount)} followers
             {org.upcomingEvents ? (
               <>
                 {' '}
@@ -139,17 +140,13 @@ function PayloadOrganizerRow({ org }: { org: OrganizerSuggestionItem }) {
         </Link>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setFollowed((f) => !f)}
-        className={`shrink-0 cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold transition ${
-          followed
-            ? 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'
-            : 'bg-[#5151eb] text-white hover:bg-[#4040d0]'
-        }`}
-      >
-        {followed ? 'Following' : 'Follow'}
-      </button>
+      <FollowButton
+        organizerId={Number(org.id)}
+        initialFollowersCount={followersCount}
+        onFollowersCountChange={setFollowersCount}
+        size="sm"
+        className="!mt-0 !w-auto shrink-0 px-3"
+      />
     </div>
   )
 }
