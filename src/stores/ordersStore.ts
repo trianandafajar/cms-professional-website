@@ -90,11 +90,19 @@ function mapOrderStatus(items: Ticket[]): OrderStatus {
     return 'Refunded'
   }
 
-  if (statuses.every((status) => status === 'completed' || status === 'checked_in' || status === 'active')) {
+  if (
+    statuses.every(
+      (status) => status === 'completed' || status === 'checked_in' || status === 'active',
+    )
+  ) {
     return 'Completed'
   }
 
-  if (statuses.some((status) => status === 'completed' || status === 'checked_in' || status === 'active')) {
+  if (
+    statuses.some(
+      (status) => status === 'completed' || status === 'checked_in' || status === 'active',
+    )
+  ) {
     return 'Completed'
   }
 
@@ -110,7 +118,7 @@ function toOrderTicketItem(ticket: Ticket): OrderTicketItem {
     id: ticket.id,
     ticketId: ticket.id,
     type: ticket.ticketType,
-    attendee: ticket.purchaserName,
+    attendee: ticket.attendeeName ?? ticket.purchaserName,
     price: ticket.price ?? 0,
     checkedIn: ticket.status === 'checked_in',
     seat: null,

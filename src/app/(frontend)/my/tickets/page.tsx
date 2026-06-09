@@ -276,6 +276,9 @@ export default function MyTicketsPage() {
                       <span className="rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-[#5151eb]">
                         Order: {ticket.order}
                       </span>
+                      <span className="rounded-lg bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-600">
+                        Attendee: {ticket.attendeeName ?? ticket.purchaserName}
+                      </span>
                       {ticket.paidAt && (
                         <span className="rounded-lg bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-600">
                           Paid {formatDateTime(ticket.paidAt)}

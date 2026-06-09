@@ -7,10 +7,17 @@ import { Button } from '@/components/ui/button'
 
 interface TicketInfo {
   id: number
+  order?: string
+  attendeeName: string
+  attendeeEmail?: string
+  attendeePhone?: string
   purchaserName: string
   purchaserEmail: string
+  purchaserPhone?: string
   ticketType: string
   eventName: string
+  paymentProvider?: 'stripe' | 'paypal' | null
+  status?: string
   checkedInAt?: string
 }
 
@@ -52,20 +59,39 @@ function ValidTicketCard({
       {/* Attendee info */}
       <div className="space-y-2 mb-5">
         <div className="flex items-baseline justify-between">
-          <span className="text-xs text-zinc-500">Name</span>
-          <span className="text-sm font-medium text-zinc-900">{ticket.purchaserName}</span>
+          <span className="text-xs text-zinc-500">Attendee Name</span>
+          <span className="text-sm font-bold text-zinc-900">{ticket.attendeeName}</span>
         </div>
         <div className="flex items-baseline justify-between">
-          <span className="text-xs text-zinc-500">Email</span>
-          <span className="text-sm font-medium text-zinc-900">{ticket.purchaserEmail}</span>
+          <span className="text-xs text-zinc-500">Attendee Email</span>
+          <span className="text-sm font-medium text-zinc-900">
+            {ticket.attendeeEmail || ticket.purchaserEmail}
+          </span>
         </div>
         <div className="flex items-baseline justify-between">
           <span className="text-xs text-zinc-500">Ticket Type</span>
           <span className="text-sm font-medium text-zinc-900">{ticket.ticketType}</span>
         </div>
         <div className="flex items-baseline justify-between">
+          <span className="text-xs text-zinc-500">Order</span>
+          <span className="text-sm font-medium text-zinc-900">{ticket.order ?? '-'}</span>
+        </div>
+        <div className="flex items-baseline justify-between">
           <span className="text-xs text-zinc-500">Event</span>
           <span className="text-sm font-medium text-zinc-900">{ticket.eventName}</span>
+        </div>
+        <div className="flex items-baseline justify-between">
+          <span className="text-xs text-zinc-500">Buyer</span>
+          <span className="text-sm font-medium text-zinc-900">
+            {ticket.purchaserName} ({ticket.purchaserEmail})
+          </span>
+        </div>
+        <div className="flex items-baseline justify-between">
+          <span className="text-xs text-zinc-500">Payment</span>
+          <span className="text-sm font-medium text-zinc-900">
+            {ticket.paymentProvider === 'paypal' ? 'PayPal' : 'Stripe'} -{' '}
+            {ticket.status ?? 'active'}
+          </span>
         </div>
       </div>
 
@@ -84,7 +110,7 @@ function ValidTicketCard({
           ) : (
             <>
               <CheckCircle2 size={16} className="mr-2" />
-              Confirm Check-In
+              Approve Check-In
             </>
           )}
         </Button>
@@ -140,8 +166,10 @@ function AlreadyCheckedInCard({ ticket }: { ticket: TicketInfo }) {
       {ticket.purchaserName && (
         <div className="mt-3 space-y-1">
           <div className="flex items-baseline justify-between">
-            <span className="text-xs text-amber-600">Name</span>
-            <span className="text-sm font-medium text-zinc-900">{ticket.purchaserName}</span>
+            <span className="text-xs text-amber-600">Attendee Name</span>
+            <span className="text-sm font-medium text-zinc-900">
+              {ticket.attendeeName ?? ticket.purchaserName}
+            </span>
           </div>
           <div className="flex items-baseline justify-between">
             <span className="text-xs text-amber-600">Ticket Type</span>

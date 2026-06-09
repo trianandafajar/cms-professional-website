@@ -6,9 +6,16 @@ import { DEFAULT_CURRENCY } from '@/lib/finance'
 export const Tickets: CollectionConfig = {
   slug: 'tickets',
   admin: {
-    useAsTitle: 'purchaserName',
+    useAsTitle: 'attendeeName',
     group: 'Event Management',
-    defaultColumns: ['purchaserName', 'event', 'ticketType', 'status', 'checkedInAt'],
+    defaultColumns: [
+      'attendeeName',
+      'purchaserName',
+      'event',
+      'ticketType',
+      'status',
+      'checkedInAt',
+    ],
   },
   custom: {
     nav: {
@@ -31,6 +38,18 @@ export const Tickets: CollectionConfig = {
 
         if (operation === 'create' && !ticketData.qrToken) {
           ticketData.qrToken = randomUUID().replace(/-/g, '')
+        }
+
+        if (!ticketData.attendeeName && ticketData.purchaserName) {
+          ticketData.attendeeName = ticketData.purchaserName
+        }
+
+        if (!ticketData.attendeeEmail && ticketData.purchaserEmail) {
+          ticketData.attendeeEmail = ticketData.purchaserEmail
+        }
+
+        if (!ticketData.attendeePhone && ticketData.purchaserPhone) {
+          ticketData.attendeePhone = ticketData.purchaserPhone
         }
 
         return ticketData
@@ -63,6 +82,25 @@ export const Tickets: CollectionConfig = {
     {
       name: 'purchaserPhone',
       type: 'text',
+    },
+    {
+      name: 'attendeeName',
+      type: 'text',
+      required: true,
+      label: 'Attendee Name',
+      admin: {
+        description: 'Name checked by organizers at the venue. Defaults to purchaser name.',
+      },
+    },
+    {
+      name: 'attendeeEmail',
+      type: 'text',
+      label: 'Attendee Email',
+    },
+    {
+      name: 'attendeePhone',
+      type: 'text',
+      label: 'Attendee Phone',
     },
     {
       name: 'ticketType',

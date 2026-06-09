@@ -5,6 +5,7 @@
 export interface ParseResult {
   valid: boolean
   ticketId: number | null
+  token?: string | null
   error?: string
 }
 
@@ -18,14 +19,14 @@ const ACCEPTED_MIME_TYPES = ['image/png', 'image/jpg', 'image/jpeg']
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 
 /**
- * Parses a QR code URL and extracts the numeric ticket ID.
+ * Parses a QR code URL and extracts the numeric ticket ID and token.
  *
  * Rules:
  * 1. Must start with `https://eventbro.id/checkin/`
  * 2. Extract path segment after `/checkin/`
  * 3. Strip trailing slash, query params, fragments
  * 4. Validate: numeric only, 1-15 digits
- * 5. Return parsed numeric ticketId
+ * 5. Return parsed numeric ticketId and token query param
  */
 export function parseCheckinUrl(data: string): ParseResult {
   if (!data || typeof data !== 'string') {
@@ -38,6 +39,15 @@ export function parseCheckinUrl(data: string): ParseResult {
       ticketId: null,
       error: 'URL does not start with https://eventbro.id/checkin/',
     }
+  }
+
+  let token: string | null = null
+
+  try {
+    const url = new URL(data)
+    token = url.searchParams.get('token')
+  } catch {
+    token = null
   }
 
   // Extract everything after the prefix
@@ -78,7 +88,7 @@ export function parseCheckinUrl(data: string): ParseResult {
   // Convert to number (preserves leading-zero-free numeric equivalence)
   const ticketId = Number(segment)
 
-  return { valid: true, ticketId }
+  return { valid: true, ticketId, token }
 }
 
 /**

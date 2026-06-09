@@ -56,8 +56,12 @@ function getIdrToUsdRate() {
 
 function convertMoneyForStripe(amount: number, sourceCurrency: string, targetCurrency: string) {
   const normalizedAmount = normalizeMoneyAmount(amount)
-  const normalizedSourceCurrency = String(sourceCurrency ?? '').trim().toLowerCase()
-  const normalizedTargetCurrency = String(targetCurrency ?? '').trim().toLowerCase()
+  const normalizedSourceCurrency = String(sourceCurrency ?? '')
+    .trim()
+    .toLowerCase()
+  const normalizedTargetCurrency = String(targetCurrency ?? '')
+    .trim()
+    .toLowerCase()
 
   if (!normalizedAmount) {
     return 0
@@ -437,7 +441,7 @@ async function createPayPalReferral({
   const data = await response.json()
   const actionUrl = (data.links || []).find((link: any) => link.rel === 'action_url')?.href
   const selfUrl = (data.links || []).find((link: any) => link.rel === 'self')?.href
-  const partnerReferralId = selfUrl ? selfUrl.split('/').pop() ?? null : null
+  const partnerReferralId = selfUrl ? (selfUrl.split('/').pop() ?? null) : null
 
   if (!actionUrl) {
     throw new Error('PayPal onboarding URL was not returned')
@@ -569,8 +573,9 @@ async function updateEventTicketSoldCounts(
   )
 
   const updatedTicketTypes = (event.ticketTypes ?? []).map((ticketType: any) => {
-    const quantity = quantities.find((item) => String(item.ticketTypeId) === String(ticketType.id))
-      ?.quantity
+    const quantity = quantities.find(
+      (item) => String(item.ticketTypeId) === String(ticketType.id),
+    )?.quantity
     if (!quantity) {
       return ticketType
     }
@@ -637,6 +642,9 @@ async function createTicketsForOrder({
           purchaserName: String(buyer.name),
           purchaserEmail: String(buyer.email),
           purchaserPhone: buyer.phone ? String(buyer.phone) : undefined,
+          attendeeName: String(buyer.name),
+          attendeeEmail: String(buyer.email),
+          attendeePhone: buyer.phone ? String(buyer.phone) : undefined,
           ticketType: item.ticketName,
           price: item.unitPrice,
           status: status ?? 'completed',
@@ -771,7 +779,8 @@ export const financeWorkspaceUpdateEndpoint: Endpoint = {
       serviceFeePercent: Number(body?.serviceFeePercent ?? 5),
       taxPercent: Number(body?.taxPercent ?? 0),
       taxLabel: String(body?.taxLabel ?? 'Tax'),
-      defaultProvider: (body?.defaultProvider ?? 'auto') as FinanceSettingsSummary['defaultProvider'],
+      defaultProvider: (body?.defaultProvider ??
+        'auto') as FinanceSettingsSummary['defaultProvider'],
       currency: DEFAULT_CURRENCY,
     }
 
@@ -883,10 +892,17 @@ export const financeCheckoutCreateEndpoint: Endpoint = {
     }
 
     if (eventSlug && String(event.slug ?? '') !== eventSlug) {
-      return Response.json({ error: 'Event slug does not match the selected event' }, { status: 400 })
+      return Response.json(
+        { error: 'Event slug does not match the selected event' },
+        { status: 400 },
+      )
     }
 
-    if (eventId && String(event.id) !== String(eventId) && String(event.slug ?? '') !== String(eventId)) {
+    if (
+      eventId &&
+      String(event.id) !== String(eventId) &&
+      String(event.slug ?? '') !== String(eventId)
+    ) {
       return Response.json({ error: 'Event ID does not match the selected event' }, { status: 400 })
     }
 
@@ -910,20 +926,34 @@ export const financeCheckoutCreateEndpoint: Endpoint = {
     }
 
     const now = new Date()
-    const eventTicketTypes = dedupeTicketsById(Array.isArray(event.ticketTypes) ? event.ticketTypes : [])
+    const eventTicketTypes = dedupeTicketsById(
+      Array.isArray(event.ticketTypes) ? event.ticketTypes : [],
+    )
     const normalizedItems = cart
       .map((item: any) => {
         const ticketTypeId = extractTicketTypeId(
-          String(item.ticketKey ?? item.ticketTypeKey ?? item.ticketTypeId ?? item.id ?? item.ticketType?.id ?? ''),
+          String(
+            item.ticketKey ??
+              item.ticketTypeKey ??
+              item.ticketTypeId ??
+              item.id ??
+              item.ticketType?.id ??
+              '',
+          ),
         )
         const quantity = Math.max(0, Number(item.quantity ?? 0))
-        const ticketType = eventTicketTypes.find((candidate: any) => String(candidate.id) === ticketTypeId)
+        const ticketType = eventTicketTypes.find(
+          (candidate: any) => String(candidate.id) === ticketTypeId,
+        )
 
         if (!ticketType || !isTicketTypeSaleActive(ticketType, now) || quantity <= 0) {
           return null
         }
 
-        const available = Math.max(0, Number(ticketType.quantity ?? 0) - Number(ticketType.sold ?? 0))
+        const available = Math.max(
+          0,
+          Number(ticketType.quantity ?? 0) - Number(ticketType.sold ?? 0),
+        )
         if (quantity > available) {
           return null
         }
@@ -948,10 +978,7 @@ export const financeCheckoutCreateEndpoint: Endpoint = {
       return Response.json({ error: 'No valid ticket items provided' }, { status: 400 })
     }
 
-    const subtotal = normalizedItems.reduce(
-      (sum, item) => sum + item.unitPrice * item.quantity,
-      0,
-    )
+    const subtotal = normalizedItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)
     const totals = calculateCheckoutTotals(subtotal, settings)
     const orderId = generateOrderId()
     const isFreeOrder = totals.total === 0
@@ -998,10 +1025,7 @@ export const financeCheckoutCreateEndpoint: Endpoint = {
     }
 
     if (!stripeAvailable) {
-      return Response.json(
-        { error: 'Stripe is not connected for this organizer' },
-        { status: 400 },
-      )
+      return Response.json({ error: 'Stripe is not connected for this organizer' }, { status: 400 })
     }
 
     const stripe = getStripeClient()
@@ -1168,7 +1192,10 @@ export const financeCheckoutCreateEndpoint: Endpoint = {
       }
 
       const message = String(error?.message ?? '')
-      if (String(error?.code ?? '') === 'amount_too_small' || message.includes('amount too small')) {
+      if (
+        String(error?.code ?? '') === 'amount_too_small' ||
+        message.includes('amount too small')
+      ) {
         return Response.json(
           {
             error:
@@ -1485,7 +1512,12 @@ export const financeWebhookEndpoint: Endpoint = {
     }
 
     const body = await (req.json as () => Promise<any>)()
-    const orderId = String(body?.orderId ?? body?.data?.orderId ?? body?.resource?.supplementary_data?.related_ids?.order_id ?? '')
+    const orderId = String(
+      body?.orderId ??
+        body?.data?.orderId ??
+        body?.resource?.supplementary_data?.related_ids?.order_id ??
+        '',
+    )
     const status = String(body?.status ?? body?.event_type ?? body?.event ?? '')
 
     if (!orderId) {
@@ -1555,8 +1587,7 @@ export const financeConnectStartEndpoint: Endpoint = {
       const existingAccountId =
         typeof pending.externalAccountId === 'string' ? pending.externalAccountId : null
       const account =
-        existingAccountId &&
-        (await getStripeAccount(stripe, existingAccountId).catch(() => null))
+        existingAccountId && (await getStripeAccount(stripe, existingAccountId).catch(() => null))
 
       const connectedAccount = account
         ? account
@@ -1613,11 +1644,11 @@ export const financeConnectStartEndpoint: Endpoint = {
     }
 
     try {
-  const accessToken = await getPayPalAccessToken()
-  const { actionUrl, partnerReferralId } = await createPayPalReferral({
-    accessToken,
-    state: String(pending.authState),
-  })
+      const accessToken = await getPayPalAccessToken()
+      const { actionUrl, partnerReferralId } = await createPayPalReferral({
+        accessToken,
+        state: String(pending.authState),
+      })
 
       await payload.update({
         collection: 'payment-connections',
@@ -1648,7 +1679,9 @@ export const financeConnectStartEndpoint: Endpoint = {
           metadata: {
             ...safePlainObject(pending.metadata),
             error: error?.message ?? 'PayPal onboarding failed',
-            errorCode: isPartnerUnauthorized ? 'paypal_partner_not_enabled' : 'paypal_onboarding_failed',
+            errorCode: isPartnerUnauthorized
+              ? 'paypal_partner_not_enabled'
+              : 'paypal_onboarding_failed',
           },
         },
         depth: 0,
@@ -1657,9 +1690,7 @@ export const financeConnectStartEndpoint: Endpoint = {
 
       return Response.redirect(
         `${getServerURL()}/organizations/finance/settings?error=${encodeURIComponent(
-          isPartnerUnauthorized
-            ? 'paypal_partner_not_enabled'
-            : 'paypal_onboarding_failed',
+          isPartnerUnauthorized ? 'paypal_partner_not_enabled' : 'paypal_onboarding_failed',
         )}`,
         302,
       )
@@ -1708,7 +1739,10 @@ export const financeConnectStripeCallbackEndpoint: Endpoint = {
       )
     }
 
-    return Response.redirect(`${getServerURL()}/organizations/finance/settings?connected=stripe`, 302)
+    return Response.redirect(
+      `${getServerURL()}/organizations/finance/settings?connected=stripe`,
+      302,
+    )
   },
 }
 
@@ -1783,8 +1817,9 @@ export const financeConnectPayPalCallbackEndpoint: Endpoint = {
     const { payload } = req
     const state = String(req.query?.state ?? '')
     const merchantId =
-      String(req.query?.merchantId ?? req.query?.merchantIdInPayPal ?? req.query?.merchant_id ?? '')
-        || null
+      String(
+        req.query?.merchantId ?? req.query?.merchantIdInPayPal ?? req.query?.merchant_id ?? '',
+      ) || null
     const error = String(req.query?.error ?? '')
 
     if (error) {

@@ -54,8 +54,9 @@ export function CameraScanner({ onScanResult, isActive }: CameraScannerProps) {
   const [isScanning, setIsScanning] = useState(false)
   const [scanFlash, setScanFlash] = useState(false)
   const [audioEnabled, setAudioEnabled] = useState(true)
+  const [trackedQR, setTrackedQR] = useState<string | null>(null)
 
-  const DEBOUNCE_MS = 3000
+  const DEBOUNCE_MS = 800
   const SCANNER_ELEMENT_ID = 'camera-scanner-region'
 
   // ─── Debounce Check ───────────────────────────────────────────────────────
@@ -76,7 +77,7 @@ export function CameraScanner({ onScanResult, isActive }: CameraScannerProps) {
 
   const handleScanSuccess = useCallback(
     (decodedText: string) => {
-      // Debounce: ignore same QR code within 3 seconds
+      // Debounce: ignore the same QR code briefly while still allowing quick retries.
       if (isDebouncedScan(decodedText)) {
         return
       }
@@ -91,7 +92,11 @@ export function CameraScanner({ onScanResult, isActive }: CameraScannerProps) {
 
       // Visual feedback: green flash
       setScanFlash(true)
+      setTrackedQR(decodedText)
       setTimeout(() => setScanFlash(false), 600)
+      setTimeout(() => {
+        setTrackedQR((current) => (current === decodedText ? null : current))
+      }, 2500)
 
       // Audio cue
       if (audioEnabled) {
@@ -118,9 +123,10 @@ export function CameraScanner({ onScanResult, isActive }: CameraScannerProps) {
       await scanner.start(
         { facingMode: 'environment' },
         {
-          fps: 2,
-          qrbox: { width: 250, height: 250 },
+          fps: 10,
+          qrbox: { width: 280, height: 280 },
           aspectRatio: 1,
+          disableFlip: false,
         },
         handleScanSuccess,
         // Error callback (called on each frame without QR) — ignore
@@ -185,6 +191,8 @@ export function CameraScanner({ onScanResult, isActive }: CameraScannerProps) {
   }, [isActive])
 
   // ─── Render ───────────────────────────────────────────────────────────────
+
+  if (!isActive) return null
 
   // Camera permission denied state
   if (cameraError) {
@@ -256,7 +264,11 @@ export function CameraScanner({ onScanResult, isActive }: CameraScannerProps) {
       {isScanning && (
         <div className="mt-3 flex items-center justify-center gap-2">
           <div className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
-          <span className="text-xs text-zinc-500">Camera active — scanning for QR codes</span>
+          <span className="text-xs text-zinc-500">
+            {trackedQR
+              ? 'QR tracked - loading ticket data automatically'
+              : 'Camera active - tracking QR codes automatically'}
+          </span>
         </div>
       )}
 

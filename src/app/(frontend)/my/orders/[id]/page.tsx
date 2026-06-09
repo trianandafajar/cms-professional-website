@@ -91,7 +91,7 @@ function getQrValue(ticket: TicketRecord) {
 
 export default function MyOrderDetailPage() {
   const params = useParams<{ id: string }>()
-  const orderId = Array.isArray(params.id) ? params.id[0] : params.id ?? ''
+  const orderId = Array.isArray(params.id) ? params.id[0] : (params.id ?? '')
   const user = useAuthStore((state) => state.user)
   const hasHydrated = useAuthStore((state) => state._hasHydrated)
   const [tickets, setTickets] = useState<TicketRecord[]>([])
@@ -135,7 +135,10 @@ export default function MyOrderDetailPage() {
     loadOrder()
   }, [hasHydrated, orderId, user?.email])
 
-  const eventTitle = useMemo(() => (tickets[0] ? getEventTitle(tickets[0]) : 'Order not found'), [tickets])
+  const eventTitle = useMemo(
+    () => (tickets[0] ? getEventTitle(tickets[0]) : 'Order not found'),
+    [tickets],
+  )
   const eventDate = tickets[0] ? getEventDate(tickets[0]) : null
   const eventEndDate = tickets[0] ? getEventEndDate(tickets[0]) : null
   const venue = tickets[0] ? getVenue(tickets[0]) : ''
@@ -144,7 +147,12 @@ export default function MyOrderDetailPage() {
   const buyerEmail = tickets[0]?.purchaserEmail ?? ''
   const buyerPhone = tickets[0]?.purchaserPhone ?? ''
   const totalAmount =
-    tickets.length > 0 ? Number(tickets[0].totalAmount ?? tickets.reduce((sum, ticket) => sum + Number(ticket.price ?? 0), 0)) : 0
+    tickets.length > 0
+      ? Number(
+          tickets[0].totalAmount ??
+            tickets.reduce((sum, ticket) => sum + Number(ticket.price ?? 0), 0),
+        )
+      : 0
   const paymentProvider = tickets[0]?.paymentProvider ?? 'stripe'
   const paidAt = tickets[0]?.paidAt ?? tickets[0]?.createdAt ?? null
 
@@ -221,8 +229,7 @@ export default function MyOrderDetailPage() {
             tickets.some((ticket) => ticket.status === 'pending')
               ? 'border-amber-200 bg-amber-50 text-amber-700'
               : tickets.some(
-                    (ticket) =>
-                      ticket.status === 'cancelled' || ticket.status === 'refunded',
+                    (ticket) => ticket.status === 'cancelled' || ticket.status === 'refunded',
                   )
                 ? 'border-zinc-200 bg-zinc-50 text-zinc-700'
                 : 'border-emerald-200 bg-emerald-50 text-emerald-700'
@@ -260,7 +267,8 @@ export default function MyOrderDetailPage() {
       </div>
 
       <div className="mt-5 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-        <h3 className="text-base font-bold text-[#12192f]">Attendee Information</h3>
+        <h3 className="text-base font-bold text-[#12192f]">Buyer Information</h3>
+        {buyerName && <p className="mt-2 text-sm font-semibold text-zinc-900">{buyerName}</p>}
         <div className="mt-3 space-y-2">
           <div className="flex items-center gap-2 text-sm text-zinc-600">
             <Mail className="size-4 text-zinc-400" />
@@ -320,7 +328,9 @@ export default function MyOrderDetailPage() {
                     </div>
                   </div>
 
-                  <p className="mt-4 text-xs text-indigo-300">Attendee: {ticket.purchaserName}</p>
+                  <p className="mt-4 text-xs text-indigo-300">
+                    Attendee: {ticket.attendeeName ?? ticket.purchaserName}
+                  </p>
                 </div>
 
                 <div className="shrink-0 rounded-xl bg-white p-2">

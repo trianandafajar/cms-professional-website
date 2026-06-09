@@ -17,11 +17,18 @@ export const checkinConfirmEndpoint: Endpoint = {
     }
 
     // Parse request body
-    const body = await (req.json as () => Promise<{ ticketId?: number; eventId?: number }>)()
+    const body = await (
+      req.json as () => Promise<{ ticketId?: number; eventId?: number; token?: string }>
+    )()
     const { ticketId, eventId } = body
+    const token = String(body.token ?? '')
 
     if (!ticketId || !eventId) {
       return Response.json({ error: 'ticketId and eventId are required' }, { status: 400 })
+    }
+
+    if (!token) {
+      return Response.json({ error: 'QR token is required' }, { status: 400 })
     }
 
     try {
@@ -61,8 +68,16 @@ export const checkinConfirmEndpoint: Endpoint = {
         return Response.json({ error: 'Ticket belongs to a different event' }, { status: 400 })
       }
 
+      if (!ticket.qrToken || ticket.qrToken !== token) {
+        return Response.json({ error: 'QR token does not match this ticket' }, { status: 400 })
+      }
+
       // 6. Check if ticket is in a valid paid state
-      if (ticket.status === 'pending' || ticket.status === 'cancelled' || ticket.status === 'refunded') {
+      if (
+        ticket.status === 'pending' ||
+        ticket.status === 'cancelled' ||
+        ticket.status === 'refunded'
+      ) {
         return Response.json({ error: 'Ticket is not active' }, { status: 400 })
       }
 
@@ -92,7 +107,7 @@ export const checkinConfirmEndpoint: Endpoint = {
       // 9. Return success with attendee info
       return Response.json({
         success: true,
-        attendeeName: ticket.purchaserName,
+        attendeeName: ticket.attendeeName ?? ticket.purchaserName,
         ticketType: ticket.ticketType,
         checkedInAt,
       })

@@ -38,10 +38,17 @@ interface EventOption {
 
 interface TicketInfo {
   id: number
+  order?: string
+  attendeeName: string
+  attendeeEmail?: string
+  attendeePhone?: string
   purchaserName: string
   purchaserEmail: string
+  purchaserPhone?: string
   ticketType: string
   eventName: string
+  paymentProvider?: 'stripe' | 'paypal' | null
+  status?: string
   checkedInAt?: string
 }
 
@@ -78,6 +85,7 @@ export default function CheckInPage() {
   const [validationResult, setValidationResult] = useState<ValidationResultData | null>(null)
   const [isConfirming, setIsConfirming] = useState(false)
   const [confirmRetryCount, setConfirmRetryCount] = useState(0)
+  const [trackedTicketId, setTrackedTicketId] = useState<number | null>(null)
 
   // Error state
   const [flowError, setFlowError] = useState<string | null>(null)
@@ -94,6 +102,7 @@ export default function CheckInPage() {
   // Refs for cleanup
   const autoDismissTimerRef = useRef<NodeJS.Timeout | null>(null)
   const currentTicketIdRef = useRef<number | null>(null)
+  const currentQrTokenRef = useRef<string | null>(null)
 
   // ─── Authentication Guard + Revalidation ────────────────────────────────
 
@@ -202,10 +211,12 @@ export default function CheckInPage() {
     setValidationResult(null)
     setIsConfirming(false)
     setConfirmRetryCount(0)
+    setTrackedTicketId(null)
     setFlowError(null)
     setIsTimeout(false)
     setSuccessMessage(null)
     currentTicketIdRef.current = null
+    currentQrTokenRef.current = null
     if (autoDismissTimerRef.current) {
       clearTimeout(autoDismissTimerRef.current)
       autoDismissTimerRef.current = null
@@ -247,13 +258,15 @@ export default function CheckInPage() {
 
       // Parse the QR code URL
       const parseResult = parseCheckinUrl(data)
-      if (!parseResult.valid || !parseResult.ticketId) {
+      if (!parseResult.valid || !parseResult.ticketId || !parseResult.token) {
         setFlowError('This QR code is not a valid Eventbro ticket.')
         return
       }
 
       const ticketId = parseResult.ticketId
       currentTicketIdRef.current = ticketId
+      currentQrTokenRef.current = parseResult.token
+      setTrackedTicketId(ticketId)
 
       // Transition to validating state
       setFlowState('validating')
@@ -266,7 +279,11 @@ export default function CheckInPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ ticketId, eventId: Number(selectedEventId) }),
+          body: JSON.stringify({
+            ticketId,
+            eventId: Number(selectedEventId),
+            token: parseResult.token,
+          }),
         })
 
         const responseData = await response.json()
@@ -275,24 +292,30 @@ export default function CheckInPage() {
           // Valid responses from the API (including already_checked_in and wrong_event)
           setValidationResult(responseData as ValidationResultData)
           setFlowState('result')
+          setTrackedTicketId(null)
         } else if (response.status === 403) {
           setFlowError('You are not authorized to check in tickets for this event.')
           setFlowState('scanning')
+          setTrackedTicketId(null)
         } else if (response.status === 404) {
           setValidationResult({ status: 'invalid', error: 'Ticket not found' })
           setFlowState('result')
+          setTrackedTicketId(null)
         } else {
           setFlowError('Server error. Please try again.')
           setFlowState('scanning')
+          setTrackedTicketId(null)
         }
       } catch (error) {
         if (error instanceof Error && error.message === 'TIMEOUT') {
           setIsTimeout(true)
           setFlowError('Connection timed out. Please check your network and try again.')
           setFlowState('scanning')
+          setTrackedTicketId(null)
         } else {
           setFlowError('Network error. Please check your connection and try again.')
           setFlowState('scanning')
+          setTrackedTicketId(null)
         }
       }
     },
@@ -303,13 +326,14 @@ export default function CheckInPage() {
 
   const handleRetryValidation = useCallback(() => {
     const ticketId = currentTicketIdRef.current
-    if (!ticketId) return
+    const token = currentQrTokenRef.current
+    if (!ticketId || !token) return
 
     // Re-trigger validation with the same ticket
     setFlowError(null)
     setIsTimeout(false)
     // Construct the URL and re-call handleScanResult logic
-    const fakeUrl = `https://eventbro.id/checkin/${ticketId}`
+    const fakeUrl = `https://eventbro.id/checkin/${ticketId}?token=${encodeURIComponent(token)}`
     setFlowState('scanning') // Reset to allow handleScanResult to proceed
     // Use setTimeout to ensure state update is processed
     setTimeout(() => {
@@ -321,7 +345,8 @@ export default function CheckInPage() {
 
   const handleConfirm = useCallback(async () => {
     const ticketId = currentTicketIdRef.current
-    if (!ticketId || !selectedEventId) return
+    const token = currentQrTokenRef.current
+    if (!ticketId || !selectedEventId || !token) return
 
     setIsConfirming(true)
     setFlowError(null)
@@ -331,7 +356,7 @@ export default function CheckInPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ ticketId, eventId: Number(selectedEventId) }),
+        body: JSON.stringify({ ticketId, eventId: Number(selectedEventId), token }),
       })
 
       const responseData = await response.json()
@@ -560,8 +585,17 @@ export default function CheckInPage() {
             </div>
 
             {/* Scanner Components */}
-            <CameraScanner onScanResult={handleScanResult} isActive={isCameraActive} />
-            <FileScanner onScanResult={handleScanResult} isActive={isFileActive} />
+            {activeTab === 'camera' ? (
+              <CameraScanner onScanResult={handleScanResult} isActive={isCameraActive} />
+            ) : (
+              <FileScanner onScanResult={handleScanResult} isActive={isFileActive} />
+            )}
+
+            {trackedTicketId && flowState === 'validating' && (
+              <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
+                QR tracked for ticket #{trackedTicketId}. Loading attendee and transaction data...
+              </div>
+            )}
 
             {/* Validating indicator */}
             {flowState === 'validating' && (

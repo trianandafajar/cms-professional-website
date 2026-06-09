@@ -17,14 +17,21 @@ export const checkinValidateEndpoint: Endpoint = {
     }
 
     // Parse request body
-    const body = await (req.json as () => Promise<{ ticketId?: number; eventId?: number }>)()
+    const body = await (
+      req.json as () => Promise<{ ticketId?: number; eventId?: number; token?: string }>
+    )()
     const { ticketId, eventId } = body
+    const token = String(body.token ?? '')
 
     if (!ticketId || !eventId) {
       return Response.json(
         { status: 'invalid', error: 'ticketId and eventId are required' },
         { status: 400 },
       )
+    }
+
+    if (!token) {
+      return Response.json({ status: 'invalid', error: 'QR token is required' }, { status: 400 })
     }
 
     // 3. Verify user is the organizer of the specified event
@@ -66,8 +73,19 @@ export const checkinValidateEndpoint: Endpoint = {
       )
     }
 
+    if (!ticket.qrToken || ticket.qrToken !== token) {
+      return Response.json(
+        { status: 'invalid', error: 'QR token does not match this ticket' },
+        { status: 400 },
+      )
+    }
+
     // 6. Check if ticket is in a payable/check-in eligible state
-    if (ticket.status === 'pending' || ticket.status === 'cancelled' || ticket.status === 'refunded') {
+    if (
+      ticket.status === 'pending' ||
+      ticket.status === 'cancelled' ||
+      ticket.status === 'refunded'
+    ) {
       return Response.json(
         {
           status: 'invalid',
@@ -84,10 +102,17 @@ export const checkinValidateEndpoint: Endpoint = {
           status: 'already_checked_in',
           ticket: {
             id: ticket.id,
+            order: ticket.order,
+            attendeeName: ticket.attendeeName ?? ticket.purchaserName,
+            attendeeEmail: ticket.attendeeEmail ?? ticket.purchaserEmail,
+            attendeePhone: ticket.attendeePhone ?? ticket.purchaserPhone,
             purchaserName: ticket.purchaserName,
             purchaserEmail: ticket.purchaserEmail,
+            purchaserPhone: ticket.purchaserPhone,
             ticketType: ticket.ticketType,
             eventName: event.title,
+            paymentProvider: ticket.paymentProvider,
+            status: ticket.status,
             checkedInAt: ticket.checkedInAt,
           },
         },
@@ -100,10 +125,17 @@ export const checkinValidateEndpoint: Endpoint = {
       status: 'valid',
       ticket: {
         id: ticket.id,
+        order: ticket.order,
+        attendeeName: ticket.attendeeName ?? ticket.purchaserName,
+        attendeeEmail: ticket.attendeeEmail ?? ticket.purchaserEmail,
+        attendeePhone: ticket.attendeePhone ?? ticket.purchaserPhone,
         purchaserName: ticket.purchaserName,
         purchaserEmail: ticket.purchaserEmail,
+        purchaserPhone: ticket.purchaserPhone,
         ticketType: ticket.ticketType,
         eventName: event.title,
+        paymentProvider: ticket.paymentProvider,
+        status: ticket.status,
       },
     })
   },
