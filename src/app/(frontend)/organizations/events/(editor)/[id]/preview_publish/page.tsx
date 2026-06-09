@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
-import { Calendar, MapPin, Ticket, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react'
+import { Calendar, MapPin } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -61,10 +61,10 @@ export default function PreviewPublishPage() {
 
     setTags,
     setVisibility,
+    setBannerImages,
 
     setBannerZoom: setZoom,
     setBannerPosition,
-    resetBanner,
   } = useEventEditorStore()
 
   const bannerImage = bannerImages[0]?.url ?? ''
@@ -156,16 +156,16 @@ export default function PreviewPublishPage() {
       .sort((left, right) => left.name.localeCompare(right.name))
   }, [categories, category])
 
-  function resetPosition() {
-    resetBanner()
-  }
+  function selectBannerImage(imageId: number) {
+    const selectedImage = bannerImages.find((image) => image.id === imageId)
+    if (!selectedImage) return
 
-  function handleZoomIn() {
-    setZoom(Math.min(zoom + 0.25, 3))
-  }
-
-  function handleZoomOut() {
-    setZoom(Math.max(zoom - 0.25, 1))
+    setBannerImages([
+      selectedImage,
+      ...bannerImages.filter((image) => image.id !== imageId),
+    ])
+    setZoom(1)
+    setBannerPosition(50, 50)
   }
 
   // Drag handlers
@@ -232,6 +232,44 @@ export default function PreviewPublishPage() {
             </div>
           </div>
 
+          {bannerImages.length > 1 && (
+            <div className="mb-4">
+              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
+                Choose banner image
+              </p>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {bannerImages.map((image, index) => {
+                  const selected = image.id === bannerImages[0]?.id
+
+                  return (
+                    <button
+                      key={image.id}
+                      type="button"
+                      onClick={() => selectBannerImage(image.id)}
+                      className={`relative h-16 w-24 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 bg-zinc-100 transition ${
+                        selected
+                          ? 'border-[#5151eb] ring-4 ring-indigo-100'
+                          : 'border-transparent hover:border-zinc-300'
+                      }`}
+                      aria-label={`Use image ${index + 1} as banner`}
+                    >
+                      <img
+                        src={image.url}
+                        alt={`Banner option ${index + 1}`}
+                        className="h-full w-full object-cover"
+                      />
+                      {selected && (
+                        <span className="absolute left-1.5 top-1.5 rounded-full bg-[#5151eb] px-2 py-0.5 text-[10px] font-bold text-white">
+                          Active
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Editor area */}
           {bannerImage && (
             <div
@@ -284,10 +322,6 @@ export default function PreviewPublishPage() {
                       <span>{locationTitle}</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-3 text-sm text-zinc-600">
-                    <Ticket size={15} className="shrink-0 text-[#5151eb]" />
-                    <span>Free & paid tickets available</span>
-                  </div>
                 </div>
 
                 {tags.length > 0 && (

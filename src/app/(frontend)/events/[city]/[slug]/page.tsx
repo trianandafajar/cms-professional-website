@@ -80,6 +80,18 @@ function getCategoryName(category: unknown): string {
   return ''
 }
 
+function getLocationId(location: unknown): number | string | null {
+  if (location && typeof location === 'object' && 'id' in location) {
+    return (location as Location).id
+  }
+
+  if (typeof location === 'number' || typeof location === 'string') {
+    return location
+  }
+
+  return null
+}
+
 function formatFullDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('en-US', {
     weekday: 'long',
@@ -335,6 +347,72 @@ export default async function EventDetailPage({ params }: Props) {
   const ticketTypes = getEventTicketTypes(realEvent)
   const priceSummary = getTicketPriceSummary(ticketTypes, ev.price, ev.isFree)
   const lowInventoryNotice = getLowInventoryNotice(ticketTypes)
+  const relatedOrganizers = new Map<
+    number | string,
+    Pick<User, 'id' | 'name' | 'avatar' | 'followersCount'> & { upcomingEvents: number }
+  >()
+
+  try {
+    const locationId = realEvent ? getLocationId(realEvent.location) : null
+
+    if (locationId) {
+      const { docs } = await payload.find({
+        collection: 'events',
+        where: {
+          and: [{ location: { equals: locationId } }, { status: { equals: 'published' } }],
+        },
+        depth: 1,
+        limit: 50,
+        sort: '-startDate',
+      })
+
+      for (const eventDoc of docs as Event[]) {
+        const organizer = eventDoc.organizer
+        if (!organizer || typeof organizer !== 'object') continue
+
+        const existing = relatedOrganizers.get(organizer.id)
+        relatedOrganizers.set(organizer.id, {
+          id: organizer.id,
+          name: organizer.name,
+          avatar: organizer.avatar,
+          followersCount: organizer.followersCount ?? 0,
+          upcomingEvents: (existing?.upcomingEvents ?? 0) + 1,
+        })
+      }
+    }
+
+    if (relatedOrganizers.size === 0) {
+      const { docs } = await payload.find({
+        collection: 'users',
+        where: { isOrganizer: { equals: true } },
+        depth: 1,
+        limit: 4,
+        sort: '-followersCount',
+      })
+
+      for (const organizer of docs as User[]) {
+        relatedOrganizers.set(organizer.id, {
+          id: organizer.id,
+          name: organizer.name,
+          avatar: organizer.avatar,
+          followersCount: organizer.followersCount ?? 0,
+          upcomingEvents: 0,
+        })
+      }
+    }
+  } catch {
+    // Keep the page available if organiser suggestions fail.
+  }
+
+  const organizerSuggestions = Array.from(relatedOrganizers.values())
+    .sort((left, right) => {
+      if (right.upcomingEvents !== left.upcomingEvents) {
+        return right.upcomingEvents - left.upcomingEvents
+      }
+
+      return (right.followersCount ?? 0) - (left.followersCount ?? 0)
+    })
+    .slice(0, 4)
 
   return (
     <div className="min-h-screen bg-[#f8f9fc]">
@@ -704,7 +782,12 @@ export default async function EventDetailPage({ params }: Props) {
                 citySlug={city}
                 eventSlug={ev.slug}
               />
-              <OrganizerSuggestions citySlug={city} title={`Organisers in ${cityName}`} limit={4} />
+              <OrganizerSuggestions
+                citySlug={city}
+                organizers={organizerSuggestions}
+                title={`Organisers in ${cityName}`}
+                limit={4}
+              />
             </div>
           </div>
         </div>

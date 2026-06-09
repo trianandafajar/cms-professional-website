@@ -24,6 +24,52 @@ type Props = {
   content: RichTextContent | string | null | undefined
 }
 
+const eventDescriptionClass =
+  'max-w-none text-start text-zinc-700 ' +
+  '[&_h1]:mb-3 [&_h1]:text-3xl [&_h1]:font-extrabold [&_h1]:leading-tight [&_h1]:text-[#12192f] ' +
+  '[&_h2]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:leading-tight [&_h2]:text-[#12192f] ' +
+  '[&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-bold [&_h3]:leading-snug [&_h3]:text-[#12192f] ' +
+  '[&_p]:mb-3 [&_p]:text-base [&_p]:leading-relaxed [&_p]:text-zinc-700 ' +
+  '[&_strong]:font-bold [&_strong]:text-zinc-950 [&_em]:italic ' +
+  '[&_a]:text-[#5151eb] [&_a]:underline ' +
+  '[&_ul]:my-3 [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-6 ' +
+  '[&_ol]:my-3 [&_ol]:list-decimal [&_ol]:space-y-1 [&_ol]:pl-6 ' +
+  '[&_li]:pl-1 [&_li]:text-base [&_li]:leading-relaxed [&_li]:text-zinc-700 ' +
+  '[&_blockquote]:my-4 [&_blockquote]:border-l-4 [&_blockquote]:border-[#5151eb] [&_blockquote]:bg-indigo-50/60 [&_blockquote]:py-2 [&_blockquote]:pl-4 [&_blockquote]:pr-3 [&_blockquote]:italic [&_blockquote]:text-zinc-700 ' +
+  '[&_code]:rounded [&_code]:bg-indigo-50 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-sm [&_code]:text-[#5151eb] ' +
+  '[&_pre]:my-4 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-zinc-900 [&_pre]:px-4 [&_pre]:py-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-zinc-100 ' +
+  '[&_.table-scroll]:my-4 [&_.table-scroll]:w-full [&_.table-scroll]:overflow-x-auto [&_.table-scroll]:rounded-lg [&_.table-scroll]:border [&_.table-scroll]:border-zinc-200 ' +
+  '[&_.table-scroll::-webkit-scrollbar]:h-2 [&_.table-scroll::-webkit-scrollbar-track]:bg-zinc-100 [&_.table-scroll::-webkit-scrollbar-thumb]:rounded-full [&_.table-scroll::-webkit-scrollbar-thumb]:bg-zinc-300 ' +
+  '[&_table]:w-full [&_table]:min-w-[640px] [&_table]:border-collapse ' +
+  '[&_th]:border [&_th]:border-zinc-200 [&_th]:bg-zinc-50 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-bold [&_th]:text-zinc-900 ' +
+  '[&_td]:border [&_td]:border-zinc-200 [&_td]:px-3 [&_td]:py-2 [&_td]:text-zinc-700 ' +
+  '[&_hr]:my-5 [&_hr]:border-zinc-200'
+
+function normalizeHtmlContent(content: string): string {
+  const trimmed = content.trim()
+
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    try {
+      const parsed = JSON.parse(trimmed)
+      if (typeof parsed === 'string') return parsed
+    } catch {
+      return trimmed.slice(1, -1)
+    }
+  }
+
+  return trimmed
+}
+
+function wrapTablesWithScroll(html: string): string {
+  return html.replace(
+    /<table(\s[^>]*)?>/gi,
+    (match) => `<div class="table-scroll">${match}`,
+  ).replace(/<\/table>/gi, '</table></div>')
+}
+
 /**
  * Minimal Lexical rich-text renderer.
  * Handles paragraphs, headings, lists, and inline bold/italic/underline.
@@ -91,10 +137,12 @@ function renderNode(node: Record<string, unknown>, idx: number): React.ReactNode
 export function EventDetailDescription({ content }: Props) {
   const [expanded, setExpanded] = useState(false)
   if (typeof content === 'string') {
-    return content.trim() ? (
+    const html = wrapTablesWithScroll(normalizeHtmlContent(content))
+
+    return html ? (
       <div
-        className="prose prose-sm max-w-none"
-        dangerouslySetInnerHTML={{ __html: content }}
+        className={eventDescriptionClass}
+        dangerouslySetInnerHTML={{ __html: html }}
       />
     ) : null
   }
@@ -111,7 +159,7 @@ export function EventDetailDescription({ content }: Props) {
 
   return (
     <div>
-      <div className="prose prose-sm max-w-none">
+      <div className={eventDescriptionClass}>
         {visible.map((node, i) => renderNode(node as Record<string, unknown>, i))}
       </div>
 

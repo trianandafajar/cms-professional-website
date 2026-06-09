@@ -20,6 +20,10 @@ import {
   Undo2,
   Eye,
   Pencil,
+  Columns3,
+  Rows3,
+  Table as TableIcon,
+  Trash2,
 } from 'lucide-react'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -28,12 +32,37 @@ import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import LinkExtension from '@tiptap/extension-link'
 import Heading from '@tiptap/extension-heading'
+import { Table as TiptapTable } from '@tiptap/extension-table'
+import TableCell from '@tiptap/extension-table-cell'
+import TableHeader from '@tiptap/extension-table-header'
+import TableRow from '@tiptap/extension-table-row'
 
 import { useEventEditorStore } from '@/stores/eventEditorStore'
+
+const descriptionContentClass =
+  'max-w-none text-start outline-none text-zinc-700 ' +
+  '[&_h1]:mb-3 [&_h1]:text-3xl [&_h1]:font-extrabold [&_h1]:leading-tight [&_h1]:text-zinc-950 ' +
+  '[&_h2]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:leading-tight [&_h2]:text-zinc-950 ' +
+  '[&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-bold [&_h3]:leading-snug [&_h3]:text-zinc-950 ' +
+  '[&_p]:mb-3 [&_p]:text-base [&_p]:leading-relaxed [&_p]:text-zinc-700 ' +
+  '[&_strong]:font-bold [&_strong]:text-zinc-950 [&_em]:italic ' +
+  '[&_a]:text-[#5151eb] [&_a]:underline ' +
+  '[&_ul]:my-3 [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-6 ' +
+  '[&_ol]:my-3 [&_ol]:list-decimal [&_ol]:space-y-1 [&_ol]:pl-6 ' +
+  '[&_li]:pl-1 [&_li]:text-base [&_li]:leading-relaxed [&_li]:text-zinc-700 ' +
+  '[&_blockquote]:my-4 [&_blockquote]:border-l-4 [&_blockquote]:border-[#5151eb] [&_blockquote]:bg-indigo-50/60 [&_blockquote]:py-2 [&_blockquote]:pl-4 [&_blockquote]:pr-3 [&_blockquote]:italic [&_blockquote]:text-zinc-700 ' +
+  '[&_code]:rounded [&_code]:bg-indigo-50 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-sm [&_code]:text-[#5151eb] ' +
+  '[&_pre]:my-4 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-zinc-900 [&_pre]:px-4 [&_pre]:py-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-zinc-100 ' +
+  '[&_table]:my-4 [&_table]:w-full [&_table]:min-w-[640px] [&_table]:border-collapse [&_table]:overflow-hidden [&_table]:rounded-lg [&_table]:border [&_table]:border-zinc-200 ' +
+  '[&_th]:border [&_th]:border-zinc-200 [&_th]:bg-zinc-50 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-bold [&_th]:text-zinc-900 ' +
+  '[&_td]:border [&_td]:border-zinc-200 [&_td]:px-3 [&_td]:py-2 [&_td]:text-zinc-700 ' +
+  '[&_hr]:my-5 [&_hr]:border-zinc-200'
 
 export default function DescriptionSection() {
   const [expanded, setExpanded] = useState(false)
   const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor')
+  const [htmlDialogOpen, setHtmlDialogOpen] = useState(false)
+  const [htmlInput, setHtmlInput] = useState('')
 
   const sectionRef = useRef<HTMLDivElement>(null)
 
@@ -68,14 +97,19 @@ export default function DescriptionSection() {
           class: 'text-[#5151eb] underline cursor-pointer',
         },
       }),
+      TiptapTable.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
 
     content: eventDescription,
 
       editorProps: {
         attributes: {
-          class:
-          'min-h-[280px] outline-none px-5 py-4 prose prose-sm max-w-none prose-headings:text-zinc-900 prose-headings:font-bold prose-p:text-zinc-700 prose-p:leading-relaxed prose-li:text-zinc-700 prose-strong:text-zinc-900 prose-a:text-[#5151eb] prose-a:underline prose-blockquote:border-l-[#5151eb] prose-blockquote:text-zinc-600 [&_h1]:mb-3 [&_h1]:text-4xl [&_h1]:font-bold [&_h2]:mb-2 [&_h2]:text-3xl [&_h2]:font-bold [&_h3]:mb-2 [&_h3]:text-2xl [&_h3]:font-bold [&_p]:mb-3 [&_p]:text-zinc-700 [&_li]:mb-1 [&_li]:text-zinc-700 [&_blockquote]:border-l-4 [&_blockquote]:border-[#5151eb] [&_blockquote]:pl-4 [&_blockquote]:italic [&_code]:rounded [&_code]:bg-indigo-50 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-sm [&_code]:text-[#5151eb] [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-zinc-900 [&_pre]:px-4 [&_pre]:py-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-zinc-100',
+          class: `min-h-[280px] px-5 py-4 ${descriptionContentClass}`,
         },
       },
 
@@ -115,6 +149,34 @@ export default function DescriptionSection() {
     editor?.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
   }
 
+  function handleInsertHtml() {
+    const html = htmlInput.trim()
+    if (!html) return
+
+    const current = eventDescription || ''
+    const separator = current && !current.endsWith('</p>') ? '\n' : ''
+    const nextHtml = `${current}${separator}${html}`
+
+    setEventDescription(nextHtml)
+    editor?.commands.setContent(nextHtml)
+    setHtmlInput('')
+    setHtmlDialogOpen(false)
+    setActiveTab('preview')
+  }
+
+  function handleInsertTable() {
+    const rowInput = window.prompt('Rows', '3')
+    if (rowInput === null) return
+
+    const columnInput = window.prompt('Columns', '3')
+    if (columnInput === null) return
+
+    const rows = Math.max(1, Math.min(20, Number(rowInput) || 3))
+    const cols = Math.max(1, Math.min(10, Number(columnInput) || 3))
+
+    editor?.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run()
+  }
+
   return (
     <div
       ref={sectionRef}
@@ -130,7 +192,7 @@ export default function DescriptionSection() {
                 {completed ? (
                   <>
                     <div
-                      className="prose prose-sm line-clamp-4 max-w-none text-start [&_h1]:text-xl [&_h1]:font-bold [&_h1]:text-zinc-900 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-zinc-900 [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-zinc-900 [&_p]:text-sm [&_p]:text-zinc-600 [&_p]:leading-relaxed [&_strong]:text-zinc-900 [&_em]:italic [&_a]:text-[#5151eb] [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:text-sm [&_li]:text-zinc-600 [&_blockquote]:border-l-2 [&_blockquote]:border-[#5151eb] [&_blockquote]:pl-3 [&_blockquote]:text-zinc-500 [&_blockquote]:italic [&_code]:text-[#5151eb] [&_code]:bg-indigo-50 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs"
+                      className={`line-clamp-4 [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_p]:text-sm [&_li]:text-sm ${descriptionContentClass}`}
                       dangerouslySetInnerHTML={{
                         __html: eventDescription,
                       }}
@@ -307,6 +369,66 @@ export default function DescriptionSection() {
                 <ToolbarDivider />
 
                 <ToolbarButton
+                  onClick={handleInsertTable}
+                  isActive={editor?.isActive('table')}
+                  title="Insert table"
+                >
+                  <TableIcon size={14} />
+                </ToolbarButton>
+
+                <ToolbarButton
+                  onClick={() => editor?.chain().focus().addRowAfter().run()}
+                  disabled={!editor?.isActive('table')}
+                  title="Add row"
+                >
+                  <Rows3 size={14} />
+                </ToolbarButton>
+
+                <ToolbarButton
+                  onClick={() => editor?.chain().focus().addColumnAfter().run()}
+                  disabled={!editor?.isActive('table')}
+                  title="Add column"
+                >
+                  <Columns3 size={14} />
+                </ToolbarButton>
+
+                <ToolbarButton
+                  onClick={() => editor?.chain().focus().deleteRow().run()}
+                  disabled={!editor?.isActive('table')}
+                  title="Delete row"
+                >
+                  <span className="text-[10px] font-bold leading-none">-R</span>
+                </ToolbarButton>
+
+                <ToolbarButton
+                  onClick={() => editor?.chain().focus().deleteColumn().run()}
+                  disabled={!editor?.isActive('table')}
+                  title="Delete column"
+                >
+                  <span className="text-[10px] font-bold leading-none">-C</span>
+                </ToolbarButton>
+
+                <ToolbarButton
+                  onClick={() => editor?.chain().focus().deleteTable().run()}
+                  disabled={!editor?.isActive('table')}
+                  title="Delete table"
+                >
+                  <Trash2 size={14} />
+                </ToolbarButton>
+
+                <ToolbarDivider />
+
+                <ToolbarButton
+                  onClick={() => setHtmlDialogOpen(true)}
+                  isActive={htmlDialogOpen}
+                  title="Insert HTML"
+                >
+                  <span className="text-[10px] font-bold leading-none">HTML</span>
+                </ToolbarButton>
+
+                <ToolbarDivider />
+
+                <ToolbarButton
                   onClick={handleSetLink}
                   isActive={editor?.isActive('link')}
                   title="Insert link"
@@ -344,7 +466,7 @@ export default function DescriptionSection() {
               <div className="min-h-[280px] px-5 py-4">
                 {completed ? (
                   <div
-                    className="prose prose-sm max-w-none"
+                    className={descriptionContentClass}
                     dangerouslySetInnerHTML={{
                       __html: eventDescription,
                     }}
@@ -356,6 +478,52 @@ export default function DescriptionSection() {
                     </p>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {htmlDialogOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/40 px-4 backdrop-blur-sm">
+              <div className="w-full max-w-2xl rounded-2xl border border-zinc-200 bg-white p-5 shadow-2xl">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-zinc-950">Insert HTML</h3>
+                    <p className="mt-1 text-sm text-zinc-500">
+                      Paste raw HTML here. It will render in preview and the public event page.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setHtmlDialogOpen(false)}
+                    className="rounded-lg px-2 py-1 text-sm font-bold text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <textarea
+                  value={htmlInput}
+                  onChange={(event) => setHtmlInput(event.target.value)}
+                  placeholder="<table><thead>...</thead></table>"
+                  className="mt-4 h-64 w-full resize-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 font-mono text-sm text-zinc-800 outline-none transition focus:border-[#5151eb] focus:bg-white focus:ring-4 focus:ring-indigo-100"
+                />
+
+                <div className="mt-4 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setHtmlDialogOpen(false)}
+                    className="cursor-pointer rounded-xl border border-zinc-200 px-4 py-2 text-sm font-bold text-zinc-600 transition hover:bg-zinc-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleInsertHtml}
+                    className="cursor-pointer rounded-xl bg-[#5151eb] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#4040d0]"
+                  >
+                    Insert HTML
+                  </button>
+                </div>
               </div>
             </div>
           )}

@@ -9,6 +9,18 @@ import {
   formatFollowers,
   type DummyOrganizer,
 } from '@/lib/dummy-organizers'
+import type { Media, User } from '@/payload-types'
+
+type OrganizerSuggestionItem = Pick<User, 'id' | 'name' | 'avatar' | 'followersCount'> & {
+  upcomingEvents?: number
+}
+
+function getAvatarUrl(avatar: unknown): string | null {
+  if (avatar && typeof avatar === 'object' && 'url' in avatar) {
+    return (avatar as Media).url ?? null
+  }
+  return null
+}
 
 // ─── Single row ──────────────────────────────────────────────────────────────
 
@@ -81,18 +93,81 @@ function OrganizerRow({ org }: { org: DummyOrganizer }) {
   )
 }
 
+function PayloadOrganizerRow({ org }: { org: OrganizerSuggestionItem }) {
+  const [followed, setFollowed] = useState(false)
+  const avatarUrl = getAvatarUrl(org.avatar)
+  const initials = org.name
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+
+  return (
+    <div className="flex items-center gap-3 py-2">
+      <Link href={`/organizers/${org.id}`} className="shrink-0">
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt={org.name}
+            className="size-10 rounded-full object-cover ring-2 ring-zinc-100"
+          />
+        ) : (
+          <div className="flex size-10 items-center justify-center rounded-full bg-linear-to-br from-[#5151eb] to-indigo-400 text-xs font-bold text-white ring-2 ring-zinc-100">
+            {initials}
+          </div>
+        )}
+      </Link>
+
+      <div className="min-w-0 flex-1">
+        <Link href={`/organizers/${org.id}`} className="group">
+          <div className="flex items-center gap-1">
+            <p className="truncate text-sm font-semibold text-[#12192f] transition group-hover:text-[#5151eb]">
+              {org.name}
+            </p>
+            <CheckCircle2 className="size-3.5 shrink-0 text-[#5151eb]" aria-label="Verified" />
+          </div>
+          <p className="truncate text-xs text-zinc-400">
+            {formatFollowers(org.followersCount ?? 0)} followers
+            {org.upcomingEvents ? (
+              <>
+                {' '}
+                · <span className="text-emerald-500">{org.upcomingEvents} events</span>
+              </>
+            ) : null}
+          </p>
+        </Link>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setFollowed((f) => !f)}
+        className={`shrink-0 cursor-pointer rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+          followed
+            ? 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'
+            : 'bg-[#5151eb] text-white hover:bg-[#4040d0]'
+        }`}
+      >
+        {followed ? 'Following' : 'Follow'}
+      </button>
+    </div>
+  )
+}
+
 // ─── Panel ───────────────────────────────────────────────────────────────────
 
 type Props = {
   /** If provided, shows organizers relevant to this city slug */
   citySlug?: string
+  organizers?: OrganizerSuggestionItem[]
   /** Override title */
   title?: string
   limit?: number
 }
 
-export function OrganizerSuggestions({ citySlug, title, limit = 5 }: Props) {
-  const organizers = citySlug
+export function OrganizerSuggestions({ citySlug, organizers, title, limit = 5 }: Props) {
+  const hasPayloadOrganizers = Array.isArray(organizers)
+  const dummyOrganizers = citySlug
     ? getOrganizersByCity(citySlug, limit)
     : [...DUMMY_ORGANIZERS].sort((a, b) => b.followersCount - a.followersCount).slice(0, limit)
 
@@ -110,9 +185,12 @@ export function OrganizerSuggestions({ citySlug, title, limit = 5 }: Props) {
 
       {/* List */}
       <div className="divide-y divide-zinc-50">
-        {organizers.map((org) => (
-          <OrganizerRow key={org.id} org={org} />
-        ))}
+        {hasPayloadOrganizers
+          ? organizers.slice(0, limit).map((org) => <PayloadOrganizerRow key={org.id} org={org} />)
+          : dummyOrganizers.map((org) => <OrganizerRow key={org.id} org={org} />)}
+        {hasPayloadOrganizers && organizers.length === 0 && (
+          <div className="py-5 text-center text-sm text-zinc-400">No organisers yet</div>
+        )}
       </div>
 
       {/* Footer hint */}
