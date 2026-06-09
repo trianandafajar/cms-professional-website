@@ -16,6 +16,13 @@ export default async function OrganizationsLayout({ children }: { children: Reac
     redirect('/auth/signin')
   }
 
+  const canAccessOrganizations =
+    user.isOrganizer || (user.roleName && user.roleName.toLowerCase().includes('organizer'))
+
+  if (!canAccessOrganizations) {
+    redirect('/my/tickets')
+  }
+
   const hydratedUser = {
     id: String(user.id),
     email: user.email,
