@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import type { MouseEvent } from 'react'
 import Link from 'next/link'
 import { Share2, MapPin, Clock } from 'lucide-react'
 import { formatEventDate, formatEventTime, locationToSlug } from '@/lib/eventQueries'
@@ -68,6 +69,38 @@ function getCitySlug(event: ResolvedEvent): string {
     return locationToSlug((event.location as Location).name)
   }
   return 'all'
+}
+
+function formatTicketAmount(amount: number, currency = 'USD'): string {
+  if (amount <= 0) return 'Free'
+
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency.toUpperCase(),
+    maximumFractionDigits: 2,
+  }).format(amount)
+}
+
+function getEventPriceLabel(event: ResolvedEvent): string {
+  const ticketTypes = event.ticketTypes ?? []
+
+  if (ticketTypes.length === 0) {
+    return event.isFree ? 'Free' : (event.price ?? 'See details')
+  }
+
+  const prices = ticketTypes
+    .map((ticketType) => Number(ticketType.price ?? 0))
+    .filter((price) => Number.isFinite(price) && price >= 0)
+
+  if (prices.length === 0) return event.isFree ? 'Free' : 'See details'
+
+  const minPrice = Math.min(...prices)
+  const maxPrice = Math.max(...prices)
+  const currency = ticketTypes.find((ticketType) => ticketType.currency)?.currency ?? 'USD'
+
+  if (minPrice === maxPrice) return formatTicketAmount(minPrice, currency)
+
+  return `${formatTicketAmount(minPrice, currency)} - ${formatTicketAmount(maxPrice, currency)}`
 }
 
 export function CityEventsSection({ events, city, totalDocs }: Props) {
@@ -181,6 +214,20 @@ function CityEventCard({
       : 'all'
   const href = `/events/${citySlug}/${eventSlug}`
   const tags = (event.tags ?? []).map((t) => t.tag).filter(Boolean) as string[]
+  const priceLabel = getEventPriceLabel(event)
+
+  function handleShare(eventClick: MouseEvent<HTMLButtonElement>) {
+    eventClick.preventDefault()
+    eventClick.stopPropagation()
+
+    const url = `${window.location.origin}${href}`
+    if (navigator.share) {
+      navigator.share({ title: event.title, url }).catch(() => {})
+      return
+    }
+
+    void navigator.clipboard.writeText(url)
+  }
 
   return (
     <Link
@@ -252,15 +299,15 @@ function CityEventCard({
         <div className="mt-auto flex items-center justify-between pt-4">
           <div>
             <p className="text-base font-bold text-[#12192f]">
-              {event.isFree ? 'Free' : (event.price ?? 'See details')}
+              {priceLabel}
             </p>
             <p className="text-xs text-zinc-400">{organizerName}</p>
           </div>
           <button
             type="button"
-            onClick={(e) => e.preventDefault()}
+            onClick={handleShare}
             aria-label="Share event"
-            className="flex size-8 items-center justify-center rounded-full border border-zinc-200 text-zinc-400 transition hover:border-[#5151eb] hover:text-[#5151eb]"
+            className="flex size-8 cursor-pointer items-center justify-center rounded-full border border-zinc-200 text-zinc-400 transition hover:border-[#5151eb] hover:text-[#5151eb]"
           >
             <Share2 className="size-3.5" />
           </button>

@@ -125,12 +125,19 @@ export function AdminNav() {
     const collections = config?.collections ?? []
 
     for (const collection of collections) {
+      if (collection.slug.startsWith('payload-')) {
+        continue
+      }
+
       const isExcluded = collection.admin?.group === false
       if (isExcluded) continue
 
       const navMeta = (((collection as any)?.custom ?? {})?.nav ?? {}) as CollectionNavMeta
-      const fallbackGroup = collection.slug.startsWith('payload-') ? 'System' : 'Collections'
-      const groupLabel = navMeta.groupLabel ?? resolveGroupLabel(collection.admin?.group ?? fallbackGroup)
+
+      const groupLabel =
+        navMeta.groupLabel ??
+        resolveGroupLabel(collection.admin?.group ?? 'Collections')
+
       const entry = grouped.get(groupLabel) ?? {
         label: groupLabel,
         order: resolveGroupOrder(navMeta.groupOrder),

@@ -20,7 +20,7 @@ import { FrontendNavbar } from '@/components/frontend/navbar'
 import { CityEventsSection } from '@/components/frontend/city-events-section'
 import { OrganizerSuggestions } from '@/components/frontend/organizer-suggestions'
 import { buildEventWhere } from '@/lib/eventQueries'
-import type { Location } from '@/payload-types'
+import type { Category, Event, Location, User } from '@/payload-types'
 import config from '@/payload.config'
 
 type Props = {
@@ -28,16 +28,16 @@ type Props = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
-const categoryFilters = [
-  { name: 'Music', icon: Music },
-  { name: 'Nightlife', icon: Sparkles },
-  { name: 'Arts', icon: Palette },
-  { name: 'Holidays', icon: PartyPopper },
-  { name: 'Dating', icon: Heart },
-  { name: 'Hobbies', icon: Gamepad2 },
-  { name: 'Business', icon: Users },
-  { name: 'Food & Drink', icon: Utensils },
-]
+const categoryIconMap = {
+  arts: Palette,
+  business: Users,
+  dating: Heart,
+  'food & drink': Utensils,
+  hobbies: Gamepad2,
+  holidays: PartyPopper,
+  music: Music,
+  nightlife: Sparkles,
+} as const
 
 const dateFilters = [
   { label: 'Today', value: 'today' },
@@ -51,6 +51,20 @@ const priceFilters = [
   { label: 'Free', value: 'free' },
   { label: 'Paid', value: 'paid' },
 ]
+
+function getCategoryIcon(name: string) {
+  return categoryIconMap[name.toLowerCase() as keyof typeof categoryIconMap] ?? Tag
+}
+
+function eventHasPaidTickets(event: Event): boolean {
+  return (event.ticketTypes ?? []).some((ticketType) => Number(ticketType.price ?? 0) > 0)
+}
+
+function eventHasFreeTickets(event: Event): boolean {
+  const ticketTypes = event.ticketTypes ?? []
+  if (ticketTypes.length === 0) return event.isFree === true
+  return ticketTypes.some((ticketType) => Number(ticketType.price ?? 0) <= 0)
+}
 
 /** Convert a URL slug back to a display name. */
 function slugToDisplayName(slug: string): string {
@@ -93,20 +107,88 @@ export default async function CityEventsPage({ params, searchParams }: Props) {
   const locationDoc = matchedLocations[0] as Location | undefined
   const locationId = locationDoc?.id ?? null
 
-  // Fetch events filtered by city + active filters
-  const { docs: events, totalDocs } = await payload.find({
-    collection: 'events',
-    where: buildEventWhere({
-      publishedOnly: true,
-      locationId,
-      categoryName: activeCategory !== 'All' ? activeCategory : null,
-      dateFilter: activeDate || null,
-      priceFilter: activePrice || null,
-    }),
-    depth: 1,
+  const { docs: categories } = await payload.find({
+    collection: 'categories',
+    where: {
+      status: {
+        equals: 'active',
+      },
+    },
+    depth: 0,
     limit: 100,
-    sort: '-interestedCount',
+    sort: 'name',
   })
+  const categoryFilters = (categories as Category[]).map((category) => ({
+    id: category.id,
+    name: category.name,
+    icon: getCategoryIcon(category.name),
+  }))
+
+  const cityEventsForOrganizers = locationId
+    ? (
+        await payload.find({
+          collection: 'events',
+          where: buildEventWhere({
+            publishedOnly: true,
+            locationId,
+          }),
+          depth: 1,
+          limit: 100,
+          sort: '-interestedCount',
+        })
+      ).docs
+    : []
+
+  const organizerMap = new Map<
+    number,
+    Pick<User, 'id' | 'name' | 'avatar' | 'followersCount'> & { upcomingEvents: number }
+  >()
+
+  for (const event of cityEventsForOrganizers as Event[]) {
+    if (!event.organizer || typeof event.organizer !== 'object') continue
+    const organizer = event.organizer as User
+    const existing = organizerMap.get(Number(organizer.id))
+    organizerMap.set(Number(organizer.id), {
+      id: organizer.id,
+      name: organizer.name,
+      avatar: organizer.avatar,
+      followersCount: organizer.followersCount ?? 0,
+      upcomingEvents: (existing?.upcomingEvents ?? 0) + 1,
+    })
+  }
+
+  const organizerSuggestions = Array.from(organizerMap.values())
+    .sort((left, right) => {
+      if (right.upcomingEvents !== left.upcomingEvents) {
+        return right.upcomingEvents - left.upcomingEvents
+      }
+      return (right.followersCount ?? 0) - (left.followersCount ?? 0)
+    })
+    .slice(0, 6)
+
+  const rawEvents = locationId
+    ? (
+        await payload.find({
+          collection: 'events',
+          where: buildEventWhere({
+            publishedOnly: true,
+            locationId,
+            categoryName: activeCategory !== 'All' ? activeCategory : null,
+            dateFilter: activeDate || null,
+            priceFilter: null,
+          }),
+          depth: 1,
+          limit: 100,
+          sort: '-interestedCount',
+        })
+      ).docs
+    : []
+  const events = (rawEvents as Event[]).filter((event) => {
+    if (activePrice === 'free') return eventHasFreeTickets(event)
+    if (activePrice === 'paid') return eventHasPaidTickets(event)
+    return true
+  })
+  const totalDocs = events.length
 
   return (
     <div className="min-h-screen bg-white">
@@ -167,7 +249,7 @@ export default async function CityEventsPage({ params, searchParams }: Props) {
                   <SlidersHorizontal className="size-4" />
                   Category
                 </h3>
-                <div className="space-y-1">
+                <div className="max-h-[280px] space-y-1 overflow-y-auto pr-1">
                   <Link
                     href={buildFilterUrl(city, {
                       category: 'All',
@@ -331,7 +413,12 @@ export default async function CityEventsPage({ params, searchParams }: Props) {
           {/* Right sidebar — Organizer suggestions */}
           <aside className="hidden w-72 shrink-0 xl:block">
             <div className="sticky top-24">
-              <OrganizerSuggestions citySlug={city} title={`EO di ${cityName}`} limit={6} />
+              <OrganizerSuggestions
+                citySlug={city}
+                organizers={organizerSuggestions}
+                title={`EO di ${cityName}`}
+                limit={6}
+              />
             </div>
           </aside>
         </div>
