@@ -116,9 +116,17 @@ export const Users: CollectionConfig = {
       },
     ],
     afterChange: [
-      async ({ doc, req, operation }) => {
-        if (doc.isOrganizer) {
-          await ensureOrganizerEmailTemplates(req.payload, doc.id)
+      async ({ doc, previousDoc, req, operation }) => {
+        const becameOrganizer = Boolean(doc.isOrganizer) && !previousDoc?.isOrganizer
+
+        if (becameOrganizer) {
+          void ensureOrganizerEmailTemplates(req.payload, doc.id).catch((error) => {
+            req.payload.logger.error({
+              msg: 'Failed to prepare organizer email templates',
+              error: error instanceof Error ? error.message : String(error),
+              userId: doc.id,
+            })
+          })
         }
 
         if (operation === 'create' && doc.email) {
