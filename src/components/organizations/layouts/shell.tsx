@@ -15,6 +15,7 @@ import {
   LayoutDashboard,
   LogOut,
   Megaphone,
+  Menu,
   Palette,
   PlusCircle,
   QrCode,
@@ -25,6 +26,14 @@ import {
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/components/ui/drawer'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import NotificationDrawer from '@/components/organizations/layouts/notification'
@@ -79,6 +88,7 @@ export function OrganizationsShell({
   const router = useRouter()
   const logout = useAuthStore((state) => state.logout)
   const [loggingOut, setLoggingOut] = useState(false)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   const displayName = user?.name || user?.email || ''
   const displayEmail = user?.email || ''
@@ -104,8 +114,105 @@ export function OrganizationsShell({
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-white">
       <header className="sticky top-0 z-50 border-b border-zinc-100 bg-white">
-        <div className="flex w-full items-center gap-4 px-4 py-3 lg:px-6">
-          <Link href="/" className="flex shrink-0 items-center gap-2">
+        <div className="flex w-full items-center gap-2 px-3 py-3 sm:gap-4 sm:px-4 lg:px-6">
+          <Drawer open={mobileNavOpen} onOpenChange={setMobileNavOpen} direction="left">
+            <DrawerTrigger asChild>
+              <button
+                type="button"
+                className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-zinc-200 text-zinc-700 transition hover:bg-zinc-50 lg:hidden"
+                aria-label="Open navigation"
+              >
+                <Menu className="size-5" />
+              </button>
+            </DrawerTrigger>
+            <DrawerContent className="w-[82vw] max-w-[320px] border-r border-zinc-100 bg-white p-0">
+              <DrawerTitle className="sr-only">Organization navigation</DrawerTitle>
+              <DrawerDescription className="sr-only">
+                Main navigation for organization dashboard pages
+              </DrawerDescription>
+
+              <div className="flex h-full flex-col">
+                <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
+                  <Link
+                    href="/organizations/dashboard"
+                    onClick={() => setMobileNavOpen(false)}
+                    className="flex items-center gap-2"
+                  >
+                    <Image
+                      src="/icon.png"
+                      alt="Eventbro"
+                      width={32}
+                      height={32}
+                      priority
+                      className="size-8 rounded-md object-contain"
+                    />
+                    <span className="text-2xl font-extrabold tracking-tight text-[#5151eb]">
+                      eventbro
+                    </span>
+                  </Link>
+                  <DrawerClose asChild>
+                    <button
+                      type="button"
+                      className="flex size-9 items-center justify-center rounded-xl border border-zinc-200 text-zinc-500 transition hover:bg-zinc-50"
+                      aria-label="Close navigation"
+                    >
+                      ×
+                    </button>
+                  </DrawerClose>
+                </div>
+
+                <nav className="flex-1 overflow-y-auto px-3 py-4">
+                  <div className="space-y-1">
+                    {topItems.map((item) => {
+                      const isActive = pathname.startsWith(item.alias || item.href)
+                      const Icon = item.icon
+
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setMobileNavOpen(false)}
+                          className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition ${
+                            isActive
+                              ? 'bg-[#5151eb] text-white shadow-sm'
+                              : 'text-zinc-600 hover:bg-indigo-50 hover:text-[#5151eb]'
+                          }`}
+                        >
+                          <Icon className="size-5" />
+                          {item.label}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </nav>
+
+                <div className="border-t border-zinc-100 px-3 py-4">
+                  {bottomItems.map((item) => {
+                    const isActive = pathname.startsWith(item.href)
+                    const Icon = item.icon
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMobileNavOpen(false)}
+                        className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition ${
+                          isActive
+                            ? 'bg-[#5151eb] text-white shadow-sm'
+                            : 'text-zinc-600 hover:bg-indigo-50 hover:text-[#5151eb]'
+                        }`}
+                      >
+                        <Icon className="size-5" />
+                        {item.label}
+                      </Link>
+                    )
+                  })}
+                </div>
+              </div>
+            </DrawerContent>
+          </Drawer>
+
+          <Link href="/" className="flex min-w-0 shrink-0 items-center gap-2">
             <Image
               src="/icon.png"
               alt="Eventbro"
@@ -114,7 +221,9 @@ export function OrganizationsShell({
               priority
               className="size-8 rounded-md object-contain"
             />
-            <span className="text-[26px] font-extrabold tracking-tight text-[#5151eb]">eventbro</span>
+            <span className="truncate text-[24px] font-extrabold tracking-tight text-[#5151eb] sm:text-[26px]">
+              eventbro
+            </span>
           </Link>
 
           <form className="relative hidden max-w-[420px] flex-1 lg:flex">
@@ -138,14 +247,14 @@ export function OrganizationsShell({
             </Button>
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-1.5 sm:gap-2 lg:ml-0">
             <NotificationDrawer />
 
             <Popover>
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="flex items-center gap-2 cursor-pointer rounded-full border border-indigo-200 bg-indigo-50 py-1 pl-1 pr-3 text-sm font-medium text-[#5151eb] transition hover:bg-indigo-100"
+                  className="flex cursor-pointer items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 py-1 pl-1 pr-2 text-sm font-medium text-[#5151eb] transition hover:bg-indigo-100 sm:pr-3"
                   aria-label="Open profile menu"
                 >
                   {avatarUrl ? (
@@ -221,7 +330,7 @@ export function OrganizationsShell({
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <aside className="sticky top-0 flex h-[calc(100vh-63px)] w-16 flex-col items-center justify-between border-r border-zinc-100 bg-white py-3">
+        <aside className="sticky top-0 hidden h-[calc(100vh-63px)] w-16 flex-col items-center justify-between border-r border-zinc-100 bg-white py-3 lg:flex">
           <div className="flex flex-col items-center gap-3">
             {topItems.map((item) => {
               const isActive = pathname.startsWith(item.alias || item.href)
@@ -277,7 +386,7 @@ export function OrganizationsShell({
           </div>
         </aside>
 
-        <main className="flex-1 overflow-y-auto bg-[#fdfdfd] p-7">{children}</main>
+        <main className="flex-1 overflow-y-auto bg-[#fdfdfd] p-4 sm:p-6 lg:p-7">{children}</main>
       </div>
     </div>
   )

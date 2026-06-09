@@ -41,19 +41,19 @@ import { useEventEditorStore } from '@/stores/eventEditorStore'
 
 const descriptionContentClass =
   'max-w-none text-start outline-none text-zinc-700 ' +
-  '[&_h1]:mb-3 [&_h1]:text-3xl [&_h1]:font-extrabold [&_h1]:leading-tight [&_h1]:text-zinc-950 ' +
-  '[&_h2]:mb-2 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:leading-tight [&_h2]:text-zinc-950 ' +
-  '[&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-bold [&_h3]:leading-snug [&_h3]:text-zinc-950 ' +
-  '[&_p]:mb-3 [&_p]:text-base [&_p]:leading-relaxed [&_p]:text-zinc-700 ' +
+  '[&_h1]:mb-3 [&_h1]:text-2xl sm:[&_h1]:text-3xl [&_h1]:font-extrabold [&_h1]:leading-tight [&_h1]:text-zinc-950 ' +
+  '[&_h2]:mb-2 [&_h2]:text-xl sm:[&_h2]:text-2xl [&_h2]:font-bold [&_h2]:leading-tight [&_h2]:text-zinc-950 ' +
+  '[&_h3]:mb-2 [&_h3]:text-lg sm:[&_h3]:text-xl [&_h3]:font-bold [&_h3]:leading-snug [&_h3]:text-zinc-950 ' +
+  '[&_p]:mb-3 [&_p]:text-sm sm:[&_p]:text-base [&_p]:leading-relaxed [&_p]:text-zinc-700 ' +
   '[&_strong]:font-bold [&_strong]:text-zinc-950 [&_em]:italic ' +
   '[&_a]:text-[#5151eb] [&_a]:underline ' +
-  '[&_ul]:my-3 [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-6 ' +
-  '[&_ol]:my-3 [&_ol]:list-decimal [&_ol]:space-y-1 [&_ol]:pl-6 ' +
-  '[&_li]:pl-1 [&_li]:text-base [&_li]:leading-relaxed [&_li]:text-zinc-700 ' +
+  '[&_ul]:my-3 [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-5 sm:[&_ul]:pl-6 ' +
+  '[&_ol]:my-3 [&_ol]:list-decimal [&_ol]:space-y-1 [&_ol]:pl-5 sm:[&_ol]:pl-6 ' +
+  '[&_li]:pl-1 [&_li]:text-sm sm:[&_li]:text-base [&_li]:leading-relaxed [&_li]:text-zinc-700 ' +
   '[&_blockquote]:my-4 [&_blockquote]:border-l-4 [&_blockquote]:border-[#5151eb] [&_blockquote]:bg-indigo-50/60 [&_blockquote]:py-2 [&_blockquote]:pl-4 [&_blockquote]:pr-3 [&_blockquote]:italic [&_blockquote]:text-zinc-700 ' +
   '[&_code]:rounded [&_code]:bg-indigo-50 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-sm [&_code]:text-[#5151eb] ' +
   '[&_pre]:my-4 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-zinc-900 [&_pre]:px-4 [&_pre]:py-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-zinc-100 ' +
-  '[&_table]:my-4 [&_table]:w-full [&_table]:min-w-[640px] [&_table]:border-collapse [&_table]:overflow-hidden [&_table]:rounded-lg [&_table]:border [&_table]:border-zinc-200 ' +
+  '[&_table]:my-4 [&_table]:w-full [&_table]:min-w-[560px] [&_table]:border-collapse [&_table]:border [&_table]:border-zinc-200 ' +
   '[&_th]:border [&_th]:border-zinc-200 [&_th]:bg-zinc-50 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-bold [&_th]:text-zinc-900 ' +
   '[&_td]:border [&_td]:border-zinc-200 [&_td]:px-3 [&_td]:py-2 [&_td]:text-zinc-700 ' +
   '[&_hr]:my-5 [&_hr]:border-zinc-200'
@@ -77,9 +77,7 @@ export default function DescriptionSection() {
 
     document.addEventListener('mousedown', handleClickOutside)
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
   const editor = useEditor({
@@ -104,15 +102,12 @@ export default function DescriptionSection() {
       TableHeader,
       TableCell,
     ],
-
     content: eventDescription,
-
-      editorProps: {
-        attributes: {
-          class: `min-h-[280px] px-5 py-4 ${descriptionContentClass}`,
-        },
+    editorProps: {
+      attributes: {
+        class: `min-h-[260px] px-4 py-4 sm:min-h-[280px] sm:px-5 ${descriptionContentClass}`,
       },
-
+    },
     onUpdate({ editor }) {
       setEventDescription(editor.getHTML())
     },
@@ -135,14 +130,12 @@ export default function DescriptionSection() {
 
   function handleSetLink() {
     const previousUrl = editor?.getAttributes('link').href || ''
-
     const url = window.prompt('Enter URL', previousUrl)
 
     if (url === null) return
 
     if (url === '') {
       editor?.chain().focus().extendMarkRange('link').unsetLink().run()
-
       return
     }
 
@@ -183,33 +176,33 @@ export default function DescriptionSection() {
       className="overflow-hidden rounded-xl border border-zinc-200 bg-white transition"
     >
       {!expanded && (
-        <button onClick={() => setExpanded(true)} className="w-full cursor-pointer">
-          <div className="relative p-5">
-            <div>
-              <h2 className="text-start text-lg font-bold text-zinc-900">Description</h2>
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="w-full cursor-pointer text-left"
+        >
+          <div className="relative p-4 pr-14 sm:p-5 sm:pr-16">
+            <h2 className="text-base font-bold text-zinc-900 sm:text-lg">Description</h2>
 
-              <div className="relative mt-3">
-                {completed ? (
-                  <>
-                    <div
-                      className={`line-clamp-4 [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_p]:text-sm [&_li]:text-sm ${descriptionContentClass}`}
-                      dangerouslySetInnerHTML={{
-                        __html: eventDescription,
-                      }}
-                    />
+            <div className="relative mt-3">
+              {completed ? (
+                <>
+                  <div
+                    className={`line-clamp-4 overflow-x-auto [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_p]:text-sm [&_li]:text-sm ${descriptionContentClass}`}
+                    dangerouslySetInnerHTML={{ __html: eventDescription }}
+                  />
 
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-linear-to-t from-white via-white/90 to-transparent" />
-                  </>
-                ) : (
-                  <p className="text-start text-sm text-zinc-500">
-                    Add more details about your event and include what people can expect if they
-                    attend.
-                  </p>
-                )}
-              </div>
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-linear-to-t from-white via-white/90 to-transparent" />
+                </>
+              ) : (
+                <p className="text-sm leading-relaxed text-zinc-500">
+                  Add more details about your event and include what people can expect if they
+                  attend.
+                </p>
+              )}
             </div>
 
-            <div className="absolute right-5 top-5">
+            <div className="absolute right-4 top-4 sm:right-5 sm:top-5">
               {completed ? (
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500">
                   <Check size={16} className="text-white" />
@@ -225,29 +218,30 @@ export default function DescriptionSection() {
       )}
 
       {expanded && (
-        <div className="p-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-start text-xl font-bold text-zinc-900">Description</h2>
+        <div className="p-4 sm:p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h2 className="text-lg font-bold text-zinc-900 sm:text-xl">Description</h2>
 
-              <p className="mt-1 text-sm text-zinc-500">
+              <p className="mt-1 text-sm leading-relaxed text-zinc-500">
                 Add more details about your event and include what people can expect if they attend.
               </p>
             </div>
 
             <button
+              type="button"
               onClick={() => setExpanded(false)}
-              className="rounded-lg p-1.5 transition hover:bg-zinc-100 cursor-pointer"
+              className="shrink-0 cursor-pointer rounded-lg p-1.5 transition hover:bg-zinc-100"
             >
               <ChevronDown size={18} className="rotate-180 text-zinc-400" />
             </button>
           </div>
 
-          <div className="mt-5 flex items-center gap-1 border-b border-zinc-200">
+          <div className="mt-5 flex overflow-x-auto border-b border-zinc-200">
             <button
               type="button"
               onClick={() => setActiveTab('editor')}
-              className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition cursor-pointer ${
+              className={`flex shrink-0 cursor-pointer items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition ${
                 activeTab === 'editor'
                   ? 'border-[#5151eb] text-[#5151eb]'
                   : 'border-transparent text-zinc-500 hover:text-zinc-700'
@@ -260,7 +254,7 @@ export default function DescriptionSection() {
             <button
               type="button"
               onClick={() => setActiveTab('preview')}
-              className={`flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition cursor-pointer ${
+              className={`flex shrink-0 cursor-pointer items-center gap-1.5 border-b-2 px-3 py-2 text-sm font-medium transition ${
                 activeTab === 'preview'
                   ? 'border-[#5151eb] text-[#5151eb]'
                   : 'border-transparent text-zinc-500 hover:text-zinc-700'
@@ -273,7 +267,7 @@ export default function DescriptionSection() {
 
           {activeTab === 'editor' && (
             <div className="mt-4 overflow-hidden rounded-lg border border-zinc-200">
-              <div className="flex flex-wrap items-center gap-0.5 border-b border-zinc-100 bg-zinc-50/80 px-2 py-1.5">
+              <div className="flex items-center gap-1 overflow-x-auto border-b border-zinc-100 bg-zinc-50/80 px-2 py-1.5 sm:flex-wrap">
                 <ToolbarButton
                   onClick={() => editor?.chain().focus().setParagraph().run()}
                   isActive={editor?.isActive('paragraph') && !editor?.isActive('heading')}
@@ -440,7 +434,6 @@ export default function DescriptionSection() {
 
                 <ToolbarButton
                   onClick={() => editor?.chain().focus().undo().run()}
-                  isActive={false}
                   disabled={!editor?.can().undo()}
                   title="Undo"
                 >
@@ -449,7 +442,6 @@ export default function DescriptionSection() {
 
                 <ToolbarButton
                   onClick={() => editor?.chain().focus().redo().run()}
-                  isActive={false}
                   disabled={!editor?.can().redo()}
                   title="Redo"
                 >
@@ -457,22 +449,22 @@ export default function DescriptionSection() {
                 </ToolbarButton>
               </div>
 
-              <EditorContent editor={editor} />
+              <div className="overflow-x-auto">
+                <EditorContent editor={editor} />
+              </div>
             </div>
           )}
 
           {activeTab === 'preview' && (
             <div className="mt-4 overflow-hidden rounded-lg border border-zinc-200">
-              <div className="min-h-[280px] px-5 py-4">
+              <div className="min-h-[260px] overflow-x-auto px-4 py-4 sm:min-h-[280px] sm:px-5">
                 {completed ? (
                   <div
                     className={descriptionContentClass}
-                    dangerouslySetInnerHTML={{
-                      __html: eventDescription,
-                    }}
+                    dangerouslySetInnerHTML={{ __html: eventDescription }}
                   />
                 ) : (
-                  <div className="flex h-[240px] items-center justify-center">
+                  <div className="flex h-[220px] items-center justify-center text-center sm:h-[240px]">
                     <p className="text-sm text-zinc-400">
                       Nothing to preview yet. Start writing in the editor.
                     </p>
@@ -483,19 +475,20 @@ export default function DescriptionSection() {
           )}
 
           {htmlDialogOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/40 px-4 backdrop-blur-sm">
-              <div className="w-full max-w-2xl rounded-2xl border border-zinc-200 bg-white p-5 shadow-2xl">
+            <div className="fixed inset-0 z-50 flex items-end justify-center bg-zinc-950/40 px-3 py-3 backdrop-blur-sm sm:items-center sm:px-4">
+              <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl border border-zinc-200 bg-white p-4 shadow-2xl sm:p-5">
                 <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h3 className="text-lg font-bold text-zinc-950">Insert HTML</h3>
+                  <div className="min-w-0">
+                    <h3 className="text-base font-bold text-zinc-950 sm:text-lg">Insert HTML</h3>
                     <p className="mt-1 text-sm text-zinc-500">
                       Paste raw HTML here. It will render in preview and the public event page.
                     </p>
                   </div>
+
                   <button
                     type="button"
                     onClick={() => setHtmlDialogOpen(false)}
-                    className="rounded-lg px-2 py-1 text-sm font-bold text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
+                    className="shrink-0 rounded-lg px-2 py-1 text-sm font-bold text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
                   >
                     ×
                   </button>
@@ -505,10 +498,10 @@ export default function DescriptionSection() {
                   value={htmlInput}
                   onChange={(event) => setHtmlInput(event.target.value)}
                   placeholder="<table><thead>...</thead></table>"
-                  className="mt-4 h-64 w-full resize-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 font-mono text-sm text-zinc-800 outline-none transition focus:border-[#5151eb] focus:bg-white focus:ring-4 focus:ring-indigo-100"
+                  className="mt-4 h-56 w-full resize-none rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 font-mono text-sm text-zinc-800 outline-none transition focus:border-[#5151eb] focus:bg-white focus:ring-4 focus:ring-indigo-100 sm:h-64"
                 />
 
-                <div className="mt-4 flex justify-end gap-2">
+                <div className="mt-4 grid grid-cols-1 gap-2 sm:flex sm:justify-end">
                   <button
                     type="button"
                     onClick={() => setHtmlDialogOpen(false)}
@@ -516,6 +509,7 @@ export default function DescriptionSection() {
                   >
                     Cancel
                   </button>
+
                   <button
                     type="button"
                     onClick={handleInsertHtml}
@@ -552,12 +546,12 @@ function ToolbarButton({
       onClick={onClick}
       disabled={disabled}
       title={title}
-      className={`flex h-7 w-7 items-center justify-center rounded-md transition cursor-pointer ${
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition ${
         isActive
           ? 'bg-[#5151eb] text-white'
           : disabled
             ? 'cursor-not-allowed text-zinc-300'
-            : 'text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900'
+            : 'cursor-pointer text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900'
       }`}
     >
       {children}
@@ -566,5 +560,5 @@ function ToolbarButton({
 }
 
 function ToolbarDivider() {
-  return <div className="mx-1 h-4 w-px bg-zinc-200" />
+  return <div className="mx-1 h-5 w-px shrink-0 bg-zinc-200" />
 }

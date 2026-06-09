@@ -207,11 +207,11 @@ export default function PreviewPublishPage() {
     : {}
 
   return (
-    <div className="max-h-[calc(100vh-93px)] -mt-16 pt-10 overflow-y-auto pb-32 scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+    <div className="pb-28 pt-1 sm:pb-32 md:-mt-16 md:pt-10">
       {/* Hidden file input */}
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Preview & Publish</h1>
+      <div className="mb-5 sm:mb-8">
+        <h1 className="text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">Preview & Publish</h1>
         <p className="mt-1 text-sm text-zinc-500">
           Review your event, customize the banner, and publish when ready
         </p>
@@ -220,8 +220,8 @@ export default function PreviewPublishPage() {
       {/* Main content */}
       <div className="space-y-6">
         {/* ─── Banner Editor ─── */}
-        <div className="rounded-xl border border-zinc-200 bg-white p-5">
-          <div className="flex items-center justify-between mb-3">
+        <div className="rounded-xl border border-zinc-200 bg-white p-4 sm:p-5">
+          <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-sm font-semibold text-zinc-900">Banner Image</h3>
               <p className="mt-0.5 text-xs text-zinc-400">
@@ -237,7 +237,7 @@ export default function PreviewPublishPage() {
               <p className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
                 Choose banner image
               </p>
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2">
                 {bannerImages.map((image, index) => {
                   const selected = image.id === bannerImages[0]?.id
 
@@ -246,7 +246,7 @@ export default function PreviewPublishPage() {
                       key={image.id}
                       type="button"
                       onClick={() => selectBannerImage(image.id)}
-                      className={`relative h-16 w-24 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 bg-zinc-100 transition ${
+                      className={`relative h-14 w-20 shrink-0 cursor-pointer overflow-hidden rounded-lg border-2 bg-zinc-100 transition sm:h-16 sm:w-24 ${
                         selected
                           ? 'border-[#5151eb] ring-4 ring-indigo-100'
                           : 'border-transparent hover:border-zinc-300'
@@ -278,7 +278,7 @@ export default function PreviewPublishPage() {
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
-              className={`relative h-56 overflow-hidden rounded-xl border border-zinc-200 ${
+              className={`relative h-40 overflow-hidden rounded-xl border border-zinc-200 sm:h-56 ${
                 zoom > 1 ? 'cursor-grab' : 'cursor-default'
               } ${isDragging ? 'cursor-grabbing' : ''}`}
               style={bannerStyle}
@@ -288,15 +288,15 @@ export default function PreviewPublishPage() {
         </div>
 
         {/* ─── Preview + Settings Grid ─── */}
-        <div className="grid grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-5 lg:gap-6">
           {/* LEFT: Live Preview */}
-          <div className="col-span-3">
+          <div className="lg:col-span-3">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
               Event Preview
             </p>
             <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white">
               {/* Banner preview */}
-              <div className="relative h-48 overflow-hidden bg-zinc-100" style={bannerStyle}>
+              <div className="relative h-40 overflow-hidden bg-zinc-100 sm:h-48" style={bannerStyle}>
                 {!bannerImage && (
                   <div className="flex h-full items-center justify-center">
                     <p className="text-sm text-zinc-400">No banner image</p>
@@ -306,18 +306,18 @@ export default function PreviewPublishPage() {
               </div>
 
               {/* Event Info */}
-              <div className="p-6">
-                <h2 className="text-xl font-bold text-zinc-900">
+              <div className="p-4 sm:p-6">
+                <h2 className="text-lg font-bold text-zinc-900 sm:text-xl">
                   {eventTitle || 'Untitled Event'}
                 </h2>
 
                 <div className="mt-4 space-y-3">
-                  <div className="flex items-center gap-3 text-sm text-zinc-600">
+                  <div className="flex items-start gap-3 text-sm text-zinc-600">
                     <Calendar size={15} className="shrink-0 text-[#5151eb]" />
                     <span>{eventDate || 'No date set'}</span>
                   </div>
                   {locationTitle && (
-                    <div className="flex items-center gap-3 text-sm text-zinc-600">
+                    <div className="flex items-start gap-3 text-sm text-zinc-600">
                       <MapPin size={15} className="shrink-0 text-[#5151eb]" />
                       <span>{locationTitle}</span>
                     </div>
@@ -353,9 +353,9 @@ export default function PreviewPublishPage() {
           </div>
 
           {/* RIGHT: Settings */}
-          <div className="col-span-2 space-y-5">
+          <div className="space-y-5 lg:col-span-2">
             {/* Event Type & Category */}
-            <div className="rounded-xl border border-zinc-200 bg-white p-5">
+            <div className="rounded-xl border border-zinc-200 bg-white p-4 sm:p-5">
               <h3 className="text-sm font-semibold text-zinc-900">Event Type & Category</h3>
               <div className="mt-3 space-y-3">
                 <div>
@@ -375,8 +375,8 @@ export default function PreviewPublishPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                <div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                  <div>
                   <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
                     Category Group
                   </label>
@@ -390,7 +390,9 @@ export default function PreviewPublishPage() {
                     >
                       <SelectTrigger className="mt-1.5 h-10 w-full rounded-lg border-zinc-200 text-sm">
                         <SelectValue
-                          placeholder={loadingCategories ? 'Loading categories...' : 'Category group'}
+                          placeholder={
+                            loadingCategories ? 'Loading categories...' : 'Category group'
+                          }
                         />
                       </SelectTrigger>
                       <SelectContent>
@@ -441,7 +443,7 @@ export default function PreviewPublishPage() {
             </div>
 
             {/* Tags */}
-            <div className="rounded-xl border border-zinc-200 bg-white p-5">
+            <div className="rounded-xl border border-zinc-200 bg-white p-4 sm:p-5">
               <h3 className="text-sm font-semibold text-zinc-900">Tags</h3>
               <div className="mt-3">
                 <TagsInput
@@ -464,7 +466,7 @@ export default function PreviewPublishPage() {
             </div>
 
             {/* Visibility */}
-            <div className="rounded-xl border border-zinc-200 bg-white p-5">
+            <div className="rounded-xl border border-zinc-200 bg-white p-4 sm:p-5">
               <h3 className="text-sm font-semibold text-zinc-900">Visibility</h3>
               <div className="mt-3 space-y-2">
                 <label

@@ -28,7 +28,7 @@ export default function EventsStatusFilter() {
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className="h-9 rounded-lg border-zinc-200 text-sm font-medium text-zinc-700"
+          className="h-10 w-full justify-between rounded-lg border-zinc-200 text-sm font-medium text-zinc-700 sm:h-9 sm:w-auto"
         >
           {currentLabel}
           <ChevronDown size={14} className="ml-1 text-zinc-400" />

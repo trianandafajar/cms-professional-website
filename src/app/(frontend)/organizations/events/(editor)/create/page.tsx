@@ -48,7 +48,7 @@ export default function CreateEventsPage() {
   }
 
   return (
-    <div className="space-y-4 pb-28 max-h-[calc(100vh-93px)] overflow-y-auto -mt-14 pt-8 scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+    <div className="space-y-4 pb-28 md:-mt-14 md:pt-8">
       <MediaSection />
       <OverviewSection />
       <DateLocationSection />

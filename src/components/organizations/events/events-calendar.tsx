@@ -66,11 +66,11 @@ export default function EventsCalendar() {
   return (
     <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-200 px-6 py-5">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-4 border-b border-gray-200 px-4 py-4 sm:px-6 sm:py-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <button
             onClick={() => setDate(new Date())}
-            className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium transition hover:bg-gray-50 cursor-pointer"
+            className="rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium transition hover:bg-gray-50 cursor-pointer sm:px-4"
           >
             Today
           </button>
@@ -89,13 +89,13 @@ export default function EventsCalendar() {
             <ChevronRight size={18} />
           </button>
 
-          <h2 className="ml-3 text-2xl font-bold tracking-tight text-gray-900">
+          <h2 className="min-w-0 flex-[1_0_100%] pt-1 text-xl font-bold tracking-tight text-gray-900 sm:ml-3 sm:flex-none sm:pt-0 sm:text-2xl">
             {moment(date).format(view === 'month' ? 'MMMM YYYY' : 'DD MMM YYYY')}
           </h2>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex rounded-xl border border-gray-200 bg-white p-1">
+          <div className="grid w-full grid-cols-2 rounded-xl border border-gray-200 bg-white p-1 sm:w-auto sm:flex">
             <button
               onClick={() => setView(Views.MONTH)}
               className={`rounded-lg px-4 py-2 text-sm font-medium transition cursor-pointer ${
@@ -122,36 +122,38 @@ export default function EventsCalendar() {
       </div>
 
       {/* Calendar */}
-      <div className="calendar-modern h-212.5 p-6">
-        <Calendar
-          localizer={localizer}
-          events={calendarEvents}
-          view={view}
-          date={date}
-          selectable
-          popup
-          components={components}
-          startAccessor="start"
-          endAccessor="end"
-          views={[Views.MONTH, Views.WEEK]}
-          onView={(nextView) => setView(nextView)}
-          onNavigate={(nextDate) => setDate(nextDate)}
-          onSelectSlot={(slot) => {
-            router.push(`/organizations/events/create?date=${slot.start.toISOString()}`)
-          }}
-          onSelectEvent={(event: any) => {
-            router.push(`/organizations/events/${event.slug ?? event.id}`)
-          }}
-          eventPropGetter={() => ({
-            className: '!bg-blue-600 !border-0 !rounded-lg !px-2 !py-1 !text-sm !font-medium',
-          })}
-          dayPropGetter={() => ({
-            className: 'hover:bg-blue-50 transition cursor-pointer',
-          })}
-          style={{
-            height: '100%',
-          }}
-        />
+      <div className="calendar-modern h-[34rem] overflow-x-auto p-3 sm:p-6 lg:h-[53rem]">
+        <div className="h-full min-w-[720px]">
+          <Calendar
+            localizer={localizer}
+            events={calendarEvents}
+            view={view}
+            date={date}
+            selectable
+            popup
+            components={components}
+            startAccessor="start"
+            endAccessor="end"
+            views={[Views.MONTH, Views.WEEK]}
+            onView={(nextView) => setView(nextView)}
+            onNavigate={(nextDate) => setDate(nextDate)}
+            onSelectSlot={(slot) => {
+              router.push(`/organizations/events/create?date=${slot.start.toISOString()}`)
+            }}
+            onSelectEvent={(event: any) => {
+              router.push(`/organizations/events/${event.slug ?? event.id}`)
+            }}
+            eventPropGetter={() => ({
+              className: '!bg-blue-600 !border-0 !rounded-lg !px-2 !py-1 !text-sm !font-medium',
+            })}
+            dayPropGetter={() => ({
+              className: 'hover:bg-blue-50 transition cursor-pointer',
+            })}
+            style={{
+              height: '100%',
+            }}
+          />
+        </div>
       </div>
     </div>
   )

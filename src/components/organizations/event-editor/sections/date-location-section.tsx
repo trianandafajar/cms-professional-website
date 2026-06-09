@@ -25,7 +25,6 @@ const MapContainer = dynamic(
 )
 
 const TileLayer = dynamic(async () => (await import('react-leaflet')).TileLayer, { ssr: false })
-
 const Marker = dynamic(async () => (await import('react-leaflet')).Marker, { ssr: false })
 
 type LocationResult = {
@@ -180,23 +179,29 @@ export default function DateLocationSection() {
       className="overflow-visible rounded-xl border border-zinc-200 bg-white transition"
     >
       {!expanded && (
-        <button onClick={() => setExpanded(true)} className="w-full cursor-pointer">
-          <div className="p-5">
-            <div className="flex items-start justify-between">
-              <div className="grid flex-1 grid-cols-2 gap-8">
-                <div>
-                  <h2 className="text-start text-lg font-bold text-zinc-900">Date and time</h2>
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="w-full cursor-pointer text-left"
+        >
+          <div className="p-4 sm:p-5">
+            <div className="flex items-start gap-3 sm:justify-between">
+              <div className="grid min-w-0 flex-1 grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
+                <div className="min-w-0">
+                  <h2 className="text-base font-bold text-zinc-900 sm:text-lg">
+                    Date and time
+                  </h2>
 
-                  <div className="mt-4 flex items-start gap-3">
-                    <Calendar size={16} className="mt-0.5 text-[#5151eb]" />
+                  <div className="mt-3 flex items-start gap-3 sm:mt-4">
+                    <Calendar size={16} className="mt-0.5 shrink-0 text-[#5151eb]" />
 
-                    <div>
-                      <p className="text-start text-sm font-medium text-zinc-800">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-zinc-800">
                         {eventDate || 'No date selected'}
                       </p>
 
                       {eventStartTime && eventEndTime && (
-                        <p className="mt-0.5 text-start text-xs text-zinc-500">
+                        <p className="mt-0.5 text-xs text-zinc-500">
                           {eventStartTime} - {eventEndTime}
                         </p>
                       )}
@@ -204,19 +209,19 @@ export default function DateLocationSection() {
                   </div>
                 </div>
 
-                <div>
-                  <h2 className="text-start text-lg font-bold text-zinc-900">Location</h2>
+                <div className="min-w-0">
+                  <h2 className="text-base font-bold text-zinc-900 sm:text-lg">Location</h2>
 
-                  <div className="mt-4 flex items-start gap-3">
-                    <MapPin size={16} className="mt-0.5 text-[#5151eb]" />
+                  <div className="mt-3 flex items-start gap-3 sm:mt-4">
+                    <MapPin size={16} className="mt-0.5 shrink-0 text-[#5151eb]" />
 
-                    <div>
-                      <p className="text-start text-sm font-medium text-zinc-800">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-zinc-800">
                         {locationTitle || 'No location selected'}
                       </p>
 
                       {locationSubtitle && (
-                        <p className="mt-0.5 text-start text-xs text-zinc-500">
+                        <p className="mt-0.5 line-clamp-2 text-xs text-zinc-500">
                           {locationSubtitle}
                         </p>
                       )}
@@ -226,24 +231,24 @@ export default function DateLocationSection() {
               </div>
 
               {completed ? (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500">
                   <Check size={16} className="text-white" />
                 </div>
               ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100">
                   <Plus size={16} className="text-zinc-500" />
                 </div>
               )}
             </div>
 
             {locationQuery && (
-              <div className="mt-5 overflow-hidden rounded-xl border border-zinc-200">
-                <div className="h-[180px] w-full">
+              <div className="relative z-0 mt-5 overflow-hidden rounded-xl border border-zinc-200">
+                <div className="h-[160px] w-full sm:h-[180px]">
                   <MapContainer
                     center={position}
                     zoom={12}
                     scrollWheelZoom={false}
-                    className="h-full w-full"
+                    className="z-0 h-full w-full"
                   >
                     <TileLayer
                       attribution="&copy; OpenStreetMap contributors"
@@ -259,10 +264,10 @@ export default function DateLocationSection() {
       )}
 
       {expanded && (
-        <div className="p-6">
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-zinc-900">Date and location</h2>
+        <div className="p-4 sm:p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h2 className="text-lg font-bold text-zinc-900 sm:text-xl">Date and location</h2>
 
               <p className="mt-1 text-sm text-zinc-500">
                 Set when and where your event will happen
@@ -270,18 +275,19 @@ export default function DateLocationSection() {
             </div>
 
             <button
+              type="button"
               onClick={() => setExpanded(false)}
-              className="rounded-lg p-1.5 transition hover:bg-zinc-100 cursor-pointer"
+              className="shrink-0 cursor-pointer rounded-lg p-1.5 transition hover:bg-zinc-100"
             >
               <ChevronDown size={18} className="rotate-180 text-zinc-400" />
             </button>
           </div>
 
-          <div className="mt-8">
+          <div className="mt-6 sm:mt-8">
             <label className="text-sm font-medium text-zinc-700">Date and time</label>
 
-            <div className="mt-3 grid grid-cols-3 gap-3">
-              <div className="relative">
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div className="relative col-span-2">
                 <Calendar
                   size={16}
                   className="absolute left-3 top-1/2 z-10 -translate-y-1/2 text-zinc-400"
@@ -325,7 +331,7 @@ export default function DateLocationSection() {
             </div>
           </div>
 
-          <div className="mt-8">
+          <div className="mt-6 sm:mt-8">
             <label className="text-sm font-medium text-zinc-700">Location</label>
 
             <div className="relative z-[9999] mt-3">
@@ -342,22 +348,24 @@ export default function DateLocationSection() {
               />
 
               {results.length > 0 && (
-                <div className="absolute left-0 top-full z-[99999] mt-2 w-full overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg">
+                <div className="absolute left-0 top-full z-40 mt-2 max-h-[260px] w-full overflow-y-auto rounded-lg border border-zinc-200 bg-white shadow-lg">
                   {results.map((item, idx) => (
                     <button
                       key={`${item.lat}-${item.lon}-${idx}`}
                       type="button"
                       onClick={() => handleSelectLocation(item)}
-                      className="flex w-full items-start gap-2 border-b border-zinc-50 px-4 py-3 text-left transition last:border-b-0 hover:bg-indigo-50/50"
+                      className="flex w-full items-start gap-2 border-b border-zinc-50 px-3 py-3 text-left transition last:border-b-0 hover:bg-indigo-50/50 sm:px-4"
                     >
-                      <MapPin size={14} className="mt-0.5 text-zinc-400" />
+                      <MapPin size={14} className="mt-0.5 shrink-0 text-zinc-400" />
 
-                      <div>
-                        <p className="text-sm font-medium text-zinc-900">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-zinc-900">
                           {item.name || item.display_name.split(',')[0]}
                         </p>
 
-                        <p className="mt-0.5 text-xs text-zinc-500">{item.display_name}</p>
+                        <p className="mt-0.5 line-clamp-2 text-xs text-zinc-500">
+                          {item.display_name}
+                        </p>
                       </div>
                     </button>
                   ))}
@@ -366,13 +374,13 @@ export default function DateLocationSection() {
             </div>
 
             {locationQuery && (
-              <div className="mt-4 overflow-hidden rounded-xl border border-zinc-200">
-                <div className="h-[240px] w-full">
-                  <MapContainer
+              <div className="relative z-0 mt-4 overflow-hidden rounded-xl border border-zinc-200">
+                <div className="h-[200px] w-full sm:h-[240px]">
+                <MapContainer
                     center={position}
                     zoom={12}
                     scrollWheelZoom={false}
-                    className="h-full w-full"
+                    className="z-0 h-full w-full"
                   >
                     <TileLayer
                       attribution="&copy; OpenStreetMap contributors"

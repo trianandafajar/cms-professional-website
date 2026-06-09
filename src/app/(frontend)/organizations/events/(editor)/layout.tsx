@@ -1,16 +1,30 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 
-import { ArrowLeft, Calendar, CheckCircle2, Circle } from 'lucide-react'
+import {
+  ArrowLeft,
+  Calendar,
+  CheckCircle2,
+  Circle,
+  Menu,
+} from 'lucide-react'
 
 import { useEventEditorStore } from '@/stores/eventEditorStore'
+import {
+  Drawer,
+  DrawerContent,
+  DrawerTrigger,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer'
 
 export default function EventEditorLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
+  const [stepsDrawerOpen, setStepsDrawerOpen] = useState(false)
 
   const {
     bannerImages,
@@ -28,30 +42,25 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
     createDraftEvent,
     loadEvent,
     saveEventDetails,
-
     saveEventSettings,
 
     isSavingEvent,
     isSavingTickets,
     publishEvent,
-    resetEvent
+    resetEvent,
   } = useEventEditorStore()
 
   const bannerImage = bannerImages[0]?.url ?? ''
 
   const segments = pathname.split('/')
-
   const eventsIdx = segments.indexOf('events')
-
   const eventKey = eventsIdx >= 0 ? segments[eventsIdx + 1] : null
 
   const isCreatePage = eventKey === 'create'
   const editorKey = eventSlug || eventKey
 
   useEffect(() => {
-    if (!eventKey || isCreatePage) {
-      return
-    }
+    if (!eventKey || isCreatePage) return
 
     loadEvent(eventKey)
   }, [eventKey, isCreatePage, loadEvent])
@@ -62,23 +71,28 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
       ? 2
       : 0
 
-  const steps = [
-    {
-      title: 'Build event page',
-      description: 'Add details and let attendees know what to expect',
-      href: isCreatePage ? '/organizations/events/create' : `/organizations/events/${editorKey}`,
-    },
-    {
-      title: 'Add tickets',
-      description: 'Create ticket types and pricing',
-      href: isCreatePage ? null : `/organizations/events/${editorKey}/tickets`,
-    },
-    {
-      title: 'Publish',
-      description: 'Preview and publish your event',
-      href: isCreatePage ? null : `/organizations/events/${editorKey}/preview_publish`,
-    },
-  ]
+  const steps = useMemo(
+    () => [
+      {
+        title: 'Build event page',
+        description: 'Add details and let attendees know what to expect',
+        href: isCreatePage ? '/organizations/events/create' : `/organizations/events/${editorKey}`,
+      },
+      {
+        title: 'Add tickets',
+        description: 'Create ticket types and pricing',
+        href: isCreatePage ? null : `/organizations/events/${editorKey}/tickets`,
+      },
+      {
+        title: 'Publish',
+        description: 'Preview and publish your event',
+        href: isCreatePage ? null : `/organizations/events/${editorKey}/preview_publish`,
+      },
+    ],
+    [editorKey, isCreatePage],
+  )
+
+  const isSaving = isSavingEvent || isSavingTickets
 
   async function handleSaveAndContinue() {
     if (isCreatePage) {
@@ -113,24 +127,22 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
 
     if (currentStep === 2) {
       await saveEventSettings()
-
       await publishEvent()
 
-      router.push(
-        '/organizations/events/list',
-      )
-
-      return
+      router.push('/organizations/events/list')
     }
   }
 
-  return (
-    <div className="flex min-h-[calc(100vh-93px)] max-h-[calc(100vh-93px)] bg-[#fafafa] -mt-16 pt-10">
-      <aside className="sticky top-[73px] flex h-[calc(100vh-73px)] w-[320px] flex-col border-r border-zinc-100 bg-white">
+  function SidebarContent() {
+    return (
+      <>
         <div className="border-b border-zinc-100 px-5 py-4">
           <Link
             href="/organizations/events/list"
-            onClick={resetEvent}
+            onClick={() => {
+              resetEvent()
+              setStepsDrawerOpen(false)
+            }}
             className="flex items-center gap-2 text-sm font-medium text-[#5151eb] hover:text-[#4040d9]"
           >
             <ArrowLeft size={15} />
@@ -165,7 +177,6 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
 
               <div className="mt-3 flex items-center gap-2 text-zinc-500">
                 <Calendar size={14} />
-
                 <span className="text-xs font-medium">{eventDate || 'No date set'}</span>
               </div>
 
@@ -182,7 +193,9 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
                       : 'border-zinc-200 bg-zinc-50 text-zinc-600'
                 }`}
               >
-                {eventStatus ? eventStatus.charAt(0).toUpperCase() + eventStatus.slice(1) : 'Draft'}
+                {eventStatus
+                  ? eventStatus.charAt(0).toUpperCase() + eventStatus.slice(1)
+                  : 'Draft'}
               </span>
             </div>
           </div>
@@ -197,9 +210,7 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
             <div className="space-y-1">
               {steps.map((step, idx) => {
                 const isActive = idx === currentStep
-
                 const isCompleted = idx < currentStep
-
                 const isClickable = !!step.href && !isCreatePage
 
                 const content = (
@@ -240,11 +251,17 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
                     className={`rounded-lg transition ${isActive ? 'bg-indigo-50' : ''}`}
                   >
                     {isClickable ? (
-                      <Link href={step.href!} className="block">
+                      <Link
+                        href={step.href!}
+                        onClick={() => setStepsDrawerOpen(false)}
+                        className="block"
+                      >
                         {content}
                       </Link>
                     ) : (
-                      <div className={!isClickable && !isActive ? 'opacity-50' : ''}>{content}</div>
+                      <div className={!isClickable && !isActive ? 'opacity-50' : ''}>
+                        {content}
+                      </div>
                     )}
                   </div>
                 )
@@ -252,16 +269,57 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
             </div>
           </div>
         </div>
-      </aside>
+      </>
+    )
+  }
 
-      <main className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-4xl px-8 py-8 pb-24">{children}</div>
-      </main>
+  return (
+    <div className="min-h-[calc(100vh-73px)] bg-[#fafafa] md:-mt-16 md:max-h-[calc(100vh-93px)] md:pt-10">
+      <div className="sticky -top-2 z-40 -mx-4 -mt-4 flex items-center justify-between border-b border-zinc-100 bg-white px-4 py-3 sm:-mx-6 sm:-mt-6 md:hidden">
+        <Drawer open={stepsDrawerOpen} onOpenChange={setStepsDrawerOpen} direction="left">
+          <DrawerTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-700"
+            >
+              <Menu size={16} />
+              Steps
+            </button>
+          </DrawerTrigger>
 
-      <div className="fixed bottom-0 left-[420px] right-0 z-40 border-t border-zinc-100 bg-white/95 backdrop-blur-sm">
-        <div className="flex items-center justify-between px-8 py-3">
+          <DrawerContent className="h-full w-[86vw] max-w-[340px] rounded-r-2xl bg-white p-0">
+            <DrawerHeader className="border-b border-zinc-100">
+              <DrawerTitle>Event editor</DrawerTitle>
+            </DrawerHeader>
+
+            <div className="flex min-h-0 flex-1 flex-col">
+              <SidebarContent />
+            </div>
+          </DrawerContent>
+        </Drawer>
+
+        <p className="max-w-[180px] truncate text-sm font-semibold text-zinc-900">
+          {eventTitle || (isCreatePage ? 'New Event' : 'Untitled Event')}
+        </p>
+      </div>
+
+      <div className="flex md:h-[calc(100vh-93px)]">
+        <aside className="sticky top-[73px] hidden h-[calc(100vh-73px)] w-[320px] shrink-0 flex-col border-r border-zinc-100 bg-white md:flex">
+          <SidebarContent />
+        </aside>
+
+        <main className="min-w-0 flex-1 overflow-y-auto scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          <div className="mx-auto max-w-4xl px-4 py-5 pb-32 sm:px-6 md:px-8 md:py-8">
+            {children}
+          </div>
+        </main>
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-100 bg-white/95 backdrop-blur-sm md:left-[320px]">
+        <div className="flex flex-col-reverse gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:px-8">
           {currentStep > 0 && !isCreatePage ? (
             <button
+              type="button"
               onClick={() => {
                 const prevHref = steps[currentStep - 1]?.href
 
@@ -269,20 +327,21 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
                   router.push(prevHref)
                 }
               }}
-              className="rounded-lg border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+              className="w-full rounded-lg border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 sm:w-auto"
             >
               Back
             </button>
           ) : (
-            <div />
+            <div className="hidden sm:block" />
           )}
 
           <button
+            type="button"
             onClick={handleSaveAndContinue}
-            disabled={isSavingEvent || isSavingTickets}
-            className="flex items-center gap-2 rounded-lg bg-[#5151eb] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#4040d9] disabled:cursor-not-allowed disabled:opacity-70"
+            disabled={isSaving}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#5151eb] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#4040d9] disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
           >
-            {isSavingEvent || isSavingTickets && (
+            {isSaving && (
               <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
             )}
 

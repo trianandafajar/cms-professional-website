@@ -82,7 +82,7 @@ export default function EventsList() {
     <div>
       <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
         {/* Header */}
-        <div className="grid grid-cols-12 gap-4 border-b border-zinc-100 bg-zinc-50/50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+        <div className="hidden grid-cols-12 gap-4 border-b border-zinc-100 bg-zinc-50/50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-500 md:grid">
           <div className="col-span-5">Event</div>
           <div className="col-span-2">Date</div>
           <div className="col-span-2">Status</div>
@@ -110,12 +110,12 @@ export default function EventsList() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between">
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-zinc-500">
             Showing {events.length} of {totalDocs} events
           </p>
 
-          <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center gap-1">
             <button
               onClick={() => setPage(page - 1)}
               disabled={page <= 1}
@@ -201,11 +201,11 @@ function EventRow({
 
   return (
     <>
-      <div className="grid grid-cols-12 items-center gap-4 border-b border-zinc-50 px-5 py-3.5 transition last:border-b-0 hover:bg-indigo-50/20">
+      <div className="relative grid grid-cols-1 gap-3 border-b border-zinc-100 px-4 py-4 pr-12 transition last:border-b-0 hover:bg-indigo-50/20 md:grid-cols-12 md:items-center md:gap-4 md:border-zinc-50 md:px-5 md:py-3.5">
         {/* Event Info */}
-        <div className="col-span-5 flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3 md:col-span-5">
           {/* Date Badge */}
-          <div className="flex h-11 w-11 flex-col items-center justify-center rounded-lg bg-indigo-50">
+          <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-lg bg-indigo-50 md:h-11 md:w-11">
             <span className="text-[9px] font-bold uppercase leading-none text-[#5151eb]">
               {month}
             </span>
@@ -213,7 +213,7 @@ function EventRow({
           </div>
 
           {/* Thumbnail */}
-          <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg bg-zinc-100">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-100 md:h-11 md:w-11">
             {coverUrl ? (
               <Image
                 src={coverUrl}
@@ -228,7 +228,7 @@ function EventRow({
           </div>
 
           {/* Details */}
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h3 className="truncate text-sm font-semibold text-zinc-900">{event.title}</h3>
             <p className="truncate text-xs text-zinc-500">
               {event.venue || (event.isOnline ? 'Online Event' : 'No venue')}
@@ -237,10 +237,16 @@ function EventRow({
         </div>
 
         {/* Date */}
-        <div className="col-span-2 text-xs text-zinc-600">{dateFormatted}</div>
+        <div className="flex items-center justify-between gap-3 text-xs text-zinc-600 md:col-span-2 md:block">
+          <span className="font-semibold uppercase tracking-wide text-zinc-400 md:hidden">Date</span>
+          <span className="text-right md:text-left">{dateFormatted}</span>
+        </div>
 
         {/* Status */}
-        <div className="col-span-2">
+        <div className="flex items-center justify-between gap-3 md:col-span-2 md:block">
+          <span className="text-xs font-semibold uppercase tracking-wide text-zinc-400 md:hidden">
+            Status
+          </span>
           <span
             className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${statusColors[event.status] || statusColors.draft}`}
           >
@@ -249,13 +255,18 @@ function EventRow({
         </div>
 
         {/* Capacity */}
-        <div className="col-span-2 text-xs text-zinc-600">
-          <span className="font-medium text-zinc-900">{capacityLabel}</span>
-          <span className="ml-1 text-zinc-400">sold / total</span>
+        <div className="flex items-center justify-between gap-3 text-xs text-zinc-600 md:col-span-2 md:block">
+          <span className="font-semibold uppercase tracking-wide text-zinc-400 md:hidden">
+            Capacity
+          </span>
+          <span>
+            <span className="font-medium text-zinc-900">{capacityLabel}</span>
+            <span className="ml-1 text-zinc-400">sold / total</span>
+          </span>
         </div>
 
         {/* Actions */}
-        <div className="col-span-1 flex justify-end">
+        <div className="absolute right-3 top-3 flex justify-end md:static md:col-span-1">
           <Popover open={menuOpen} onOpenChange={setMenuOpen}>
             <PopoverTrigger asChild>
               <button className="rounded-lg p-1.5 transition hover:bg-zinc-100 cursor-pointer">
@@ -305,7 +316,7 @@ function EventRow({
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-6 shadow-xl">
+          <div className="mx-4 w-full max-w-sm rounded-xl border border-zinc-200 bg-white p-6 shadow-xl">
             <h3 className="text-base font-semibold text-zinc-900">Delete event</h3>
             <p className="mt-2 text-sm text-zinc-500">
               Are you sure you want to delete &ldquo;{event.title}&rdquo;? This action cannot be
