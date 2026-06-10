@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { X, Camera, Loader2 } from 'lucide-react'
 import { apiClient } from '@/lib/apiClient'
 import { useAuthStore } from '@/stores/authStore'
+import { AvatarCropModal } from './avatar-crop-modal'
 
 type Props = {
   isOpen: boolean
@@ -26,18 +27,21 @@ export function OrganizerProfileEditModal({ isOpen, onClose, organizer, onUpdate
   const [instagram, setInstagram] = useState(organizer.instagram ?? '')
   const [avatarPreview, setAvatarPreview] = useState<string | null>(organizer.avatarUrl ?? null)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [cropFile, setCropFile] = useState<File | null>(null)
+  const [cropOpen, setCropOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const { setUser, user } = useAuthStore()
+  const { setUser, user, refreshUser } = useAuthStore()
 
   if (!isOpen) return null
 
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    setAvatarFile(file)
-    setAvatarPreview(URL.createObjectURL(file))
+    setCropFile(file)
+    setCropOpen(true)
+    e.target.value = ''
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -47,6 +51,7 @@ export function OrganizerProfileEditModal({ isOpen, onClose, organizer, onUpdate
 
     try {
       let avatarId: number | undefined
+      let uploadedAvatar: any
 
       // Upload avatar if changed
       if (avatarFile) {
@@ -60,17 +65,23 @@ export function OrganizerProfileEditModal({ isOpen, onClose, organizer, onUpdate
         if (!res.ok) throw new Error('Failed to upload avatar')
         const data = await res.json()
         avatarId = data.doc.id
+        uploadedAvatar = data.doc
       }
 
       const updateData: Record<string, any> = { name, bio, website, instagram }
       if (avatarId) updateData.avatar = avatarId
 
-      await apiClient.patch('/api/organizer/profile', updateData)
+      const response = await apiClient.patch<{ doc: any }>('/api/organizer/profile', updateData)
 
       // Update local auth store
       if (user) {
-        setUser({ ...user, name, bio, website, instagram })
+        setUser({
+          ...user,
+          ...response.doc,
+          ...(uploadedAvatar ? { avatar: uploadedAvatar } : {}),
+        })
       }
+      await refreshUser()
 
       onUpdated()
       onClose()
@@ -209,6 +220,15 @@ export function OrganizerProfileEditModal({ isOpen, onClose, organizer, onUpdate
           </div>
         </form>
       </div>
+      <AvatarCropModal
+        file={cropFile}
+        open={cropOpen}
+        onClose={() => setCropOpen(false)}
+        onApply={(file, previewUrl) => {
+          setAvatarFile(file)
+          setAvatarPreview(previewUrl)
+        }}
+      />
     </div>
   )
 }

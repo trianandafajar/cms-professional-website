@@ -25,6 +25,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useAuthStore } from '@/stores/authStore'
+import NotificationDrawer from '@/components/organizations/layouts/notification'
 
 type SearchSuggestion = {
   id: string
@@ -536,33 +537,35 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
         {/* Auth */}
         <div className="hidden items-center gap-2 lg:flex">
           {isAuthed ? (
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className="flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 py-1 pl-1 pr-3 text-sm font-medium text-[#5151eb] transition hover:bg-indigo-100"
-                  aria-label="Open profile menu"
+            <>
+              <NotificationDrawer />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 py-1 pl-1 pr-3 text-sm font-medium text-[#5151eb] transition hover:bg-indigo-100"
+                    aria-label="Open profile menu"
+                  >
+                    {avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt={displayName || 'User'}
+                        className="size-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="flex size-8 items-center justify-center rounded-full bg-[#5151eb] text-xs font-semibold text-white">
+                        {initials}
+                      </span>
+                    )}
+                    <span className="max-w-[140px] truncate">{displayName}</span>
+                    <ChevronDown className="size-3.5 text-[#5151eb]" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent
+                  align="end"
+                  sideOffset={8}
+                  className="w-[300px] overflow-hidden rounded-2xl border border-zinc-200 bg-white p-0 shadow-xl ring-0"
                 >
-                  {avatarUrl ? (
-                    <img
-                      src={avatarUrl}
-                      alt={displayName || 'User'}
-                      className="size-8 rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="flex size-8 items-center justify-center rounded-full bg-[#5151eb] text-xs font-semibold text-white">
-                      {initials}
-                    </span>
-                  )}
-                  <span className="max-w-[140px] truncate">{displayName}</span>
-                  <ChevronDown className="size-3.5 text-[#5151eb]" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent
-                align="end"
-                sideOffset={8}
-                className="w-[300px] overflow-hidden rounded-2xl border border-zinc-200 bg-white p-0 shadow-xl ring-0"
-              >
                 {/* Header */}
                 <div className="border-b border-zinc-100 px-4 py-4">
                   <div className="flex items-center gap-3">
@@ -623,8 +626,9 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                     {loggingOut ? 'Logging out…' : 'Log out'}
                   </button>
                 </div>
-              </PopoverContent>
-            </Popover>
+                </PopoverContent>
+              </Popover>
+            </>
           ) : (
             <>
               <Button

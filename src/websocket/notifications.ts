@@ -6,6 +6,7 @@ export type RealtimeNotification = {
   link?: string | null
   isRead?: boolean | null
   type?: string | null
+  metadata?: Record<string, unknown> | null
   createdAt?: string | null
   updatedAt?: string | null
 }

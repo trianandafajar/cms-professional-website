@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import {
   Heart,
   MessageCircle,
@@ -71,6 +72,7 @@ function PostCard({
   onDelete,
   onEdit,
   onLike,
+  onOpenComments,
 }: {
   post: Post
   organizerName: string
@@ -79,9 +81,9 @@ function PostCard({
   onDelete: (id: number) => void
   onEdit: (post: Post) => void
   onLike: (postId: number, liked: boolean) => void
+  onOpenComments: (postId: number) => void
 }) {
   const [showMenu, setShowMenu] = useState(false)
-  const [showComments, setShowComments] = useState(false)
   const { gate } = useAuthGate()
   const user = useAuthStore((s) => s.user)
   const postImageUrl = getMediaUrl(post.image)
@@ -216,7 +218,7 @@ function PostCard({
           </button>
           <button
             type="button"
-            onClick={() => setShowComments(true)}
+            onClick={() => onOpenComments(post.id)}
             className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-[#5151eb] transition"
           >
             <MessageCircle className="size-4" />
@@ -232,8 +234,6 @@ function PostCard({
         </div>
       </div>
 
-      {/* Comments Modal */}
-      {showComments && <CommentsModal postId={post.id} onClose={() => setShowComments(false)} />}
     </>
   )
 }
@@ -315,9 +315,12 @@ function EditPostModal({
 }
 
 export function OrganizerFeed({ organizerId, isOwner, avatarUrl, organizerName }: Props) {
+  const searchParams = useSearchParams()
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [editingPost, setEditingPost] = useState<Post | null>(null)
+  const [activeCommentsPostId, setActiveCommentsPostId] = useState<number | null>(null)
+  const [targetCommentId, setTargetCommentId] = useState<number | null>(null)
 
   const fetchPosts = useCallback(async () => {
     try {
@@ -333,6 +336,15 @@ export function OrganizerFeed({ organizerId, isOwner, avatarUrl, organizerName }
   useEffect(() => {
     fetchPosts()
   }, [fetchPosts])
+
+  useEffect(() => {
+    const postId = Number(searchParams.get('post'))
+    const commentId = Number(searchParams.get('comment'))
+    if (!postId || Number.isNaN(postId)) return
+
+    setActiveCommentsPostId(postId)
+    setTargetCommentId(commentId && !Number.isNaN(commentId) ? commentId : null)
+  }, [searchParams])
 
   async function handleDelete(postId: number) {
     if (!confirm('Are you sure you want to delete this post?')) return
@@ -407,6 +419,10 @@ export function OrganizerFeed({ organizerId, isOwner, avatarUrl, organizerName }
           onDelete={handleDelete}
           onEdit={setEditingPost}
           onLike={handleLike}
+          onOpenComments={(postId) => {
+            setActiveCommentsPostId(postId)
+            setTargetCommentId(null)
+          }}
         />
       ))}
 
@@ -416,6 +432,25 @@ export function OrganizerFeed({ organizerId, isOwner, avatarUrl, organizerName }
           post={editingPost}
           onClose={() => setEditingPost(null)}
           onSaved={fetchPosts}
+        />
+      )}
+      {activeCommentsPostId && (
+        <CommentsModal
+          postId={activeCommentsPostId}
+          targetCommentId={targetCommentId}
+          onClose={() => {
+            setActiveCommentsPostId(null)
+            setTargetCommentId(null)
+          }}
+          onCommentAdded={() => {
+            setPosts((prev) =>
+              prev.map((post) =>
+                post.id === activeCommentsPostId
+                  ? { ...post, commentsCount: (post.commentsCount ?? 0) + 1 }
+                  : post,
+              ),
+            )
+          }}
         />
       )}
     </div>

@@ -13,6 +13,7 @@ import {
   ImageIcon,
 } from 'lucide-react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { apiClient } from '@/lib/apiClient'
 import { useAuthGate } from '@/hooks/useAuthGate'
 import { useAuthStore } from '@/stores/authStore'
@@ -70,14 +71,15 @@ function PostCard({
   onDelete,
   onEdit,
   onLike,
+  onOpenComments,
 }: {
   post: Post
   onDelete: (id: number) => void
   onEdit: (post: Post) => void
   onLike: (postId: number, liked: boolean) => void
+  onOpenComments: (postId: number) => void
 }) {
   const [showMenu, setShowMenu] = useState(false)
-  const [showComments, setShowComments] = useState(false)
   const { gate } = useAuthGate()
   const user = useAuthStore((s) => s.user)
   const postImageUrl = getMediaUrl(post.image)
@@ -223,7 +225,7 @@ function PostCard({
           </button>
           <button
             type="button"
-            onClick={() => setShowComments(true)}
+            onClick={() => onOpenComments(post.id)}
             className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-[#5151eb] transition"
           >
             <MessageCircle className="size-4" />
@@ -239,26 +241,19 @@ function PostCard({
         </div>
       </div>
 
-      {/* Comments Modal */}
-      {showComments && (
-        <CommentsModal
-          postId={post.id}
-          onClose={() => setShowComments(false)}
-          onCommentAdded={() => {
-            // Refresh will happen via the modal's internal state
-          }}
-        />
-      )}
     </>
   )
 }
 
 export function FeedSection() {
+  const searchParams = useSearchParams()
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [page, setPage] = useState(1)
   const [hasNextPage, setHasNextPage] = useState(false)
+  const [activeCommentsPostId, setActiveCommentsPostId] = useState<number | null>(null)
+  const [targetCommentId, setTargetCommentId] = useState<number | null>(null)
   const observerRef = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
@@ -289,6 +284,15 @@ export function FeedSection() {
   useEffect(() => {
     fetchPosts(1)
   }, [fetchPosts])
+
+  useEffect(() => {
+    const postId = Number(searchParams.get('post'))
+    const commentId = Number(searchParams.get('comment'))
+    if (!postId || Number.isNaN(postId)) return
+
+    setActiveCommentsPostId(postId)
+    setTargetCommentId(commentId && !Number.isNaN(commentId) ? commentId : null)
+  }, [searchParams])
 
   // Infinite scroll
   useEffect(() => {
@@ -373,6 +377,10 @@ export function FeedSection() {
             // TODO: Implement edit modal
           }}
           onLike={handleLike}
+          onOpenComments={(postId) => {
+            setActiveCommentsPostId(postId)
+            setTargetCommentId(null)
+          }}
         />
       ))}
 
@@ -381,6 +389,25 @@ export function FeedSection() {
         <div ref={loadMoreRef} className="flex items-center justify-center py-4">
           {loadingMore && <Loader2 className="size-5 animate-spin text-[#5151eb]" />}
         </div>
+      )}
+      {activeCommentsPostId && (
+        <CommentsModal
+          postId={activeCommentsPostId}
+          targetCommentId={targetCommentId}
+          onClose={() => {
+            setActiveCommentsPostId(null)
+            setTargetCommentId(null)
+          }}
+          onCommentAdded={() => {
+            setPosts((prev) =>
+              prev.map((post) =>
+                post.id === activeCommentsPostId
+                  ? { ...post, commentsCount: (post.commentsCount ?? 0) + 1 }
+                  : post,
+              ),
+            )
+          }}
+        />
       )}
     </div>
   )

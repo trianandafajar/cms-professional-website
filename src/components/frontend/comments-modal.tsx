@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { X, Loader2, Send, AtSign, Trash2 } from 'lucide-react'
+import { X, Loader2, Send, AtSign, CornerDownRight } from 'lucide-react'
+import Link from 'next/link'
 import { apiClient } from '@/lib/apiClient'
 import { useAuthGate } from '@/hooks/useAuthGate'
 import { useAuthStore } from '@/stores/authStore'
@@ -11,6 +12,7 @@ interface Comment {
   id: number
   content: string
   author: User | number
+  parent?: Comment | number | null
   mentions?: { user: User | number }[] | null
   createdAt: string
 }
@@ -30,6 +32,20 @@ function getMediaUrl(media: unknown): string | null {
   return null
 }
 
+function getMentionHandle(user?: User | null) {
+  const raw = user?.instagram?.replace('@', '') || user?.name || ''
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+}
+
+function getUserId(user?: User | null) {
+  if (!user?.id) return null
+  return Number(user.id)
+}
+
 function timeAgo(dateStr: string): string {
   const now = new Date()
   const date = new Date(dateStr)
@@ -47,24 +63,28 @@ function timeAgo(dateStr: string): string {
   return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-function renderContentWithMentions(content: string, mentions?: { user: User | number }[] | null) {
-  if (!mentions || mentions.length === 0) {
-    return <span>{content}</span>
-  }
-
+function renderContentWithMentions(
+  content: string,
+  mentions?: { user: User | number }[] | null,
+  knownUsers: User[] = [],
+) {
   // Build a map of usernames to user info
   const mentionMap = new Map<string, User>()
-  mentions.forEach((m) => {
+  knownUsers.forEach((user) => {
+    const handle = getMentionHandle(user)
+    if (handle) mentionMap.set(handle, user)
+  })
+  mentions?.forEach((m) => {
     if (typeof m.user === 'object' && m.user) {
-      const username = m.user.instagram?.replace('@', '') || m.user.name
-      mentionMap.set(username.toLowerCase(), m.user)
+      const handle = getMentionHandle(m.user)
+      if (handle) mentionMap.set(handle, m.user)
     }
   })
 
   // Split content by @mentions
   const parts: React.ReactNode[] = []
   let lastIndex = 0
-  const regex = /@(\w+)/g
+  const regex = /@([a-zA-Z0-9_.-]+)/g
   let match
   let key = 0
 
@@ -75,19 +95,30 @@ function renderContentWithMentions(content: string, mentions?: { user: User | nu
     }
 
     // Add the mention
-    const username = match[1].toLowerCase()
+    const username = match[1].toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
     const mentionedUser = mentionMap.get(username)
     const isEO = mentionedUser?.isOrganizer
 
-    parts.push(
-      <span
-        key={key++}
-        className={`font-medium ${isEO ? 'text-[#5151eb]' : 'text-blue-500'} hover:underline cursor-pointer`}
-        title={mentionedUser?.name}
-      >
-        {match[0]}
-      </span>,
-    )
+    const mentionedUserId = getUserId(mentionedUser)
+
+    if (isEO && mentionedUserId) {
+      parts.push(
+        <Link
+          key={key++}
+          href={`/organizers/${mentionedUserId}`}
+          className="font-medium text-[#5151eb] hover:underline"
+          title={mentionedUser?.name}
+        >
+          {match[0]}
+        </Link>,
+      )
+    } else {
+      parts.push(
+        <span key={key++} className="font-medium text-blue-500" title={mentionedUser?.name}>
+          {match[0]}
+        </span>,
+      )
+    }
 
     lastIndex = match.index + match[0].length
   }
@@ -104,10 +135,12 @@ export function CommentsModal({
   postId,
   onClose,
   onCommentAdded,
+  targetCommentId,
 }: {
   postId: number
   onClose: () => void
   onCommentAdded?: () => void
+  targetCommentId?: number | null
 }) {
   const [comments, setComments] = useState<Comment[]>([])
   const [loading, setLoading] = useState(true)
@@ -115,16 +148,19 @@ export function CommentsModal({
   const [page, setPage] = useState(1)
   const [hasNextPage, setHasNextPage] = useState(false)
   const [newComment, setNewComment] = useState('')
+  const [replyingTo, setReplyingTo] = useState<Comment | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [showMentions, setShowMentions] = useState(false)
   const [mentionQuery, setMentionQuery] = useState('')
   const [mentionPosition, setMentionPosition] = useState(0)
+  const [selectedMentionIds, setSelectedMentionIds] = useState<Record<string, number>>({})
   const { gate } = useAuthGate()
   const user = useAuthStore((s) => s.user)
   const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const observerRef = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
+  const targetCommentRef = useRef<HTMLDivElement | null>(null)
 
   const fetchComments = useCallback(
     async (pageNum: number, append: boolean = false) => {
@@ -159,6 +195,16 @@ export function CommentsModal({
   useEffect(() => {
     fetchComments(1)
   }, [fetchComments])
+
+  useEffect(() => {
+    if (!targetCommentId || loading) return
+
+    const timer = window.setTimeout(() => {
+      targetCommentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 120)
+
+    return () => window.clearTimeout(timer)
+  }, [loading, targetCommentId, comments])
 
   // Infinite scroll for comments
   useEffect(() => {
@@ -195,11 +241,19 @@ export function CommentsModal({
     try {
       const result = await apiClient.post<{ doc: Comment }>(
         `/api/post-comments/${postId}`,
-        { content: newComment.trim() },
+        {
+          content: newComment.trim(),
+          parent: replyingTo?.id,
+          mentions: Object.entries(selectedMentionIds)
+            .filter(([handle]) => newComment.includes(`@${handle}`))
+            .map(([, id]) => id),
+        },
         { timeout: 60000 },
       )
       setComments((prev) => [result.doc, ...prev])
       setNewComment('')
+      setReplyingTo(null)
+      setSelectedMentionIds({})
       setShowMentions(false)
       onCommentAdded?.()
     } catch (err: any) {
@@ -239,26 +293,145 @@ export function CommentsModal({
     setShowMentions(false)
   }
 
-  function insertMention(username: string) {
+  function insertMention(mentionedUser: User) {
+    const username = getMentionHandle(mentionedUser)
+    if (!username) return
+
     const beforeMention = newComment.slice(0, mentionPosition)
     const afterMention = newComment.slice(
       newComment.indexOf('@', mentionPosition) + mentionQuery.length + 1,
     )
     setNewComment(`${beforeMention}@${username} ${afterMention}`)
+    setSelectedMentionIds((current) => ({
+      ...current,
+      [username]: Number(mentionedUser.id),
+    }))
     setShowMentions(false)
     inputRef.current?.focus()
   }
 
-  // Filter organizers for mention suggestions
-  const suggestedOrganizers = comments
+  function startReply(comment: Comment) {
+    const author = typeof comment.author === 'object' ? comment.author : null
+    const username = getMentionHandle(author)
+    setReplyingTo(comment)
+    setNewComment(username ? `@${username} ` : '')
+    if (author && username) {
+      setSelectedMentionIds((current) => ({
+        ...current,
+        [username]: Number(author.id),
+      }))
+    }
+    inputRef.current?.focus()
+  }
+
+  function getParentId(comment: Comment) {
+    if (!comment.parent) return null
+    return typeof comment.parent === 'object' ? comment.parent.id : comment.parent
+  }
+
+  const repliesByParent = comments.reduce<Map<number, Comment[]>>((map, comment) => {
+    const parentId = getParentId(comment)
+    if (!parentId) return map
+    const replies = map.get(parentId) ?? []
+    replies.push(comment)
+    map.set(parentId, replies)
+    return map
+  }, new Map())
+
+  const topLevelComments = comments.filter((comment) => !getParentId(comment))
+  const knownUsers = comments
+    .map((comment) => (typeof comment.author === 'object' ? comment.author : null))
+    .filter((author): author is User => Boolean(author))
+
+  function renderComment(comment: Comment, isReply = false) {
+    const author = typeof comment.author === 'object' ? comment.author : null
+    const authorName = author?.name || 'Unknown'
+    const authorAvatar = getMediaUrl(author?.avatar)
+    const replies = repliesByParent.get(comment.id) ?? []
+    const isTarget = targetCommentId === comment.id
+    const authorId = getUserId(author)
+    const authorProfile = author?.isOrganizer && authorId ? `/organizers/${authorId}` : null
+    const avatarNode = authorAvatar ? (
+      <img
+        src={authorAvatar}
+        alt={authorName}
+        className="size-8 rounded-full object-cover shrink-0"
+      />
+    ) : (
+      <div className="size-8 rounded-full bg-zinc-200 flex items-center justify-center text-zinc-500 text-xs font-bold shrink-0">
+        {authorName.slice(0, 2).toUpperCase()}
+      </div>
+    )
+    const nameNode = <span className="text-sm font-semibold text-[#12192f]">{authorName}</span>
+
+    return (
+      <div key={comment.id}>
+        <div className={isReply ? 'relative ml-8 pl-5' : ''}>
+          {isReply && (
+            <div className="absolute left-0 top-0 h-7 w-4 rounded-bl-xl border-b border-l border-zinc-200" />
+          )}
+          <div
+            ref={isTarget ? targetCommentRef : undefined}
+            className={`flex gap-3 rounded-xl p-2 transition ${
+              isTarget ? 'bg-indigo-50 ring-1 ring-[#5151eb]/20' : ''
+            }`}
+          >
+            {authorProfile ? (
+              <Link href={authorProfile} className="shrink-0 hover:opacity-80">
+                {avatarNode}
+              </Link>
+            ) : (
+              avatarNode
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                {authorProfile ? (
+                  <Link href={authorProfile} className="hover:underline">
+                    {nameNode}
+                  </Link>
+                ) : (
+                  nameNode
+                )}
+                {author?.isOrganizer && (
+                  <span className="rounded bg-[#5151eb]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#5151eb]">
+                    EO
+                  </span>
+                )}
+                <span className="text-xs text-zinc-400">{timeAgo(comment.createdAt)}</span>
+              </div>
+              <p className="text-sm text-zinc-600 mt-0.5 whitespace-pre-wrap">
+                {renderContentWithMentions(comment.content, comment.mentions, knownUsers)}
+              </p>
+              <button
+                type="button"
+                onClick={() => startReply(comment)}
+                className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-zinc-500 transition hover:text-[#5151eb]"
+              >
+                <CornerDownRight className="size-3" />
+                Reply
+              </button>
+            </div>
+          </div>
+        </div>
+        {replies
+          .slice()
+          .reverse()
+          .map((reply) => renderComment(reply, true))}
+      </div>
+    )
+  }
+
+  // Filter visible commenters for mention suggestions
+  const suggestedUsers = comments
     .map((c) => (typeof c.author === 'object' ? c.author : null))
-    .filter(Boolean)
-    .filter((u) => u?.isOrganizer)
+    .filter((author): author is User => Boolean(author))
     .filter((u) => {
       if (!mentionQuery) return true
+      const handle = getMentionHandle(u)
       return (
         u?.name?.toLowerCase().includes(mentionQuery) ||
-        u?.instagram?.toLowerCase().includes(mentionQuery)
+        u?.instagram?.toLowerCase().includes(mentionQuery) ||
+        handle.includes(mentionQuery)
       )
     })
     .filter((u, i, arr) => arr.findIndex((x) => x?.id === u?.id) === i) // unique
@@ -291,53 +464,7 @@ export function CommentsModal({
               <p className="text-xs text-zinc-400 mt-1">Be the first to comment!</p>
             </div>
           ) : (
-            comments.map((comment) => {
-              const author = typeof comment.author === 'object' ? comment.author : null
-              const authorName = author?.name || 'Unknown'
-              const authorAvatar = getMediaUrl(author?.avatar)
-              const isOwner = author?.id === user?.id
-              const isAdmin = user?.roleName === 'admin'
-              const canDelete = isOwner || isAdmin
-
-              return (
-                <div key={comment.id} className="flex gap-3">
-                  {authorAvatar ? (
-                    <img
-                      src={authorAvatar}
-                      alt={authorName}
-                      className="size-8 rounded-full object-cover shrink-0"
-                    />
-                  ) : (
-                    <div className="size-8 rounded-full bg-zinc-200 flex items-center justify-center text-zinc-500 text-xs font-bold shrink-0">
-                      {authorName.slice(0, 2).toUpperCase()}
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-[#12192f]">{authorName}</span>
-                      {author?.isOrganizer && (
-                        <span className="rounded bg-[#5151eb]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#5151eb]">
-                          EO
-                        </span>
-                      )}
-                      <span className="text-xs text-zinc-400">{timeAgo(comment.createdAt)}</span>
-                    </div>
-                    <p className="text-sm text-zinc-600 mt-0.5 whitespace-pre-wrap">
-                      {renderContentWithMentions(comment.content, comment.mentions)}
-                    </p>
-                  </div>
-                  {canDelete && (
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteComment(comment.id)}
-                      className="p-1 text-zinc-400 hover:text-red-500 transition shrink-0"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
-                  )}
-                </div>
-              )
-            })
+            topLevelComments.map((comment) => renderComment(comment))
           )}
 
           {/* Load more trigger */}
@@ -350,6 +477,27 @@ export function CommentsModal({
 
         {/* Comment Input */}
         <form onSubmit={gate(handleSubmit)} className="border-t border-zinc-100 p-4 shrink-0">
+          {replyingTo && (
+            <div className="mb-2 flex items-center justify-between rounded-lg bg-indigo-50 px-3 py-2 text-xs text-[#5151eb]">
+              <span>
+                Replying to{' '}
+                <strong>
+                  {typeof replyingTo.author === 'object' ? replyingTo.author.name : 'comment'}
+                </strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setReplyingTo(null)
+                  setNewComment('')
+                  setSelectedMentionIds({})
+                }}
+                className="font-semibold hover:underline"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
           <div className="relative">
             <div className="flex gap-2">
               <div className="flex-1 relative">
@@ -390,15 +538,13 @@ export function CommentsModal({
             </div>
 
             {/* Mention Suggestions */}
-            {showMentions && suggestedOrganizers.length > 0 && (
+            {showMentions && suggestedUsers.length > 0 && (
               <div className="absolute bottom-full left-0 right-0 mb-1 rounded-lg border border-zinc-200 bg-white shadow-lg overflow-hidden">
-                {suggestedOrganizers.map((organizer) => (
+                {suggestedUsers.map((organizer) => (
                   <button
                     key={organizer?.id}
                     type="button"
-                    onClick={() =>
-                      insertMention(organizer?.instagram?.replace('@', '') || organizer?.name || '')
-                    }
+                    onClick={() => insertMention(organizer)}
                     className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-zinc-50 transition"
                   >
                     {getMediaUrl(organizer?.avatar) ? (
@@ -418,14 +564,16 @@ export function CommentsModal({
                         <p className="text-xs text-zinc-400">{organizer.instagram}</p>
                       )}
                     </div>
-                    <span className="ml-auto text-[10px] font-semibold text-[#5151eb]">EO</span>
+                    {organizer?.isOrganizer && (
+                      <span className="ml-auto text-[10px] font-semibold text-[#5151eb]">EO</span>
+                    )}
                   </button>
                 ))}
               </div>
             )}
           </div>
           <p className="text-xs text-zinc-400 mt-2">
-            Use @ to mention event organizers. They will be notified.
+            Use @ to mention users. They will be notified.
           </p>
         </form>
       </div>

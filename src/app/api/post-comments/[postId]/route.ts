@@ -13,6 +13,28 @@ async function getPayloadInstance() {
   return cachedPayload
 }
 
+function getRelationId(value: unknown) {
+  if (!value) return null
+  if (typeof value === 'object' && 'id' in value) {
+    return String((value as { id?: string | number }).id ?? '')
+  }
+  return String(value)
+}
+
+function normalizeMentionHandle(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^@/, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+}
+
+function extractMentionHandles(content: string) {
+  return [...new Set([...content.matchAll(/@([a-zA-Z0-9_.-]+)/g)].map((match) => normalizeMentionHandle(match[1])))]
+    .filter(Boolean)
+}
+
 export async function GET(request: Request, { params }: { params: Promise<{ postId: string }> }) {
   const { postId: postIdStr } = await params
   const postId = Number(postIdStr)
@@ -61,6 +83,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ pos
   if (!content) {
     return Response.json({ error: 'Content is required' }, { status: 400 })
   }
+  const parentId = body?.parent ? Number(body.parent) : null
+  const explicitMentionIds: number[] = Array.isArray(body?.mentions)
+    ? Array.from(
+        new Set<number>(
+          body.mentions
+            .map((id: unknown) => Number(id))
+            .filter((id: number) => Number.isInteger(id) && id > 0),
+        ),
+      )
+    : []
 
   const payload = await getPayloadInstance()
 
@@ -76,6 +108,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ pos
     return onboardingRequiredResponse()
   }
 
+  let parentComment: any = null
+  if (parentId) {
+    parentComment = await payload.findByID({
+      collection: 'comments',
+      id: parentId,
+      depth: 0,
+    })
+
+    const parentPostId =
+      typeof parentComment.post === 'object' ? parentComment.post.id : parentComment.post
+    if (Number(parentPostId) !== postId) {
+      return Response.json({ error: 'Reply target does not belong to this post' }, { status: 400 })
+    }
+  }
+
   // Create comment immediately WITHOUT resolving mentions to avoid timeout.
   // Mentions will be resolved in the afterChange hook or can be added later.
   const comment = await payload.create({
@@ -84,53 +131,115 @@ export async function POST(request: Request, { params }: { params: Promise<{ pos
       post: postId,
       author: user.id,
       content,
+      parent: parentId || undefined,
     },
     depth: 1,
   })
 
-  // Resolve mentions in background (fire-and-forget) so the response is fast
-  const mentionMatches = content.match(/@(\w+)/g)
-  if (mentionMatches && mentionMatches.length > 0) {
-    resolveMentionsInBackground(payload, comment.id, mentionMatches)
-  }
+  // Resolve mentions and related comment notifications in background.
+  resolveCommentNotificationsInBackground(
+    payload,
+    comment.id,
+    postId,
+    user,
+    content,
+    parentComment,
+    explicitMentionIds,
+  )
 
   return Response.json({ doc: comment }, { status: 201 })
 }
 
 /**
- * Resolve @mentions and update the comment in the background.
+ * Resolve @mentions and create related notifications in the background.
  * This runs after the response is sent so the user doesn't wait.
  */
-async function resolveMentionsInBackground(
+async function resolveCommentNotificationsInBackground(
   payload: Awaited<ReturnType<typeof getPayload>>,
   commentId: number,
-  matches: string[],
+  postId: number,
+  author: any,
+  content: string,
+  parentComment: any,
+  explicitMentionIds: number[],
 ) {
   try {
-    const uniqueUsernames = [...new Set(matches.map((m) => m.slice(1)))]
-    const mentions: { user: number }[] = []
+    const uniqueUsernames = extractMentionHandles(content)
+    const mentionIds = new Set<number>(explicitMentionIds)
 
     const mentionResults = await Promise.all(
-      uniqueUsernames.map((username) =>
-        payload.find({
+      uniqueUsernames.map(async (username) => {
+        const spacedName = username.replace(/_/g, ' ')
+        const result = await payload.find({
           collection: 'users',
           where: {
             or: [
               { name: { equals: username } },
+              { name: { equals: spacedName } },
+              { name: { contains: spacedName } },
               { instagram: { equals: username } },
               { instagram: { equals: `@${username}` } },
             ],
           },
-          limit: 1,
+          limit: 20,
           depth: 0,
-        }),
-      ),
+        })
+
+        return result.docs.find((doc) => {
+          const nameHandle = normalizeMentionHandle(doc.name || '')
+          const instagramHandle = normalizeMentionHandle(doc.instagram || '')
+          return nameHandle === username || instagramHandle === username
+        })
+      }),
     )
 
     for (const result of mentionResults) {
-      if (result.docs.length > 0) {
-        mentions.push({ user: result.docs[0].id })
+      if (result) {
+        mentionIds.add(Number(result.id))
       }
+    }
+
+    const mentions = [...mentionIds].map((user) => ({ user }))
+
+    const recipientIds = new Map<string, { title: string; reason: 'mention' | 'reply' | 'post' }>()
+    const authorId = String(author.id)
+    const authorName = author.name || 'Someone'
+    const message = content.length > 120 ? `${content.slice(0, 117)}...` : content
+
+    mentions.forEach((mention) => {
+      const recipientId = String(mention.user)
+      if (recipientId !== authorId) {
+        recipientIds.set(recipientId, {
+          title: `${authorName} mentioned you`,
+          reason: 'mention',
+        })
+      }
+    })
+
+    if (parentComment) {
+      const parentAuthorId = getRelationId(parentComment.author)
+      if (parentAuthorId && parentAuthorId !== authorId && !recipientIds.has(parentAuthorId)) {
+        recipientIds.set(parentAuthorId, {
+          title: `${authorName} replied to your comment`,
+          reason: 'reply',
+        })
+      }
+    }
+
+    const post = await payload.findByID({
+      collection: 'posts',
+      id: postId,
+      depth: 0,
+    })
+    const postAuthorId = getRelationId(post.author)
+    const link = postAuthorId
+      ? `/organizers/${postAuthorId}?tab=feed&post=${postId}&comment=${commentId}`
+      : '/organizers'
+    if (postAuthorId && postAuthorId !== authorId && !recipientIds.has(postAuthorId)) {
+      recipientIds.set(postAuthorId, {
+        title: `${authorName} commented on your post`,
+        reason: 'post',
+      })
     }
 
     if (mentions.length > 0) {
@@ -140,8 +249,34 @@ async function resolveMentionsInBackground(
         data: { mentions },
         depth: 0,
       })
+
     }
+
+    await Promise.all(
+      [...recipientIds.entries()].map(([recipient, notification]) =>
+        payload.create({
+          collection: 'notifications',
+          data: {
+            recipient: Number(recipient),
+            type: 'comment',
+            title: notification.title,
+            message,
+            link,
+            isRead: false,
+              metadata: {
+                postId,
+                commentId,
+                authorId: author.id,
+                postAuthorId: postAuthorId ? Number(postAuthorId) : null,
+                reason: notification.reason,
+              },
+          },
+          overrideAccess: true,
+          depth: 0,
+        }),
+      ),
+    )
   } catch (err) {
-    console.error('Failed to resolve mentions for comment', commentId, err)
+    console.error('Failed to resolve notifications for comment', commentId, err)
   }
 }

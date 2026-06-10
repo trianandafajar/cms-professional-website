@@ -19,9 +19,10 @@ import {
 import Link from 'next/link'
 import { useAuthStore } from '@/stores/authStore'
 import { apiClient } from '@/lib/apiClient'
+import { AvatarCropModal } from '@/components/frontend/avatar-crop-modal'
 
 export default function SettingsPage() {
-  const { user, setUser } = useAuthStore()
+  const { user, setUser, refreshUser } = useAuthStore()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -34,6 +35,8 @@ export default function SettingsPage() {
   const [instagram, setInstagram] = useState('')
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [cropFile, setCropFile] = useState<File | null>(null)
+  const [cropOpen, setCropOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Load current profile data
@@ -63,8 +66,9 @@ export default function SettingsPage() {
   function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    setAvatarFile(file)
-    setAvatarPreview(URL.createObjectURL(file))
+    setCropFile(file)
+    setCropOpen(true)
+    e.target.value = ''
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -75,6 +79,7 @@ export default function SettingsPage() {
 
     try {
       let avatarId: number | undefined
+      let uploadedAvatar: any
 
       // Upload avatar if changed
       if (avatarFile) {
@@ -88,17 +93,23 @@ export default function SettingsPage() {
         if (!res.ok) throw new Error('Failed to upload avatar')
         const data = await res.json()
         avatarId = data.doc.id
+        uploadedAvatar = data.doc
       }
 
       const updateData: Record<string, any> = { name, bio, website, instagram }
       if (avatarId) updateData.avatar = avatarId
 
-      await apiClient.patch('/api/organizer/profile', updateData)
+      const response = await apiClient.patch<{ doc: any }>('/api/organizer/profile', updateData)
 
       // Update local auth store
       if (user) {
-        setUser({ ...user, name, bio, website, instagram })
+        setUser({
+          ...user,
+          ...response.doc,
+          ...(uploadedAvatar ? { avatar: uploadedAvatar } : {}),
+        })
       }
+      await refreshUser()
 
       setSuccess(true)
       setAvatarFile(null)
@@ -378,6 +389,15 @@ export default function SettingsPage() {
           </div>
         </aside>
       </div>
+      <AvatarCropModal
+        file={cropFile}
+        open={cropOpen}
+        onClose={() => setCropOpen(false)}
+        onApply={(file, previewUrl) => {
+          setAvatarFile(file)
+          setAvatarPreview(previewUrl)
+        }}
+      />
     </div>
   )
 }

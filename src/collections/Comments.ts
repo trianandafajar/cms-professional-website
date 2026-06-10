@@ -124,6 +124,16 @@ export const Comments: CollectionConfig = {
       },
     },
     {
+      name: 'parent',
+      type: 'relationship',
+      relationTo: 'comments',
+      index: true,
+      label: 'Parent Comment',
+      admin: {
+        description: 'Set when this comment is a reply',
+      },
+    },
+    {
       name: 'content',
       type: 'textarea',
       required: true,

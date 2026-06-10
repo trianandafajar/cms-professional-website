@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { User, Mail, Save, CheckCircle2, Camera } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
+import { AvatarCropModal } from '@/components/frontend/avatar-crop-modal'
 
 function getAvatarUrl(avatar: unknown): string | null {
   if (avatar && typeof avatar === 'object' && 'url' in avatar) {
@@ -12,13 +13,15 @@ function getAvatarUrl(avatar: unknown): string | null {
 }
 
 export default function MyProfilePage() {
-  const { user, refreshUser } = useAuthStore()
+  const { user, setUser, refreshUser } = useAuthStore()
   const [name, setName] = useState(user?.name ?? '')
   const [bio, setBio] = useState(user?.bio ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(getAvatarUrl(user?.avatar))
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [cropFile, setCropFile] = useState<File | null>(null)
+  const [cropOpen, setCropOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Update form when user data changes
@@ -33,8 +36,9 @@ export default function MyProfilePage() {
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    setAvatarFile(file)
-    setAvatarPreview(URL.createObjectURL(file))
+    setCropFile(file)
+    setCropOpen(true)
+    e.target.value = ''
   }
 
   async function handleSave(e: React.FormEvent) {
@@ -44,6 +48,7 @@ export default function MyProfilePage() {
 
     try {
       let avatarId: number | undefined
+      let uploadedAvatar: any
 
       // Upload avatar if changed
       if (avatarFile) {
@@ -57,6 +62,7 @@ export default function MyProfilePage() {
         if (!res.ok) throw new Error('Failed to upload avatar')
         const data = await res.json()
         avatarId = data.doc.id
+        uploadedAvatar = data.doc
       }
 
       const updateData: Record<string, any> = { name, bio }
@@ -70,7 +76,14 @@ export default function MyProfilePage() {
       })
 
       if (res.ok) {
-        // Refresh user data in auth store so navbar updates
+        if (user) {
+          setUser({
+            ...user,
+            name,
+            bio,
+            ...(uploadedAvatar ? { avatar: uploadedAvatar } : {}),
+          })
+        }
         await refreshUser()
         setAvatarFile(null)
         setSaved(true)
@@ -205,6 +218,15 @@ export default function MyProfilePage() {
           )}
         </div>
       </form>
+      <AvatarCropModal
+        file={cropFile}
+        open={cropOpen}
+        onClose={() => setCropOpen(false)}
+        onApply={(file, previewUrl) => {
+          setAvatarFile(file)
+          setAvatarPreview(previewUrl)
+        }}
+      />
     </div>
   )
 }

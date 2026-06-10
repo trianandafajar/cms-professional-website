@@ -501,7 +501,7 @@ export interface TicketDesignPreset {
 export interface Notification {
   id: number;
   recipient: number | User;
-  type: 'order' | 'checkin' | 'finance' | 'system';
+  type: 'order' | 'checkin' | 'finance' | 'comment' | 'system';
   title: string;
   message: string;
   link?: string | null;
@@ -748,6 +748,10 @@ export interface Comment {
   id: number;
   post: number | Post;
   author: number | User;
+  /**
+   * Set when this comment is a reply
+   */
+  parent?: (number | null) | Comment;
   content: string;
   /**
    * Users tagged in this comment
@@ -1295,6 +1299,7 @@ export interface PostsSelect<T extends boolean = true> {
 export interface CommentsSelect<T extends boolean = true> {
   post?: T;
   author?: T;
+  parent?: T;
   content?: T;
   mentions?:
     | T

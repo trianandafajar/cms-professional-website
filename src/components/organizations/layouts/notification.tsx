@@ -51,6 +51,40 @@ function upsertNotification(
   return next
 }
 
+function normalizeNotificationLink(
+  link: string | null | undefined,
+  notification: RealtimeNotification,
+  currentUserId?: string | number | null,
+) {
+  if (!link) return null
+
+  if (link.startsWith('/feed')) {
+    const metadata = notification.metadata as
+      | {
+          postAuthorId?: string | number | null
+          organizerId?: string | number | null
+          postId?: string | number | null
+          commentId?: string | number | null
+        }
+      | null
+      | undefined
+    const organizerId = metadata?.postAuthorId ?? metadata?.organizerId ?? currentUserId
+    const sourceUrl = new URL(link, 'http://localhost')
+    const postId = metadata?.postId ?? sourceUrl.searchParams.get('post')
+    const commentId = metadata?.commentId ?? sourceUrl.searchParams.get('comment')
+
+    if (!organizerId) return '/organizers'
+
+    const params = new URLSearchParams({ tab: 'feed' })
+    if (postId) params.set('post', String(postId))
+    if (commentId) params.set('comment', String(commentId))
+
+    return `/organizers/${organizerId}?${params.toString()}`
+  }
+
+  return link
+}
+
 export default function NotificationDrawer() {
   const user = useAuthStore((state) => state.user)
   const hasHydrated = useAuthStore((state) => state._hasHydrated)
@@ -306,11 +340,13 @@ export default function NotificationDrawer() {
                     </>
                   )
 
-                  if (notification.link) {
+                  const normalizedLink = normalizeNotificationLink(notification.link, notification, user?.id)
+
+                  if (normalizedLink) {
                     return (
                       <a
                         key={notification.id}
-                        href={notification.link}
+                        href={normalizedLink}
                         className={className}
                         onClick={() => {
                           if (isUnread) {
