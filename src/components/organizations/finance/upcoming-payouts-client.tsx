@@ -139,8 +139,8 @@ export default function UpcomingPayoutsClient({
   }
 
   return (
-    <div className="space-y-5">
-      <div className="rounded-xl border border-zinc-200 bg-white p-5">
+    <div className="space-y-5 overflow-x-hidden">
+      <div className="rounded-xl border border-zinc-200 bg-white p-4 sm:p-5">
         <p className="text-xs font-medium uppercase tracking-wider text-zinc-400">Total Upcoming</p>
         <p className="mt-2 text-2xl font-bold text-zinc-900">
           {formatMoneyAmount(totalUpcoming, 'USD')}
@@ -151,21 +151,23 @@ export default function UpcomingPayoutsClient({
         </p>
       </div>
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <p className="text-sm text-zinc-500">
           Payouts scheduled to be transferred to your connected account
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start lg:self-auto">
           <button
+            type="button"
             onClick={() => setDrawerOpen(true)}
-            className="flex h-9 items-center rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+            className="inline-flex h-9 cursor-pointer items-center rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
           >
             Filters
           </button>
           <button
+            type="button"
             onClick={handleExport}
             disabled={filteredRows.length === 0}
-            className="flex h-9 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Download size={14} />
             Export
@@ -176,77 +178,135 @@ export default function UpcomingPayoutsClient({
       {filteredRows.length === 0 ? (
         <PayoutEmpty />
       ) : (
-        <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-zinc-100 bg-zinc-50/80">
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  ID
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Event
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Gross
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Fees
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Net
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Status
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Method
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                  Expected Date
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100 bg-white">
-              {filteredRows.map((item) => (
-                <tr key={item.id} className="transition hover:bg-zinc-50/50">
-                  <td className="px-4 py-3.5 text-sm font-medium text-zinc-900">{item.id}</td>
-                  <td className="px-4 py-3.5 text-sm text-zinc-700">
-                    <div className="space-y-0.5">
-                      <p>{item.event}</p>
-                      <p className="text-xs text-zinc-400">{item.ticketCount} completed ticket(s)</p>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3.5 text-right text-sm text-zinc-700">
-                    {formatMoneyAmount(item.gross, 'USD')}
-                  </td>
-                  <td className="px-4 py-3.5 text-right text-sm text-zinc-400">
-                    {formatMoneyAmount(item.fees, 'USD')}
-                  </td>
-                  <td className="px-4 py-3.5 text-right text-sm font-semibold text-zinc-900">
-                    {formatMoneyAmount(item.net, 'USD')}
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <span
-                      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        item.status === 'Scheduled'
-                          ? 'bg-blue-50 text-blue-700'
-                          : 'bg-emerald-50 text-emerald-700'
-                      }`}
-                    >
-                      {item.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5 text-sm text-zinc-600">
+        <>
+          <div className="grid gap-3 overflow-x-hidden lg:hidden">
+            {filteredRows.map((item) => (
+              <div key={item.id} className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-zinc-900">{item.event}</p>
+                    <p className="mt-1 text-xs text-zinc-500">{item.id}</p>
+                  </div>
+                  <span
+                    className={`inline-flex shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      item.status === 'Scheduled'
+                        ? 'bg-blue-50 text-blue-700'
+                        : 'bg-emerald-50 text-emerald-700'
+                    }`}
+                  >
+                    {item.status}
+                  </span>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                  <div className="rounded-lg bg-zinc-50 p-2.5">
+                    <p className="text-xs text-zinc-500">Gross</p>
+                    <p className="mt-1 font-medium text-zinc-900">
+                      {formatMoneyAmount(item.gross, 'USD')}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-zinc-50 p-2.5">
+                    <p className="text-xs text-zinc-500">Fees</p>
+                    <p className="mt-1 font-medium text-zinc-900">
+                      {formatMoneyAmount(item.fees, 'USD')}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-zinc-50 p-2.5">
+                    <p className="text-xs text-zinc-500">Net</p>
+                    <p className="mt-1 font-medium text-zinc-900">
+                      {formatMoneyAmount(item.net, 'USD')}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-zinc-50 p-2.5">
+                    <p className="text-xs text-zinc-500">Expected</p>
+                    <p className="mt-1 font-medium text-zinc-900">{formatTableDate(item.expectedDate)}</p>
+                  </div>
+                </div>
+
+                <div className="mt-3 rounded-lg bg-zinc-50 p-2.5 text-sm text-zinc-700">
+                  <p className="text-xs text-zinc-500">Method</p>
+                  <p className="mt-1 font-medium text-zinc-900">
                     {buildPaymentProviderLabel(item.paymentProvider)}
-                  </td>
-                  <td className="px-4 py-3.5 text-sm text-zinc-500">
-                    {formatTableDate(item.expectedDate)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="hidden overflow-hidden rounded-xl border border-zinc-200 bg-white lg:block">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[980px]">
+                <thead>
+                  <tr className="border-b border-zinc-100 bg-zinc-50/80">
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                      ID
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                      Event
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                      Gross
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                      Fees
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                      Net
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                      Method
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                      Expected Date
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100 bg-white">
+                  {filteredRows.map((item) => (
+                    <tr key={item.id} className="transition hover:bg-zinc-50/50">
+                      <td className="px-4 py-3.5 text-sm font-medium text-zinc-900">{item.id}</td>
+                      <td className="px-4 py-3.5 text-sm text-zinc-700">
+                        <div className="space-y-0.5">
+                          <p>{item.event}</p>
+                          <p className="text-xs text-zinc-400">{item.ticketCount} completed ticket(s)</p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-right text-sm text-zinc-700">
+                        {formatMoneyAmount(item.gross, 'USD')}
+                      </td>
+                      <td className="px-4 py-3.5 text-right text-sm text-zinc-400">
+                        {formatMoneyAmount(item.fees, 'USD')}
+                      </td>
+                      <td className="px-4 py-3.5 text-right text-sm font-semibold text-zinc-900">
+                        {formatMoneyAmount(item.net, 'USD')}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                            item.status === 'Scheduled'
+                              ? 'bg-blue-50 text-blue-700'
+                              : 'bg-emerald-50 text-emerald-700'
+                          }`}
+                        >
+                          {item.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-sm text-zinc-600">
+                        {buildPaymentProviderLabel(item.paymentProvider)}
+                      </td>
+                      <td className="px-4 py-3.5 text-sm text-zinc-500">
+                        {formatTableDate(item.expectedDate)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
 
       <PayoutFilterDrawer

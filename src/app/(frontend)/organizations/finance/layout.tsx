@@ -13,7 +13,7 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
   const pathname = usePathname()
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto max-w-6xl overflow-x-hidden">
       <div className="mb-6">
         <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Finance</h1>
         <p className="mt-1 text-sm text-zinc-500">Track payouts, revenue, and financial settings</p>
@@ -23,11 +23,9 @@ export default function FinanceLayout({ children }: { children: React.ReactNode 
         {tabs.map((tab) => {
           const active =
             tab.href === '/organizations/finance'
-              ? pathname === '/organizations/finance' ||
-                (pathname.startsWith('/organizations/finance') &&
-                  !pathname.startsWith('/organizations/finance/faq') &&
-                  !pathname.startsWith('/organizations/finance/settings') &&
-                  !pathname.startsWith('/organizations/finance/upcoming'))
+              ? pathname.startsWith('/organizations/finance') &&
+                !pathname.startsWith('/organizations/finance/faq') &&
+                !pathname.startsWith('/organizations/finance/settings')
               : pathname === tab.href || pathname.startsWith(`${tab.href}/`)
 
           return (

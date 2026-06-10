@@ -1,6 +1,13 @@
 'use client'
 
 import { Drawer, DrawerContent } from '@/components/ui/drawer'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { X } from 'lucide-react'
 
 interface Props {
@@ -39,48 +46,62 @@ export default function PayoutFilterDrawer({ open, onOpenChange, filters, onChan
               <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
                 Date range
               </label>
-              <select
+              <Select
                 value={filters.dateRange}
-                onChange={(e) => onChange({ dateRange: e.target.value as Props['filters']['dateRange'] })}
-                className="mt-2 h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm text-zinc-700 outline-none focus:border-[#5151eb]"
+                onValueChange={(value) =>
+                  onChange({ dateRange: value as Props['filters']['dateRange'] })
+                }
               >
-                <option value="all">All time</option>
-                <option value="30d">Last 30 days</option>
-                <option value="90d">Last 90 days</option>
-                <option value="year">This year</option>
-              </select>
+                <SelectTrigger className="mt-2 h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent align="start">
+                  <SelectItem value="all">All time</SelectItem>
+                  <SelectItem value="30d">Last 30 days</SelectItem>
+                  <SelectItem value="90d">Last 90 days</SelectItem>
+                  <SelectItem value="year">This year</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
                 Status
               </label>
-              <select
+              <Select
                 value={filters.status}
-                onChange={(e) => onChange({ status: e.target.value as Props['filters']['status'] })}
-                className="mt-2 h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm text-zinc-700 outline-none focus:border-[#5151eb]"
+                onValueChange={(value) => onChange({ status: value as Props['filters']['status'] })}
               >
-                <option value="all">All</option>
-                <option value="Scheduled">Scheduled</option>
-                <option value="Ready">Ready</option>
-              </select>
+                <SelectTrigger className="mt-2 h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent align="start">
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="Scheduled">Scheduled</SelectItem>
+                  <SelectItem value="Ready">Ready</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
                 Payment method
               </label>
-              <select
+              <Select
                 value={filters.paymentMethod}
-                onChange={(e) =>
-                  onChange({ paymentMethod: e.target.value as Props['filters']['paymentMethod'] })
+                onValueChange={(value) =>
+                  onChange({ paymentMethod: value as Props['filters']['paymentMethod'] })
                 }
-                className="mt-2 h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm text-zinc-700 outline-none focus:border-[#5151eb]"
               >
-                <option value="all">All</option>
-                <option value="stripe">Stripe</option>
-                <option value="paypal">PayPal</option>
-              </select>
+                <SelectTrigger className="mt-2 h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent align="start">
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="stripe">Stripe</SelectItem>
+                  <SelectItem value="paypal">PayPal</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
@@ -111,20 +132,22 @@ export default function PayoutFilterDrawer({ open, onOpenChange, filters, onChan
           {/* Footer */}
           <div className="border-t border-zinc-100 px-6 py-4">
             <div className="flex gap-3">
-              <button
-                onClick={() => onOpenChange(false)}
-                className="flex-1 rounded-lg border border-zinc-200 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  onOpenChange(false)
-                }}
-                className="flex-1 rounded-lg bg-[#5151eb] py-2.5 text-sm font-medium text-white transition hover:bg-[#3d3dcc]"
-              >
-                Apply
-              </button>
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="flex-1 cursor-pointer rounded-lg border border-zinc-200 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onOpenChange(false)
+              }}
+              className="flex-1 cursor-pointer rounded-lg bg-[#5151eb] py-2.5 text-sm font-medium text-white transition hover:bg-[#3d3dcc]"
+            >
+              Apply
+            </button>
             </div>
           </div>
         </div>

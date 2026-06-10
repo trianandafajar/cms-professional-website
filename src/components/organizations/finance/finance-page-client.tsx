@@ -17,6 +17,13 @@ import {
 } from 'recharts'
 
 import { ChartSkeleton, DashboardStatsSkeleton, TableSkeleton } from '@/components/ui/skeleton'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { buildPaymentProviderLabel, formatMoneyAmount, formatMoneyShortAmount } from '@/lib/finance'
 import { useAuthStore } from '@/stores/authStore'
 import { useFinanceStore } from '@/stores/financeStore'
@@ -243,7 +250,7 @@ export default function FinancePageClient({ organizerId }: { organizerId: string
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 overflow-x-hidden">
       {isLoading && orders.length === 0 ? (
         <>
           <DashboardStatsSkeleton />
@@ -263,7 +270,7 @@ export default function FinancePageClient({ organizerId }: { organizerId: string
 
       {(!isLoading || orders.length > 0) && !error ? (
         <>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <SummaryCard
               icon={Wallet}
               label="Completed Revenue"
@@ -389,12 +396,12 @@ export default function FinancePageClient({ organizerId }: { organizerId: string
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center rounded-lg border border-zinc-200 p-0.5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="flex items-center rounded-lg border border-zinc-200 p-0.5 self-start">
                 <button
                   onClick={() => changeTab('orders')}
-                  className={`rounded-md px-4 py-1.5 text-sm font-medium transition ${
+                  className={`cursor-pointer rounded-md px-4 py-1.5 text-sm font-medium transition ${
                     !isEventsTab ? 'bg-[#5151eb] text-white' : 'text-zinc-600 hover:bg-zinc-50'
                   }`}
                 >
@@ -402,7 +409,7 @@ export default function FinancePageClient({ organizerId }: { organizerId: string
                 </button>
                 <button
                   onClick={() => changeTab('events')}
-                  className={`rounded-md px-4 py-1.5 text-sm font-medium transition ${
+                  className={`cursor-pointer rounded-md px-4 py-1.5 text-sm font-medium transition ${
                     isEventsTab ? 'bg-[#5151eb] text-white' : 'text-zinc-600 hover:bg-zinc-50'
                   }`}
                 >
@@ -410,23 +417,24 @@ export default function FinancePageClient({ organizerId }: { organizerId: string
                 </button>
               </div>
 
-              <select
-                value={filterStatus}
-                onChange={(event) => setFilterStatus(event.target.value)}
-                className="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none focus:border-[#5151eb]"
-              >
-                <option value="all">All Status</option>
-                <option value="Completed">Completed</option>
-                <option value="Pending">Pending</option>
-                <option value="Cancelled">Cancelled</option>
-                <option value="Refunded">Refunded</option>
-                {isEventsTab ? <option value="Mixed">Mixed</option> : null}
-              </select>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="h-9 w-full cursor-pointer rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 sm:w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent align="start">
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="Completed">Completed</SelectItem>
+                  <SelectItem value="Pending">Pending</SelectItem>
+                  <SelectItem value="Cancelled">Cancelled</SelectItem>
+                  <SelectItem value="Refunded">Refunded</SelectItem>
+                  {isEventsTab ? <SelectItem value="Mixed">Mixed</SelectItem> : null}
+                </SelectContent>
+              </Select>
             </div>
 
             <button
               onClick={handleExport}
-              className="flex h-9 items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+              className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
             >
               <Download size={15} />
               Export CSV
@@ -434,80 +442,139 @@ export default function FinancePageClient({ organizerId }: { organizerId: string
           </div>
 
           {currentData.length > 0 ? (
-            <div className="overflow-hidden rounded-xl border border-zinc-200">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-zinc-100 bg-zinc-50/80">
-                    {!isEventsTab ? (
-                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                        Order
-                      </th>
-                    ) : null}
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                      Event
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                      Gross
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                      Net
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                      Tickets
-                    </th>
-                    {isEventsTab ? (
-                      <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                        Orders
-                      </th>
-                    ) : null}
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
-                      Date
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100 bg-white">
-                  {currentData.map((item) => (
-                    <tr key={item.id} className="transition hover:bg-zinc-50/50">
-                      {!isEventsTab ? (
-                        <td className="px-4 py-3.5 text-sm font-medium text-zinc-900">{item.id}</td>
-                      ) : null}
-                      <td className="px-4 py-3.5 text-sm text-zinc-700">{item.event}</td>
-                      <td className="px-4 py-3.5 text-right text-sm text-zinc-700">
-                        {formatMoneyAmount(item.gross)}
-                      </td>
-                      <td className="px-4 py-3.5 text-right text-sm font-semibold text-zinc-900">
-                        {formatMoneyAmount(item.net)}
-                      </td>
-                      <td className="px-4 py-3.5 text-right text-sm text-zinc-700">{item.tickets}</td>
+            <>
+              <div className="grid gap-3 overflow-x-hidden lg:hidden">
+                {currentData.map((item) => (
+                  <div key={item.id} className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-zinc-900">
+                          {!isEventsTab ? item.id : item.event}
+                        </p>
+                        <p className="mt-1 break-words text-xs text-zinc-500">{item.event}</p>
+                      </div>
+                      <span
+                        className={`inline-flex shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          item.status === 'Completed'
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : item.status === 'Pending'
+                              ? 'bg-amber-50 text-amber-700'
+                              : item.status === 'Refunded'
+                                ? 'bg-violet-50 text-violet-700'
+                                : item.status === 'Mixed'
+                                  ? 'bg-indigo-50 text-indigo-700'
+                                  : 'bg-rose-50 text-rose-700'
+                        }`}
+                      >
+                        {item.status}
+                      </span>
+                    </div>
+                    <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                      <div className="rounded-lg bg-zinc-50 p-2.5">
+                        <p className="text-xs text-zinc-500">Gross</p>
+                        <p className="mt-1 font-medium text-zinc-900">{formatMoneyAmount(item.gross)}</p>
+                      </div>
+                      <div className="rounded-lg bg-zinc-50 p-2.5">
+                        <p className="text-xs text-zinc-500">Net</p>
+                        <p className="mt-1 font-medium text-zinc-900">{formatMoneyAmount(item.net)}</p>
+                      </div>
+                      <div className="rounded-lg bg-zinc-50 p-2.5">
+                        <p className="text-xs text-zinc-500">Tickets</p>
+                        <p className="mt-1 font-medium text-zinc-900">{item.tickets}</p>
+                      </div>
                       {isEventsTab ? (
-                        <td className="px-4 py-3.5 text-right text-sm text-zinc-700">{item.orders}</td>
-                      ) : null}
-                      <td className="px-4 py-3.5">
-                        <span
-                          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            item.status === 'Completed'
-                              ? 'bg-emerald-50 text-emerald-700'
-                              : item.status === 'Pending'
-                                ? 'bg-amber-50 text-amber-700'
-                                : item.status === 'Refunded'
-                                  ? 'bg-violet-50 text-violet-700'
-                                  : item.status === 'Mixed'
-                                    ? 'bg-indigo-50 text-indigo-700'
-                                    : 'bg-rose-50 text-rose-700'
-                          }`}
-                        >
-                          {item.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5 text-sm text-zinc-500">{formatOrderDate(item.date)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        <div className="rounded-lg bg-zinc-50 p-2.5">
+                          <p className="text-xs text-zinc-500">Orders</p>
+                          <p className="mt-1 font-medium text-zinc-900">{item.orders}</p>
+                        </div>
+                      ) : (
+                        <div className="rounded-lg bg-zinc-50 p-2.5">
+                          <p className="text-xs text-zinc-500">Updated</p>
+                          <p className="mt-1 font-medium text-zinc-900">{formatOrderDate(item.date)}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden overflow-hidden rounded-xl border border-zinc-200 lg:block">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[900px]">
+                    <thead>
+                      <tr className="border-b border-zinc-100 bg-zinc-50/80">
+                        {!isEventsTab ? (
+                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                            Order
+                          </th>
+                        ) : null}
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                          Event
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                          Gross
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                          Net
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                          Tickets
+                        </th>
+                        {isEventsTab ? (
+                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                            Orders
+                          </th>
+                        ) : null}
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                          Status
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                          Date
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-100 bg-white">
+                      {currentData.map((item) => (
+                        <tr key={item.id} className="transition hover:bg-zinc-50/50">
+                          {!isEventsTab ? (
+                            <td className="px-4 py-3.5 text-sm font-medium text-zinc-900">{item.id}</td>
+                          ) : null}
+                          <td className="px-4 py-3.5 text-sm text-zinc-700">{item.event}</td>
+                          <td className="px-4 py-3.5 text-right text-sm text-zinc-700">
+                            {formatMoneyAmount(item.gross)}
+                          </td>
+                          <td className="px-4 py-3.5 text-right text-sm font-semibold text-zinc-900">
+                            {formatMoneyAmount(item.net)}
+                          </td>
+                          <td className="px-4 py-3.5 text-right text-sm text-zinc-700">{item.tickets}</td>
+                          {isEventsTab ? (
+                            <td className="px-4 py-3.5 text-right text-sm text-zinc-700">{item.orders}</td>
+                          ) : null}
+                          <td className="px-4 py-3.5">
+                            <span
+                              className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                item.status === 'Completed'
+                                  ? 'bg-emerald-50 text-emerald-700'
+                                  : item.status === 'Pending'
+                                    ? 'bg-amber-50 text-amber-700'
+                                    : item.status === 'Refunded'
+                                      ? 'bg-violet-50 text-violet-700'
+                                      : item.status === 'Mixed'
+                                        ? 'bg-indigo-50 text-indigo-700'
+                                        : 'bg-rose-50 text-rose-700'
+                              }`}
+                            >
+                              {item.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3.5 text-sm text-zinc-500">{formatOrderDate(item.date)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
           ) : (
             <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-200 py-16">
               <h3 className="text-base font-semibold text-zinc-900">No finance records found</h3>
