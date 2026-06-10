@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -23,7 +23,10 @@ import {
   Settings,
   Ticket,
   User as UserIcon,
-  X
+  X,
+  CalendarDays,
+  TrendingUp,
+  ArrowRight,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -41,8 +44,148 @@ import NotificationDrawer from '@/components/organizations/layouts/notification'
 import type { User } from '@/stores/authStore'
 import { useAuthStore } from '@/stores/authStore'
 
+type SearchSuggestion = {
+  id: string
+  title: string
+  type: 'event' | 'organizer' | 'order'
+  subtitle: string | null
+  slug: string
+  city: string
+  image: string | null
+}
+
+type SearchSuggestionsResponse = {
+  events: SearchSuggestion[]
+  organizers: SearchSuggestion[]
+  orders: SearchSuggestion[]
+}
+
+type QuickLink = {
+  label: string
+  href: string
+  keywords: string[]
+  description: string
+}
+
+type SearchResultKind = 'page' | 'event' | 'organizer' | 'order'
+
+type SearchResult = {
+  id: string
+  kind: SearchResultKind
+  title: string
+  subtitle: string
+  href: string
+  image: string | null
+  icon: 'page' | 'event' | 'organizer' | 'order'
+}
+
+const quickLinks: QuickLink[] = [
+  {
+    label: 'Dashboard',
+    href: '/organizations/dashboard',
+    keywords: ['dashboard', 'home', 'overview', 'main'],
+    description: 'Organization overview and stats',
+  },
+  {
+    label: 'Events',
+    href: '/organizations/events/list',
+    keywords: ['events', 'event list', 'event management'],
+    description: 'Create and manage events',
+  },
+  {
+    label: 'Calendar',
+    href: '/organizations/events/calendar',
+    keywords: ['calendar', 'event calendar', 'schedule'],
+    description: 'See your events on a calendar',
+  },
+  {
+    label: 'Orders',
+    href: '/organizations/orders',
+    keywords: ['orders', 'order', 'sales', 'tickets'],
+    description: 'Browse ticket purchases',
+  },
+  {
+    label: 'Finance',
+    href: '/organizations/finance',
+    keywords: ['finance', 'payouts', 'revenue', 'money'],
+    description: 'Track payouts and revenue',
+  },
+  {
+    label: 'Finance Dashboard',
+    href: '/organizations/finance',
+    keywords: ['finance dashboard', 'financial dashboard', 'finance overview'],
+    description: 'Open finance overview',
+  },
+  {
+    label: 'Finance Upcoming',
+    href: '/organizations/finance/upcoming',
+    keywords: ['upcoming payout', 'upcoming payouts', 'finance upcoming'],
+    description: 'See scheduled payouts',
+  },
+  {
+    label: 'Finance Settings',
+    href: '/organizations/finance/settings',
+    keywords: ['finance settings', 'finance account', 'payment account'],
+    description: 'Manage payout providers',
+  },
+  {
+    label: 'Tax Settings',
+    href: '/organizations/finance/settings/tax',
+    keywords: ['tax', 'tax settings', 'taxpayer info'],
+    description: 'Update taxpayer information',
+  },
+  {
+    label: 'Marketing',
+    href: '/organizations/marketing/dashboard',
+    keywords: ['marketing', 'promo', 'promotion', 'campaign'],
+    description: 'Promotions and email tools',
+  },
+  {
+    label: 'Email Templates',
+    href: '/organizations/marketing/email-templates',
+    keywords: ['email template', 'email templates', 'template', 'mail'],
+    description: 'Manage email template library',
+  },
+  {
+    label: 'Promotions',
+    href: '/organizations/marketing/promotions',
+    keywords: ['promotions', 'promotion', 'promo code', 'coupon'],
+    description: 'Create and share promo codes',
+  },
+  {
+    label: 'Ticket Designer',
+    href: '/organizations/ticket-designer',
+    keywords: ['ticket designer', 'ticket design', 'tickets'],
+    description: 'Design tickets and QR layouts',
+  },
+  {
+    label: 'Settings',
+    href: '/organizations/settings',
+    keywords: ['settings', 'profile', 'account', 'my profile'],
+    description: 'Manage your organizer profile',
+  },
+  {
+    label: 'Profile',
+    href: '/organizations/settings',
+    keywords: ['profile', 'account', 'bio', 'social links'],
+    description: 'Edit profile and account info',
+  },
+  {
+    label: 'Account',
+    href: '/organizations/settings',
+    keywords: ['account', 'profile', 'settings'],
+    description: 'Open account settings',
+  },
+  {
+    label: 'Help Center',
+    href: '/organizations/help',
+    keywords: ['help', 'support', 'faq'],
+    description: 'Find answers and support',
+  },
+]
+
 const profileMenu = [
-  { label: 'My Profile', href: '/organizers/me', icon: UserIcon, organizerOnly: true },
+  { label: 'My Profile', href: '/organizations/settings', icon: UserIcon, organizerOnly: true },
   { label: 'Dashboard', href: '/organizations/dashboard', icon: LayoutDashboard, organizerOnly: true },
   { label: 'My Events', href: '/organizations/events', icon: Calendar, organizerOnly: true },
   { label: 'My Tickets', href: '/my/tickets', icon: Ticket, attendeeOnly: true },
@@ -90,6 +233,22 @@ export function OrganizationsShell({
   const logout = useAuthStore((state) => state.logout)
   const [loggingOut, setLoggingOut] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [searchInput, setSearchInput] = useState('')
+  const [searchFocused, setSearchFocused] = useState(false)
+  const [suggestions, setSuggestions] = useState<SearchSuggestionsResponse>({
+    events: [],
+    organizers: [],
+    orders: [],
+  })
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
+  const abortRef = useRef<AbortController | null>(null)
+  const cacheRef = useRef(new Map<string, SearchSuggestionsResponse>())
+  const searchRef = useRef<HTMLDivElement>(null)
+  const desktopSearchRef = useRef<HTMLInputElement>(null)
+  const mobileSearchRef = useRef<HTMLInputElement>(null)
+  const [activeSearchIndex, setActiveSearchIndex] = useState(0)
 
   const displayName = user?.name || user?.email || ''
   const displayEmail = user?.email || ''
@@ -97,6 +256,234 @@ export function OrganizationsShell({
   const avatarUrl = getAvatarUrl(user?.avatar)
   const topItems = sidebarItems.filter((item) => !item.isBottom)
   const bottomItems = sidebarItems.filter((item) => item.isBottom)
+
+  const hasSuggestions =
+    suggestions.events.length > 0 ||
+    suggestions.organizers.length > 0 ||
+    suggestions.orders.length > 0
+  const pageSuggestions = quickLinks.filter((item) => {
+    const haystack = [item.label, item.description, ...item.keywords].join(' ').toLowerCase()
+    return searchInput.trim().length >= 2 && haystack.includes(searchInput.trim().toLowerCase())
+  })
+
+  const searchResults = useMemo<SearchResult[]>(() => {
+    const pageResults = pageSuggestions.map((item) => ({
+      id: `page-${item.href}`,
+      kind: 'page' as const,
+      title: item.label,
+      subtitle: item.description,
+      href: item.href,
+      image: null,
+      icon: 'page' as const,
+    }))
+
+    const dynamicResults = [
+      ...suggestions.events.map((item) => ({
+        id: `event-${item.id}`,
+        kind: 'event' as const,
+        title: item.title,
+        subtitle: item.subtitle || 'Event',
+        href: `/events/${item.city ? encodeURIComponent(item.city.toLowerCase()) : 'event'}/${item.slug}`,
+        image: item.image,
+        icon: 'event' as const,
+      })),
+      ...suggestions.organizers.map((item) => ({
+        id: `organizer-${item.id}`,
+        kind: 'organizer' as const,
+        title: item.title,
+        subtitle: item.subtitle || 'Organizer',
+        href: `/organizers/${item.slug}`,
+        image: item.image,
+        icon: 'organizer' as const,
+      })),
+      ...suggestions.orders.map((item) => ({
+        id: `order-${item.id}`,
+        kind: 'order' as const,
+        title: item.title,
+        subtitle: item.subtitle || 'Order',
+        href: `/organizations/orders/${item.slug}`,
+        image: null,
+        icon: 'order' as const,
+      })),
+    ]
+
+    return [...pageResults, ...dynamicResults]
+  }, [pageSuggestions, suggestions.events, suggestions.organizers, suggestions.orders])
+  const searchResultIndexMap = useMemo(
+    () => new Map(searchResults.map((item, index) => [item.id, index] as const)),
+    [searchResults],
+  )
+
+  const activeSearchResult = searchResults[activeSearchIndex] ?? null
+
+  const selectSearchResult = useCallback(
+    (result: SearchResult) => {
+      setSearchFocused(false)
+      setSearchInput(result.title)
+      router.push(result.href)
+    },
+    [router],
+  )
+
+  const submitSearch = useCallback(() => {
+    if (!searchResults.length) return
+
+    const nextResult = activeSearchResult ?? searchResults[0]
+    if (!nextResult) return
+    selectSearchResult(nextResult)
+  }, [activeSearchResult, searchResults, selectSearchResult])
+
+  const isSearchResultActive = useCallback(
+    (resultId: string) => searchResultIndexMap.get(resultId) === activeSearchIndex,
+    [activeSearchIndex, searchResultIndexMap],
+  )
+
+  const fetchSuggestions = useCallback(async (value: string) => {
+    const query = value.trim()
+    if (query.length < 2) {
+      setSuggestions({ events: [], organizers: [], orders: [] })
+      setLoadingSuggestions(false)
+      return
+    }
+
+    const cacheKey = query.toLowerCase()
+    const cached = cacheRef.current.get(cacheKey)
+    if (cached) {
+      setSuggestions(cached)
+      return
+    }
+
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+    setLoadingSuggestions(true)
+
+    try {
+      const response = await fetch(
+        `/api/navbar-search-suggestions?q=${encodeURIComponent(query)}&limit=4`,
+        { signal: controller.signal },
+      )
+
+      if (!response.ok) return
+
+      const data = (await response.json()) as SearchSuggestionsResponse
+      const nextSuggestions = {
+        events: Array.isArray(data?.events) ? data.events : [],
+        organizers: Array.isArray(data?.organizers) ? data.organizers : [],
+        orders: Array.isArray(data?.orders) ? data.orders : [],
+      }
+
+      cacheRef.current.set(cacheKey, nextSuggestions)
+      setSuggestions(nextSuggestions)
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        setSuggestions({ events: [], organizers: [], orders: [] })
+      }
+    } finally {
+      if (!controller.signal.aborted) {
+        setLoadingSuggestions(false)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+
+    if (searchInput.trim().length >= 2) {
+      debounceRef.current = setTimeout(() => {
+        setDebouncedSearchQuery(searchInput)
+      }, 120)
+    } else {
+      setDebouncedSearchQuery('')
+      setSuggestions({ events: [], organizers: [], orders: [] })
+      setLoadingSuggestions(false)
+    }
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [searchInput])
+
+  useEffect(() => {
+    if (!debouncedSearchQuery.trim()) return
+    void fetchSuggestions(debouncedSearchQuery)
+  }, [debouncedSearchQuery, fetchSuggestions])
+
+  useEffect(() => {
+    setActiveSearchIndex(0)
+  }, [searchInput])
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setSearchFocused(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  useEffect(() => {
+    if (!searchFocused) return
+    if (!searchResults.length) {
+      setActiveSearchIndex(0)
+      return
+    }
+    if (activeSearchIndex >= searchResults.length) {
+      setActiveSearchIndex(0)
+    }
+  }, [activeSearchIndex, searchFocused, searchResults.length])
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        const isDesktop = window.matchMedia('(min-width: 1024px)').matches
+        const targetInput = isDesktop ? desktopSearchRef.current : mobileSearchRef.current
+        targetInput?.focus()
+        setSearchFocused(true)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  const handleSearchKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (!searchFocused || searchResults.length === 0) {
+        if (event.key === 'Enter') {
+          event.preventDefault()
+        }
+        return
+      }
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault()
+        setActiveSearchIndex((current) => Math.min(current + 1, searchResults.length - 1))
+        return
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault()
+        setActiveSearchIndex((current) => Math.max(current - 1, 0))
+        return
+      }
+
+      if (event.key === 'Enter') {
+        event.preventDefault()
+        submitSearch()
+        return
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setSearchFocused(false)
+      }
+    },
+    [searchFocused, searchResults.length, submitSearch],
+  )
 
   async function handleLogout() {
     if (loggingOut) return
@@ -227,14 +614,400 @@ export function OrganizationsShell({
             </span>
           </Link>
 
-          <form className="relative hidden max-w-[420px] flex-1 lg:flex">
-            <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
-            <input
-              className="h-10 w-full rounded-lg border border-zinc-200 bg-[#fdfdfd] pl-10 pr-4 text-sm outline-none placeholder:text-zinc-500 focus:border-[#5151eb] focus:ring-1 focus:ring-[#5151eb]/20"
-              placeholder="Search events, orders..."
-              type="search"
-            />
-          </form>
+          <div ref={searchRef} className="relative hidden max-w-[420px] flex-1 lg:block">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                submitSearch()
+              }}
+            >
+              <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
+              <input
+                className="h-10 w-full rounded-full border border-zinc-200 bg-[#fdfdfd] pl-10 pr-28 text-sm outline-none placeholder:text-zinc-500 transition focus:border-[#5151eb] focus:ring-1 focus:ring-[#5151eb]/20"
+                placeholder="Search events, orders..."
+                type="search"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onKeyDown={handleSearchKeyDown}
+                ref={desktopSearchRef}
+              />
+              <div className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400 lg:flex">
+                <span>Ctrl</span>
+                <span>+</span>
+                <span>K</span>
+              </div>
+            </form>
+
+            {searchFocused &&
+              searchInput.trim().length >= 2 &&
+              (searchResults.length > 0 || loadingSuggestions) && (
+                <div className="absolute left-0 top-full z-50 mt-2 w-full overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-xl">
+                  {loadingSuggestions && !hasSuggestions && (
+                    <div className="flex items-center gap-2 px-4 py-3 text-sm text-zinc-400">
+                      <div className="size-4 animate-spin rounded-full border-2 border-zinc-300 border-t-[#5151eb]" />
+                      Searching...
+                    </div>
+                  )}
+                  {searchResults.length > 0 && (
+                    <div className="max-h-[420px] overflow-y-auto p-2">
+                      {pageSuggestions.length > 0 && (
+                        <div className="mb-2">
+                          <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                            Pages
+                          </p>
+                          <div className="space-y-1">
+                            {pageSuggestions.map((item) => (
+                              <button
+                                key={item.href}
+                                type="button"
+                                onClick={() => {
+                                  selectSearchResult({
+                                    id: `page-${item.href}`,
+                                    kind: 'page',
+                                    title: item.label,
+                                    subtitle: item.description,
+                                    href: item.href,
+                                    image: null,
+                                    icon: 'page',
+                                  })
+                                }}
+                                data-search-index={searchResultIndexMap.get(`page-${item.href}`)}
+                                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                                  isSearchResultActive(`page-${item.href}`)
+                                    ? 'bg-indigo-50 ring-1 ring-[#5151eb]/20'
+                                    : 'hover:bg-zinc-50'
+                                }`}
+                              >
+                                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-indigo-50">
+                                  <ArrowRight className="size-4 text-[#5151eb]" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-medium text-zinc-800">
+                                    {item.label}
+                                  </p>
+                                  <p className="truncate text-xs text-zinc-400">
+                                    {item.description}
+                                  </p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {suggestions.events.length > 0 && (
+                        <div className="mb-2">
+                          <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                            Events
+                          </p>
+                          <div className="space-y-1">
+                            {suggestions.events.map((item) => (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => {
+                                  selectSearchResult({
+                                    id: `event-${item.id}`,
+                                    kind: 'event',
+                                    title: item.title,
+                                    subtitle: item.subtitle || 'Event',
+                                    href: `/events/${item.city ? encodeURIComponent(item.city.toLowerCase()) : 'event'}/${item.slug}`,
+                                    image: item.image,
+                                    icon: 'event',
+                                  })
+                                }}
+                                data-search-index={searchResultIndexMap.get(`event-${item.id}`)}
+                                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                                  isSearchResultActive(`event-${item.id}`)
+                                    ? 'bg-indigo-50 ring-1 ring-[#5151eb]/20'
+                                    : 'hover:bg-zinc-50'
+                                }`}
+                              >
+                                <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-indigo-50">
+                                  {item.image ? (
+                                    <img
+                                      src={item.image}
+                                      alt={item.title}
+                                      className="size-full object-cover"
+                                    />
+                                  ) : (
+                                    <CalendarDays className="size-4 text-[#5151eb]" />
+                                  )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-medium text-zinc-800">
+                                    {item.title}
+                                  </p>
+                                  <p className="truncate text-xs text-zinc-400">
+                                    {item.subtitle || 'Event'}
+                                  </p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {suggestions.organizers.length > 0 && (
+                        <div>
+                          <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                            Organizers
+                          </p>
+                          <div className="space-y-1">
+                            {suggestions.organizers.map((item) => (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => {
+                                  selectSearchResult({
+                                    id: `organizer-${item.id}`,
+                                    kind: 'organizer',
+                                    title: item.title,
+                                    subtitle: item.subtitle || 'Organizer',
+                                    href: `/organizers/${item.slug}`,
+                                    image: item.image,
+                                    icon: 'organizer',
+                                  })
+                                }}
+                                data-search-index={searchResultIndexMap.get(`organizer-${item.id}`)}
+                                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                                  isSearchResultActive(`organizer-${item.id}`)
+                                    ? 'bg-indigo-50 ring-1 ring-[#5151eb]/20'
+                                    : 'hover:bg-zinc-50'
+                                }`}
+                              >
+                                <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-indigo-50">
+                                  {item.image ? (
+                                    <img
+                                      src={item.image}
+                                      alt={item.title}
+                                      className="size-full object-cover"
+                                    />
+                                  ) : (
+                                    <UserIcon className="size-4 text-[#5151eb]" />
+                                  )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-medium text-zinc-800">
+                                    {item.title}
+                                  </p>
+                                  <p className="truncate text-xs text-zinc-400">
+                                    {item.subtitle || 'Organizer'}
+                                  </p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {suggestions.orders.length > 0 && (
+                        <div>
+                          <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                            Orders
+                          </p>
+                          <div className="space-y-1">
+                            {suggestions.orders.map((item) => (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => {
+                                  selectSearchResult({
+                                    id: `order-${item.id}`,
+                                    kind: 'order',
+                                    title: item.title,
+                                    subtitle: item.subtitle || 'Order',
+                                    href: `/organizations/orders/${item.slug}`,
+                                    image: null,
+                                    icon: 'order',
+                                  })
+                                }}
+                                data-search-index={searchResultIndexMap.get(`order-${item.id}`)}
+                                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                                  isSearchResultActive(`order-${item.id}`)
+                                    ? 'bg-indigo-50 ring-1 ring-[#5151eb]/20'
+                                    : 'hover:bg-zinc-50'
+                                }`}
+                              >
+                                <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-indigo-50">
+                                  <FileText className="size-4 text-[#5151eb]" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-medium text-zinc-800">
+                                    {item.title}
+                                  </p>
+                                  <p className="truncate text-xs text-zinc-400">
+                                    {item.subtitle || 'Order'}
+                                  </p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                    </div>
+                  )}
+                </div>
+              )}
+          </div>
+
+          <div className="relative ml-0 flex-1 lg:hidden">
+            <form
+              className="relative w-full"
+              onSubmit={(e) => {
+                e.preventDefault()
+                submitSearch()
+              }}
+            >
+              <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
+              <input
+                className="h-10 w-full rounded-full border border-zinc-200 bg-[#fdfdfd] pl-10 pr-4 text-sm outline-none placeholder:text-zinc-500 transition focus:border-[#5151eb] focus:ring-1 focus:ring-[#5151eb]/20"
+                placeholder="Search..."
+                type="search"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onKeyDown={handleSearchKeyDown}
+                ref={mobileSearchRef}
+              />
+            </form>
+
+            {searchFocused &&
+              searchInput.trim().length >= 2 &&
+              (searchResults.length > 0 || loadingSuggestions) && (
+                <div className="absolute left-3 right-3 top-[calc(100%+0.5rem)] z-50 overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-xl">
+                  {loadingSuggestions && !hasSuggestions && (
+                    <div className="flex items-center gap-2 px-4 py-3 text-sm text-zinc-400">
+                      <div className="size-4 animate-spin rounded-full border-2 border-zinc-300 border-t-[#5151eb]" />
+                      Searching...
+                    </div>
+                  )}
+                  {searchResults.length > 0 && (
+                    <div className="max-h-72 overflow-y-auto p-2">
+                      {pageSuggestions.length > 0 && (
+                        <div className="mb-2">
+                          <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                            Pages
+                          </p>
+                          <div className="space-y-1">
+                            {pageSuggestions.slice(0, 4).map((item) => (
+                              <button
+                                key={item.href}
+                                type="button"
+                                onClick={() => {
+                                  selectSearchResult({
+                                    id: `page-${item.href}`,
+                                    kind: 'page',
+                                    title: item.label,
+                                    subtitle: item.description,
+                                    href: item.href,
+                                    image: null,
+                                    icon: 'page',
+                                  })
+                                }}
+                                data-search-index={searchResultIndexMap.get(`page-${item.href}`)}
+                                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                                  isSearchResultActive(`page-${item.href}`)
+                                    ? 'bg-indigo-50 ring-1 ring-[#5151eb]/20'
+                                    : 'hover:bg-zinc-50'
+                                }`}
+                              >
+                                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50">
+                                  <ArrowRight className="size-4 text-[#5151eb]" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-medium text-zinc-800">
+                                    {item.label}
+                                  </p>
+                                  <p className="truncate text-xs text-zinc-400">
+                                    {item.description}
+                                  </p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {[...suggestions.events, ...suggestions.organizers, ...suggestions.orders]
+                        .slice(0, 6)
+                        .map((item) => (
+                          <button
+                            key={`${item.type}-${item.id}`}
+                            type="button"
+                            onClick={() => {
+                              selectSearchResult({
+                                id: `${item.type}-${item.id}`,
+                                kind: item.type,
+                                title: item.title,
+                                subtitle:
+                                  item.subtitle ||
+                                  (item.type === 'event'
+                                    ? 'Event'
+                                    : item.type === 'order'
+                                      ? 'Order'
+                                      : 'Organizer'),
+                                href:
+                                  item.type === 'event'
+                                    ? `/events/${item.city ? encodeURIComponent(item.city.toLowerCase()) : 'event'}/${item.slug}`
+                                    : item.type === 'organizer'
+                                      ? `/organizers/${item.slug}`
+                                      : `/organizations/orders/${item.slug}`,
+                                image: item.image,
+                                icon:
+                                  item.type === 'event'
+                                    ? 'event'
+                                    : item.type === 'organizer'
+                                      ? 'organizer'
+                                      : 'order',
+                              })
+                            }}
+                            data-search-index={searchResultIndexMap.get(`${item.type}-${item.id}`)}
+                            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                              isSearchResultActive(`${item.type}-${item.id}`)
+                                ? 'bg-indigo-50 ring-1 ring-[#5151eb]/20'
+                                : 'hover:bg-zinc-50'
+                            }`}
+                          >
+                            <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-indigo-50">
+                              {item.type === 'order' ? (
+                                <FileText className="size-4 text-[#5151eb]" />
+                              ) : item.image ? (
+                                <img
+                                  src={item.image}
+                                  alt={item.title}
+                                  className="size-full object-cover"
+                                />
+                              ) : item.type === 'event' ? (
+                                <CalendarDays className="size-4 text-[#5151eb]" />
+                              ) : (
+                                <UserIcon className="size-4 text-[#5151eb]" />
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium text-zinc-800">
+                                {item.title}
+                              </p>
+                              <p className="truncate text-xs text-zinc-400">
+                                {
+                                  item.subtitle ||
+                                  (item.type === 'event'
+                                    ? 'Event'
+                                    : item.type === 'order'
+                                      ? 'Order'
+                                      : 'Organizer')
+                                }
+                              </p>
+                            </div>
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )}
+          </div>
 
           <nav className="ml-auto hidden items-center gap-1 lg:flex">
             <Button asChild className="text-sm font-medium text-zinc-700 hover:text-[#12192f]" size="sm" variant="ghost">

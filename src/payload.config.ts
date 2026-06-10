@@ -29,6 +29,7 @@ import { checkinConfirmEndpoint } from './endpoints/checkin-confirm'
 import { checkinStatsEndpoint } from './endpoints/checkin-stats'
 import { meEndpoint } from './endpoints/me'
 import { notificationsBootstrapEndpoint } from './endpoints/notifications-bootstrap'
+import { navbarSearchSuggestionsEndpoint } from './endpoints/navbar-search-suggestions'
 import {
   emailTemplateWorkspaceDetailEndpoint,
   emailTemplatesSendTestEndpoint,
@@ -147,6 +148,7 @@ export default buildConfig({
     organizerFollowEndpoint,
     organizerFollowToggleEndpoint,
     likeEndpoint,
+    navbarSearchSuggestionsEndpoint,
     {
       path: '/likes/toggle/:eventId',
       method: 'post',
