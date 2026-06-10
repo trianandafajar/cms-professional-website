@@ -16,14 +16,12 @@ import Link from 'next/link'
 import Image from 'next/image'
 
 import { useEventsStore } from '@/stores/eventsStore'
-import { useAuthStore } from '@/stores/authStore'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import type { Event, Media } from '@/payload-types'
 import { EventsListSkeleton } from './events-skeletons'
 
-export default function EventsList() {
+export default function EventsList({ organizerId }: { organizerId: string }) {
   const router = useRouter()
-  const user = useAuthStore((s) => s.user)
   const {
     events,
     totalDocs,
@@ -35,11 +33,13 @@ export default function EventsList() {
     deleteEvent,
     duplicateEvent,
     setPage,
+    setActiveOrganizerId,
   } = useEventsStore()
 
   useEffect(() => {
-    fetchEvents()
-  }, [fetchEvents])
+    setActiveOrganizerId(organizerId)
+    fetchEvents(organizerId)
+  }, [fetchEvents, organizerId, setActiveOrganizerId])
 
   // Empty state
   if (!isLoading && events.length === 0 && !error) {
@@ -69,7 +69,7 @@ export default function EventsList() {
       <div className="flex flex-col items-center justify-center rounded-xl border border-red-100 bg-red-50 py-12">
         <p className="text-sm text-red-600">{error}</p>
         <button
-          onClick={fetchEvents}
+          onClick={() => fetchEvents(organizerId)}
           className="mt-3 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700"
         >
           Retry

@@ -4,6 +4,7 @@ import { getPayload } from 'payload'
 
 import { OrganizationsAuthSync } from '@/components/organizations/layouts/auth-sync'
 import { OrganizationsShell } from '@/components/organizations/layouts/shell'
+import { isUserOnboarded } from '@/lib/onboarding'
 import type { User } from '@/stores/authStore'
 import config from '@/payload.config'
 
@@ -14,6 +15,10 @@ export default async function OrganizationsLayout({ children }: { children: Reac
 
   if (!user) {
     redirect('/auth/signin')
+  }
+
+  if (!isUserOnboarded(user)) {
+    redirect('/onboarding')
   }
 
   const canAccessOrganizations =

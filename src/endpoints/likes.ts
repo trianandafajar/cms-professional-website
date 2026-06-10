@@ -1,4 +1,5 @@
 import type { Endpoint } from 'payload'
+import { isUserOnboarded, onboardingRequiredResponse } from '@/lib/onboarding'
 
 export const likeEndpoint: Endpoint = {
   path: '/likes',
@@ -15,6 +16,10 @@ export const likeEndpoint: Endpoint = {
       id: user.id,
       depth: 1,
     })
+
+    if (!isUserOnboarded(currentUser)) {
+      return onboardingRequiredResponse()
+    }
 
     const likedEvents = currentUser.likedEvents ?? []
 

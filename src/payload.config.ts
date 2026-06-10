@@ -54,6 +54,7 @@ import {
 } from './endpoints/organizer-follow'
 import { likeEndpoint } from './endpoints/likes'
 import { financeConnectStripeReturnEndpoint } from './endpoints/finance-stripe-return'
+import { isUserOnboarded, onboardingRequiredResponse } from './lib/onboarding'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -178,6 +179,10 @@ export default buildConfig({
           id: user.id,
           depth: 0,
         })
+
+        if (!isUserOnboarded(currentUser)) {
+          return onboardingRequiredResponse()
+        }
 
         const currentLiked = (currentUser.likedEvents as number[] | undefined) ?? []
         const isLiked = currentLiked.includes(eventId)

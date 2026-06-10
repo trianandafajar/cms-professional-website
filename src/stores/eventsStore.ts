@@ -1,6 +1,7 @@
 // src/stores/eventsStore.ts
 import { create } from 'zustand'
 import { apiClient } from '@/lib/apiClient'
+import { useAuthStore } from '@/stores/authStore'
 import type { Event } from '@/payload-types'
 
 type EventStatus = 'all' | 'draft' | 'published' | 'cancelled' | 'completed'
@@ -50,13 +51,15 @@ interface EventsState {
   error: string | null
   search: string
   statusFilter: EventStatus
+  activeOrganizerId: string | number | null
 
   // Actions
-  fetchEvents: () => Promise<void>
-  fetchAllEvents: () => Promise<void>
+  fetchEvents: (organizerId?: string | number) => Promise<void>
+  fetchAllEvents: (organizerId?: string | number) => Promise<void>
   setSearch: (search: string) => void
   setStatusFilter: (status: EventStatus) => void
   setPage: (page: number) => void
+  setActiveOrganizerId: (organizerId: string | number | null) => void
   deleteEvent: (id: number) => Promise<void>
   duplicateEvent: (id: number) => Promise<string | null>
   updateEventStatus: (id: number, status: Event['status']) => Promise<void>
@@ -73,8 +76,9 @@ export const useEventsStore = create<EventsState>((set, get) => ({
   error: null,
   search: '',
   statusFilter: 'all',
+  activeOrganizerId: null,
 
-  fetchEvents: async () => {
+  fetchEvents: async (organizerId) => {
     if (get().isLoading) {
       return
     }
@@ -82,6 +86,21 @@ export const useEventsStore = create<EventsState>((set, get) => ({
     set({ isLoading: true, error: null })
     try {
       const { search, statusFilter, page } = get()
+      const currentUser = useAuthStore.getState().user
+      const currentOrganizerId = organizerId ?? get().activeOrganizerId ?? currentUser?.id
+
+      if (!currentOrganizerId) {
+        set({
+          events: [],
+          totalDocs: 0,
+          totalPages: 0,
+          page,
+          isLoading: false,
+          hasFetched: true,
+        })
+        return
+      }
+      set({ activeOrganizerId: currentOrganizerId })
 
       // Build query params for Payload REST API
       const params = new URLSearchParams()
@@ -89,9 +108,7 @@ export const useEventsStore = create<EventsState>((set, get) => ({
       params.set('page', String(page))
       params.set('sort', '-createdAt')
       params.set('depth', '1')
-
-      // Filter by current user's events (organizer)
-      // We rely on the auth cookie to identify the user
+      params.set('where[organizer][equals]', String(currentOrganizerId))
 
       if (search.trim()) {
         params.set('where[title][like]', search.trim())
@@ -136,6 +153,10 @@ export const useEventsStore = create<EventsState>((set, get) => ({
     get().fetchEvents()
   },
 
+  setActiveOrganizerId: (activeOrganizerId) => {
+    set({ activeOrganizerId })
+  },
+
   deleteEvent: async (id) => {
     try {
       await apiClient.delete(`/api/events/${id}`)
@@ -174,16 +195,35 @@ export const useEventsStore = create<EventsState>((set, get) => ({
     }
   },
 
-  fetchAllEvents: async () => {
+  fetchAllEvents: async (organizerId) => {
     if (get().isLoading) {
       return
     }
 
     set({ isLoading: true, error: null })
     try {
+      const currentUser = useAuthStore.getState().user
+      const currentOrganizerId = organizerId ?? get().activeOrganizerId ?? currentUser?.id
+
+      if (!currentOrganizerId) {
+        set({
+          allEvents: [],
+          isLoading: false,
+          hasFetched: true,
+        })
+        return
+      }
+      set({ activeOrganizerId: currentOrganizerId })
+
+      const params = new URLSearchParams()
+      params.set('limit', '1000')
+      params.set('sort', '-startDate')
+      params.set('depth', '1')
+      params.set('where[organizer][equals]', String(currentOrganizerId))
+
       const response = await apiClient.get<{
         docs: Event[]
-      }>('/api/events?limit=1000&sort=-startDate&depth=1')
+      }>(`/api/events?${params.toString()}`)
 
       set({
         allEvents: response.docs,

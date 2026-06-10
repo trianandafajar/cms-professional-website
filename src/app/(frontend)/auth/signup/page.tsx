@@ -5,8 +5,9 @@ import { useForm } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { z } from 'zod'
 import { useAuthStore } from '@/stores/authStore'
+import { useOnboardingStore } from '@/stores/onboardingStore'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Eye, EyeOff, Mail, Lock, User, AlertCircle } from 'lucide-react'
 
@@ -18,6 +19,7 @@ type SignUpInput = z.infer<typeof signUpSchema>
 
 export default function SignUpPage() {
   const { register: registerUser, isLoading, error: storeError, clearError } = useAuthStore()
+  const clearOnboarding = useOnboardingStore((state) => state.clear)
   const router = useRouter()
   const [formError, setFormError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
@@ -29,34 +31,24 @@ export default function SignUpPage() {
     formState: { errors },
   } = useForm<SignUpInput>({ resolver: standardSchemaResolver(signUpSchema) })
 
+  useEffect(() => {
+    clearOnboarding()
+  }, [clearOnboarding])
+
   const onSubmit = async (data: SignUpInput) => {
     setFormError(null)
     clearError()
+    clearOnboarding()
     try {
-      const user = await registerUser(data.name, data.email, data.password)
-      const isOnboardingDone = Boolean(user.isOnboarded) || (user.onboardingStep ?? 0) >= 4
+      await registerUser(data.name, data.email, data.password)
 
-      if (!isOnboardingDone) {
-        // Check for redirect param to pass along to onboarding completion
-        const params = new URLSearchParams(window.location.search)
-        const redirect = params.get('redirect')
-        if (redirect) {
-          // Store redirect for after onboarding
-          sessionStorage.setItem('postOnboardingRedirect', redirect)
-        }
-        router.push('/onboarding')
-        return
-      }
-
-      // Check for redirect param
       const params = new URLSearchParams(window.location.search)
       const redirect = params.get('redirect')
       if (redirect) {
-        router.push(decodeURIComponent(redirect))
-        return
+        sessionStorage.setItem('postLoginRedirect', redirect)
       }
 
-      router.push(user.isOrganizer ? '/organizations/dashboard' : '/my/tickets')
+      router.push(`/auth/signin?registered=1&email=${encodeURIComponent(data.email)}`)
     } catch (err: any) {
       setFormError(err.message || 'Sign up failed')
     }

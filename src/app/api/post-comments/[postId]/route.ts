@@ -1,6 +1,7 @@
 import { getPayload } from 'payload'
 import config from '@payload-config'
 import { headers as getHeaders } from 'next/headers'
+import { isUserOnboarded, onboardingRequiredResponse } from '@/lib/onboarding'
 
 // Cache payload instance to avoid re-initialization on every request
 let cachedPayload: Awaited<ReturnType<typeof getPayload>> | null = null
@@ -69,6 +70,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ pos
 
   if (!user) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  if (!isUserOnboarded(user)) {
+    return onboardingRequiredResponse()
   }
 
   // Create comment immediately WITHOUT resolving mentions to avoid timeout.

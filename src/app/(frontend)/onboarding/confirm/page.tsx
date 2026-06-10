@@ -19,6 +19,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { apiClient } from '@/lib/apiClient'
 
 const ORGANIZER_ROLE_NAME = 'event organizer (eo)'
+const VISITOR_ROLE_NAME = 'visitor'
 
 type RoleDoc = { id: string | number; name: string }
 
@@ -71,6 +72,11 @@ export default function OnboardingConfirmPage() {
         payload.roleName = ORGANIZER_ROLE_NAME
         payload.isOrganizer = true
       } else {
+        const roleId = await findRoleIdByName(VISITOR_ROLE_NAME)
+        if (roleId) {
+          payload.role = roleId
+        }
+        payload.roleName = VISITOR_ROLE_NAME
         payload.isOrganizer = false
       }
 

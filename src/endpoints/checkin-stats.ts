@@ -35,7 +35,7 @@ export const checkinStatsEndpoint: Endpoint = {
 
     const eventOrganizerId =
       typeof event.organizer === 'object' ? event.organizer.id : event.organizer
-    if (eventOrganizerId !== user.id) {
+    if (String(eventOrganizerId) !== String(user.id)) {
       return Response.json({ error: 'You are not the organizer of this event' }, { status: 403 })
     }
 

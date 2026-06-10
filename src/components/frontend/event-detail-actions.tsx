@@ -64,7 +64,7 @@ export function EventDetailActions({
   const [isTogglingInterested, setIsTogglingInterested] = useState(false)
   const [copied, setCopied] = useState(false)
   const router = useRouter()
-  const { gate, isAuthenticated } = useAuthGate()
+  const { gate, requireOnboardingComplete } = useAuthGate()
 
   useEffect(() => {
     setStoreInterestedCount(eventId, interestedCount)
@@ -93,8 +93,7 @@ export function EventDetailActions({
 
   function handleGetTickets() {
     const ticketsPath = `/events/${citySlug}/${eventSlug}/tickets`
-    if (!isAuthenticated()) {
-      router.push(`/auth/signin?redirect=${encodeURIComponent(ticketsPath)}`)
+    if (requireOnboardingComplete(ticketsPath)) {
       return
     }
     router.push(ticketsPath)

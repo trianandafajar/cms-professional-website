@@ -18,6 +18,7 @@ import {
   LogOut,
   User as UserIcon,
   Heart,
+  ClipboardCheck,
 } from 'lucide-react'
 import { useState, useRef, useEffect, useCallback } from 'react'
 
@@ -38,6 +39,10 @@ type SearchSuggestion = {
 type NavbarUser = {
   name?: string | null
   email?: string | null
+  isOnboarded?: boolean | null
+  onboardingStep?: number | null
+  isOrganizer?: boolean | null
+  avatar?: unknown
 }
 
 type NavbarProps = {
@@ -168,11 +173,18 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
   const displayName = resolvedUser?.name || resolvedUser?.email || ''
   const displayEmail = resolvedUser?.email || ''
   const initials = getInitials(resolvedUser?.name || resolvedUser?.email)
-  const avatarUrl = getAvatarUrl((authUser as any)?.avatar)
+  const avatarUrl = getAvatarUrl(resolvedUser?.avatar)
   const isAuthed = Boolean(resolvedUser)
-  const isOrganizer = Boolean(authUser?.isOrganizer)
+  const hasOnboardingState =
+    resolvedUser?.isOnboarded !== undefined ||
+    resolvedUser?.onboardingStep !== undefined
+  const isOnboardingDone =
+    Boolean(resolvedUser?.isOnboarded) || (resolvedUser?.onboardingStep ?? 0) >= 4
+  const needsOnboarding = isAuthed && hasOnboardingState && !isOnboardingDone
+  const isOrganizer = isOnboardingDone && Boolean(resolvedUser?.isOrganizer)
 
   const filteredProfileMenu = profileMenu.filter((item) => {
+    if (needsOnboarding) return false
     if (isOrganizer) return item.organizerOnly === true
     return !item.organizerOnly
   })
@@ -486,15 +498,17 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
           >
             <Link href="/organizers">Organizers</Link>
           </Button>
-          <Button
-            asChild
-            className="text-sm font-medium text-zinc-700 hover:text-[#12192f]"
-            size="sm"
-            variant="ghost"
-          >
-            <Link href="/organizations/events/create">Create Events</Link>
-          </Button>
-          {!isOrganizer && (
+          {!needsOnboarding && (
+            <Button
+              asChild
+              className="text-sm font-medium text-zinc-700 hover:text-[#12192f]"
+              size="sm"
+              variant="ghost"
+            >
+              <Link href="/organizations/events/create">Create Events</Link>
+            </Button>
+          )}
+          {isAuthed && !needsOnboarding && !isOrganizer && (
             <Button
               asChild
               className="text-sm font-medium text-zinc-700 hover:text-[#12192f]"
@@ -504,7 +518,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
               <Link href="/my/tickets">Find My Tickets</Link>
             </Button>
           )}
-          {isAuthed && !isOrganizer && (
+          {isAuthed && !needsOnboarding && !isOrganizer && (
             <Button
               asChild
               className="text-sm font-medium text-zinc-700 hover:text-[#12192f]"
@@ -576,6 +590,16 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
 
                 {/* Menu */}
                 <div className="p-1.5">
+                  {needsOnboarding && (
+                    <Link
+                      href="/onboarding"
+                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-indigo-50 hover:text-[#5151eb]"
+                    >
+                      <ClipboardCheck className="size-4 text-zinc-500" />
+                      Complete onboarding
+                    </Link>
+                  )}
+
                   {filteredProfileMenu.map(({ label, href, icon: Icon }) => (
                     <Link
                       key={href}
@@ -664,13 +688,15 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
             >
               Find Events
             </Link>
-            <Link
-              className="rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-              href="/organizations/events/draft?onboard=1"
-            >
-              Create Events
-            </Link>
-            {!isOrganizer && (
+            {!needsOnboarding && (
+              <Link
+                className="rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                href="/organizations/events/draft?onboard=1"
+              >
+                Create Events
+              </Link>
+            )}
+            {isAuthed && !needsOnboarding && !isOrganizer && (
               <Link
                 className="rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
                 href="/my/tickets"
@@ -678,7 +704,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                 Find My Tickets
               </Link>
             )}
-            {isAuthed && !isOrganizer && (
+            {isAuthed && !needsOnboarding && !isOrganizer && (
               <Link
                 className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
                 href="/my/likes"
@@ -712,6 +738,16 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                     )}
                   </div>
                 </div>
+                {needsOnboarding && (
+                  <Link
+                    href="/onboarding"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                  >
+                    <ClipboardCheck className="size-4 text-zinc-500" />
+                    Complete onboarding
+                  </Link>
+                )}
                 {filteredProfileMenu.map(({ label, href, icon: Icon }) => (
                   <Link
                     key={href}
@@ -737,7 +773,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
               <>
                 <Link
                   className="rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-                  href="/auth/login"
+                  href="/auth/signin"
                 >
                   <UserIcon className="size-4 text-zinc-500" />
                   Log In

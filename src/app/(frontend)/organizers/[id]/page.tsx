@@ -23,6 +23,7 @@ import {
   type DummyOrganizer,
   type DummyEvent,
 } from '@/lib/dummy-organizers'
+import { isUserOnboarded } from '@/lib/onboarding'
 import config from '@/payload.config'
 import type { Media, Event } from '@/payload-types'
 
@@ -433,6 +434,9 @@ export default async function OrganizerProfilePage({ params, searchParams }: Pro
   if (id === 'me') {
     if (!currentUser) {
       redirect('/auth/signin')
+    }
+    if (!isUserOnboarded(currentUser)) {
+      redirect('/onboarding')
     }
     const isEO =
       currentUser.isOrganizer ||

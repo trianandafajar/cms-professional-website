@@ -4,6 +4,7 @@ import { getPayload } from 'payload'
 
 import { MyShell } from '@/components/frontend/my-shell'
 import { OrganizationsAuthSync } from '@/components/organizations/layouts/auth-sync'
+import { isUserOnboarded } from '@/lib/onboarding'
 import type { User } from '@/stores/authStore'
 import config from '@/payload.config'
 
@@ -14,6 +15,10 @@ export default async function MyLayout({ children }: { children: React.ReactNode
 
   if (!user) {
     redirect('/auth/signin')
+  }
+
+  if (!isUserOnboarded(user)) {
+    redirect('/onboarding')
   }
 
   if (user.isOrganizer) {
@@ -38,7 +43,7 @@ export default async function MyLayout({ children }: { children: React.ReactNode
   return (
     <>
       <OrganizationsAuthSync user={hydratedUser} />
-      <MyShell>{children}</MyShell>
+      <MyShell user={hydratedUser}>{children}</MyShell>
     </>
   )
 }

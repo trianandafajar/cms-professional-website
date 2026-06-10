@@ -1,4 +1,5 @@
 import type { Endpoint } from 'payload'
+import { isUserOnboarded, onboardingRequiredResponse } from '@/lib/onboarding'
 
 export const organizerFollowEndpoint: Endpoint = {
   path: '/organizers/follow/:organizerId',
@@ -76,6 +77,10 @@ export const organizerFollowToggleEndpoint: Endpoint = {
       id: user.id,
       depth: 0,
     })
+
+    if (!isUserOnboarded(currentUser)) {
+      return onboardingRequiredResponse()
+    }
 
     const followed =
       (currentUser.followedOrganizers as Array<number | { id: number }> | undefined) ?? []

@@ -349,7 +349,7 @@ export function CommentsModal({
         </div>
 
         {/* Comment Input */}
-        <form onSubmit={handleSubmit} className="border-t border-zinc-100 p-4 shrink-0">
+        <form onSubmit={gate(handleSubmit)} className="border-t border-zinc-100 p-4 shrink-0">
           <div className="relative">
             <div className="flex gap-2">
               <div className="flex-1 relative">

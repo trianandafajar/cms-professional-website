@@ -6,9 +6,11 @@ import { ArrowLeft, ChevronRight, Clock, MapPin, Calendar } from 'lucide-react'
 
 import { FrontendNavbar } from '@/components/frontend/navbar'
 import { TicketSelector } from '@/components/frontend/ticket-selector'
+import { OrganizationsAuthSync } from '@/components/organizations/layouts/auth-sync'
 import config from '@/payload.config'
 import { DEFAULT_CURRENCY, getActiveCheckoutProviders, normalizeFinanceSettings } from '@/lib/finance'
 import type { Event, Media, Location, Category } from '@/payload-types'
+import type { User as AuthUser } from '@/stores/authStore'
 
 type Props = {
   params: Promise<{ city: string; slug: string }>
@@ -262,6 +264,22 @@ export default async function EventTicketsPage({ params }: Props) {
 
   const cityName = ev.locationName || slugToDisplayName(city)
   const eventDetailHref = `/events/${city}/${slug}`
+  const hydratedUser = currentUser
+    ? ({
+        id: String(currentUser.id),
+        email: currentUser.email,
+        name: currentUser.name ?? undefined,
+        role: currentUser.role ?? undefined,
+        roleName: currentUser.roleName ?? undefined,
+        isOnboarded: currentUser.isOnboarded ?? undefined,
+        onboardingStep: currentUser.onboardingStep ?? undefined,
+        isOrganizer: currentUser.isOrganizer ?? undefined,
+        avatar: currentUser.avatar ?? undefined,
+        bio: currentUser.bio ?? undefined,
+        website: currentUser.website ?? undefined,
+        instagram: currentUser.instagram ?? undefined,
+      } satisfies AuthUser)
+    : null
 
   // Build ticket types from Payload data
   let ticketTypes: TicketType[]
@@ -297,9 +315,8 @@ export default async function EventTicketsPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-[#f8f9fc]">
-      <FrontendNavbar
-        user={currentUser ? { name: currentUser.name, email: currentUser.email } : null}
-      />
+      {hydratedUser && <OrganizationsAuthSync user={hydratedUser} />}
+      <FrontendNavbar user={hydratedUser} />
 
       {/* Breadcrumb */}
       <div className="bg-white border-b border-zinc-100">

@@ -16,6 +16,7 @@ import {
   CheckCircle2,
 } from 'lucide-react'
 import { apiClient } from '@/lib/apiClient'
+import { useAuthGate } from '@/hooks/useAuthGate'
 import {
   calculateCheckoutTotals,
   formatMoneyAmount,
@@ -720,6 +721,7 @@ export function TicketSelector({
   const [checkoutNotice, setCheckoutNotice] = useState<string | null>(null)
   const [restoringSession, setRestoringSession] = useState(false)
   const finalizedSessionRef = useRef<string | null>(null)
+  const { gate } = useAuthGate()
 
   function addTicket(ticket: TicketType) {
     setCart((prev) => {
@@ -906,7 +908,7 @@ export function TicketSelector({
             cart={activeCart}
             isFree={isFree}
             financeSettings={financeSettings}
-            onCheckout={() => setStep('checkout')}
+            onCheckout={gate(() => setStep('checkout'))}
           />
         </>
       )}

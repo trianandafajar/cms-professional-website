@@ -140,7 +140,7 @@ export default function MyTicketsPage() {
 
       try {
         const response = await apiClient.get<{ docs: TicketRecord[] }>(
-          `/api/tickets?limit=1000&depth=2&sort=-createdAt&where[purchaserEmail][equals]=${encodeURIComponent(user.email)}&where[status][equals]=completed`,
+          `/api/tickets?limit=1000&depth=2&sort=-createdAt&where[purchaserEmail][equals]=${encodeURIComponent(user.email)}`,
         )
         setTickets(response.docs ?? [])
       } catch (err: any) {

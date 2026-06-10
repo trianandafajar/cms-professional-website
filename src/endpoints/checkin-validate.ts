@@ -48,7 +48,7 @@ export const checkinValidateEndpoint: Endpoint = {
 
     const eventOrganizerId =
       typeof event.organizer === 'object' ? event.organizer.id : event.organizer
-    if (eventOrganizerId !== user.id) {
+    if (String(eventOrganizerId) !== String(user.id)) {
       return Response.json({ error: 'You are not the organizer of this event' }, { status: 403 })
     }
 
@@ -66,7 +66,7 @@ export const checkinValidateEndpoint: Endpoint = {
 
     // 5. Check if ticket belongs to the selected event
     const ticketEventId = typeof ticket.event === 'object' ? ticket.event.id : ticket.event
-    if (ticketEventId !== eventId) {
+    if (String(ticketEventId) !== String(eventId)) {
       return Response.json(
         { status: 'wrong_event', error: 'Ticket belongs to a different event' },
         { status: 400 },

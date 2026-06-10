@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
@@ -16,13 +16,24 @@ export default function SignInPage() {
   const { login, isLoading, error: storeError, clearError } = useAuthStore()
   const router = useRouter()
   const [formError, setFormError] = useState<string | null>(null)
+  const [wasRegistered, setWasRegistered] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<SignInInput>({ resolver: standardSchemaResolver(signInSchema) })
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const email = params.get('email')
+    if (email) {
+      setValue('email', email)
+    }
+    setWasRegistered(params.get('registered') === '1')
+  }, [setValue])
 
   const onSubmit = async (data: SignInInput) => {
     setFormError(null)
@@ -30,15 +41,20 @@ export default function SignInPage() {
     try {
       const user = await login(data.email, data.password)
       const isOnboardingDone = Boolean(user.isOnboarded) || (user.onboardingStep ?? 0) >= 4
+      const params = new URLSearchParams(window.location.search)
+      const redirect = params.get('redirect') ?? sessionStorage.getItem('postLoginRedirect')
+
       if (!isOnboardingDone) {
+        if (redirect) {
+          sessionStorage.setItem('postOnboardingRedirect', redirect)
+          sessionStorage.removeItem('postLoginRedirect')
+        }
         router.push('/onboarding')
         return
       }
 
-      // Check for redirect param
-      const params = new URLSearchParams(window.location.search)
-      const redirect = params.get('redirect')
       if (redirect) {
+        sessionStorage.removeItem('postLoginRedirect')
         router.push(decodeURIComponent(redirect))
         return
       }
@@ -62,6 +78,12 @@ export default function SignInPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {wasRegistered && (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+            Account created. Please sign in with the email and password you just made.
+          </div>
+        )}
+
         <div className="space-y-1.5">
           <label
             htmlFor="email"

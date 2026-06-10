@@ -38,13 +38,26 @@ export const Users: CollectionConfig = {
           return data
         }
 
-        if (data.role) {
-          return data
-        }
-
         const usersCount = await req.payload.count({
           collection: 'users',
         })
+
+        const isPublicRegistration = !req.user && usersCount.totalDocs > 0
+
+        if (isPublicRegistration) {
+          delete data.role
+          delete data.roleName
+          data.isOnboarded = false
+          data.onboardingStep = 0
+          data.isOrganizer = false
+          data.defaultLocation = null
+          data.preferredCategories = []
+          return data
+        }
+
+        if (data.role) {
+          return data
+        }
 
         const targetRoleName = usersCount.totalDocs === 0 ? 'admin' : 'user'
 

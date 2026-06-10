@@ -38,10 +38,10 @@ const DashboardListsIsland = dynamic(
   },
 )
 
-export default function DashboardClientShell() {
+export default function DashboardClientShell({ organizerId }: { organizerId: string }) {
   return (
     <div className="mx-auto max-w-[1400px] space-y-7 px-2 py-7">
-      <DashboardSummaryIsland />
+      <DashboardSummaryIsland organizerId={organizerId} />
       <DashboardChartsIsland />
       <DashboardListsIsland />
     </div>

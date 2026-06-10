@@ -2,6 +2,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { apiClient } from '@/lib/apiClient'
+import { isUserOnboarded } from '@/lib/onboarding'
+import { useOnboardingStore } from './onboardingStore'
 import { useLikesStore } from './likesStore'
 
 export interface User {
@@ -84,6 +86,11 @@ export const useAuthStore = create<AuthState>()(
             authExpiresAt,
             isLoading: false,
           })
+          if (isUserOnboarded(loginResponse.user)) {
+            useOnboardingStore.getState().clear()
+          } else {
+            useOnboardingStore.getState().startForUser(String(loginResponse.user.id))
+          }
           scheduleAuthExpiry(authExpiresAt)
           useLikesStore.getState().fetchLikes()
           // Refresh user data to ensure avatar is populated with full URL
@@ -98,31 +105,20 @@ export const useAuthStore = create<AuthState>()(
       register: async (name, email, password) => {
         set({ isLoading: true, error: null })
         try {
-          // Payload's create endpoint returns { doc, message } and does NOT set
-          // the auth cookie. We have to follow up with a login call so the
-          // session cookie gets attached.
-          await apiClient.post<{ doc: User; message: string }>('/api/users', {
+          const response = await apiClient.post<{ doc: User; message: string }>('/api/users', {
             name,
             email,
             password,
           })
-          const loginResponse = await apiClient.post<{ user: User }>('/api/users/login', {
-            email,
-            password,
-          })
-          const payloadResponse = loginResponse as { user: User; exp?: number }
-          const authExpiresAt = payloadResponse.exp ? payloadResponse.exp * 1000 : null
           set({
-            user: payloadResponse.user,
-            authExpiresAt,
+            user: null,
+            authExpiresAt: null,
             isLoading: false,
           })
-          scheduleAuthExpiry(authExpiresAt)
-          // Fetch user's likes after successful registration/login
-          useLikesStore.getState().fetchLikes()
-          // Refresh user data to ensure avatar is populated with full URL
-          get().refreshUser()
-          return loginResponse.user
+          clearAuthExpiryTimer()
+          useOnboardingStore.getState().clear()
+          useLikesStore.getState().clear()
+          return response.doc
         } catch (err: any) {
           set({ error: err.message || 'Registration failed', isLoading: false })
           throw err
@@ -138,6 +134,7 @@ export const useAuthStore = create<AuthState>()(
         } finally {
           clearAuthExpiryTimer()
           set({ user: null, authExpiresAt: null, isLoading: false })
+          useOnboardingStore.getState().clear()
           // Clear likes on logout
           useLikesStore.getState().clear()
         }

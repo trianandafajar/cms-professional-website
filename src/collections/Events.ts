@@ -1,8 +1,71 @@
 // src/collections/Events.ts
-import type { CollectionConfig } from 'payload'
+import type { Access, CollectionConfig } from 'payload'
 
 import { slugify } from '@/lib/slugify'
 import { DEFAULT_CURRENCY } from '@/lib/finance'
+import { isUserOnboarded } from '@/lib/onboarding'
+
+function getUserId(user: unknown): string | number | null {
+  if (!user || typeof user !== 'object' || !('id' in user)) {
+    return null
+  }
+
+  const id = (user as { id?: string | number }).id
+  return id ?? null
+}
+
+function isAdmin(user: unknown): boolean {
+  if (!user || typeof user !== 'object') {
+    return false
+  }
+
+  const role = (user as { role?: unknown; roleName?: string | null }).role
+  const roleName = (user as { roleName?: string | null }).roleName
+
+  return (
+    roleName === 'admin' ||
+    (typeof role === 'object' &&
+      role !== null &&
+      'name' in role &&
+      (role as { name?: string }).name === 'admin')
+  )
+}
+
+const readEvents: Access = ({ req }) => {
+  const userId = getUserId(req.user)
+
+  if (isAdmin(req.user)) {
+    return true
+  }
+
+  if (!userId) {
+    return { status: { equals: 'published' } } as any
+  }
+
+  return {
+    or: [{ status: { equals: 'published' } }, { organizer: { equals: userId } }],
+  } as any
+}
+
+const createEvent: Access = ({ req }) => {
+  return Boolean(req.user?.isOrganizer && isUserOnboarded(req.user))
+}
+
+const manageOwnEvents: Access = ({ req }) => {
+  const userId = getUserId(req.user)
+
+  if (isAdmin(req.user)) {
+    return true
+  }
+
+  if (!userId || !req.user?.isOrganizer || !isUserOnboarded(req.user)) {
+    return false
+  }
+
+  return {
+    organizer: { equals: userId },
+  }
+}
 
 export const Events: CollectionConfig = {
   slug: 'events',
@@ -20,10 +83,10 @@ export const Events: CollectionConfig = {
     },
   },
   access: {
-    read: () => true,
-    create: ({ req }) => Boolean(req.user),
-    update: ({ req }) => Boolean(req.user),
-    delete: ({ req }) => Boolean(req.user),
+    read: readEvents,
+    create: createEvent,
+    update: manageOwnEvents,
+    delete: manageOwnEvents,
   },
   hooks: {
     beforeValidate: [

@@ -38,7 +38,9 @@ interface OrdersState {
   isLoading: boolean
   hasFetched: boolean
   error: string | null
+  activeOrganizerId: string | null
   fetchOrders: (userId?: string | null) => Promise<void>
+  setActiveOrganizerId: (userId: string | null) => void
   getOrderById: (orderId: string) => OrderRow | null
 }
 
@@ -165,6 +167,7 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
   isLoading: false,
   hasFetched: false,
   error: null,
+  activeOrganizerId: null,
 
   fetchOrders: async (userId) => {
     if (get().isLoading) {
@@ -174,17 +177,25 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
     set({ isLoading: true, error: null })
 
     try {
+      const organizerId = userId ?? get().activeOrganizerId
+
+      if (!organizerId) {
+        set({
+          orders: [],
+          isLoading: false,
+          hasFetched: true,
+        })
+        return
+      }
+
+      set({ activeOrganizerId: organizerId })
+
       const fetchTickets = async (query: string) =>
         apiClient.get<{ docs: Ticket[] }>(`/api/tickets?limit=1000&depth=2&sort=-createdAt${query}`)
 
-      const filteredResponse = userId
-        ? await fetchTickets(`&where[event.organizer][equals]=${encodeURIComponent(userId)}`)
-        : null
-
-      const response =
-        filteredResponse && filteredResponse.docs.length > 0
-          ? filteredResponse
-          : await fetchTickets('')
+      const response = await fetchTickets(
+        `&where[event.organizer][equals]=${encodeURIComponent(organizerId)}`,
+      )
 
       set({
         orders: groupTicketsToOrders(response.docs),
@@ -195,6 +206,8 @@ export const useOrdersStore = create<OrdersState>((set, get) => ({
       set({ error: err.message || 'Failed to fetch orders', isLoading: false, hasFetched: true })
     }
   },
+
+  setActiveOrganizerId: (activeOrganizerId) => set({ activeOrganizerId }),
 
   getOrderById: (orderId) => get().orders.find((order) => order.id === orderId) ?? null,
 }))

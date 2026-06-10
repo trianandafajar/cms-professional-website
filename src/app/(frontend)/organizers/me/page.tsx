@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { headers as getHeaders } from 'next/headers.js'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
+import { isUserOnboarded } from '@/lib/onboarding'
 
 export default async function OrganizersMePage() {
   const headers = await getHeaders()
@@ -11,6 +12,10 @@ export default async function OrganizersMePage() {
 
   if (!user) {
     redirect('/auth/signin')
+  }
+
+  if (!isUserOnboarded(user)) {
+    redirect('/onboarding')
   }
 
   const isEO =

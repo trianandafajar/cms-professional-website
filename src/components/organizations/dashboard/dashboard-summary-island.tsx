@@ -9,7 +9,7 @@ import { useOrdersStore } from '@/stores/ordersStore'
 import { formatMoneyAmount } from '@/lib/finance'
 import { DashboardHeaderSkeleton, DashboardStatsSkeleton } from './dashboard-skeletons'
 
-export default function DashboardSummaryIsland() {
+export default function DashboardSummaryIsland({ organizerId }: { organizerId: string }) {
   const user = useAuthStore((state) => state.user)
   const hasHydrated = useAuthStore((state) => state._hasHydrated)
   const { orders, isLoading: ordersLoading, hasFetched: ordersFetched, fetchOrders } = useOrdersStore()
@@ -17,9 +17,9 @@ export default function DashboardSummaryIsland() {
 
   useEffect(() => {
     if (!hasHydrated) return
-    fetchOrders(user?.id ?? null)
-    fetchAllEvents()
-  }, [hasHydrated, user?.id, fetchOrders, fetchAllEvents])
+    fetchOrders(organizerId)
+    fetchAllEvents(organizerId)
+  }, [hasHydrated, organizerId, fetchOrders, fetchAllEvents])
 
   const completedOrders = useMemo(
     () => orders.filter((order) => order.status === 'Completed'),

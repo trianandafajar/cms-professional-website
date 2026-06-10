@@ -14,6 +14,7 @@ import {
   type PaymentConnectionSummary,
   type PaymentProvider,
 } from '@/lib/finance'
+import { isUserOnboarded, onboardingRequiredResponse } from '@/lib/onboarding'
 
 function getServerURL() {
   return process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'
@@ -873,7 +874,7 @@ export const financeCheckoutCreateEndpoint: Endpoint = {
   path: '/finance/checkout',
   method: 'post',
   handler: async (req) => {
-    const { payload } = req
+    const { payload, user } = req
     const body = await (req.json as () => Promise<any>)()
     const eventId = body?.eventId
     const eventSlug = String(body?.eventSlug ?? '')
@@ -881,6 +882,14 @@ export const financeCheckoutCreateEndpoint: Endpoint = {
     const buyer = body?.buyer ?? {}
     const cart = Array.isArray(body?.cart) ? body.cart : []
     const returnPath = String(body?.returnPath ?? '')
+
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    if (!isUserOnboarded(user)) {
+      return onboardingRequiredResponse()
+    }
 
     if (!buyer.name || !buyer.email) {
       return Response.json({ error: 'Buyer information is required' }, { status: 400 })

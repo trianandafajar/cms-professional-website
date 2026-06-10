@@ -15,7 +15,7 @@ import { EventsCalendarSkeleton } from './events-skeletons'
 
 const localizer = momentLocalizer(moment)
 
-export default function EventsCalendar() {
+export default function EventsCalendar({ organizerId }: { organizerId: string }) {
   const router = useRouter()
   const { allEvents, isLoading, error, fetchAllEvents } = useEventsStore()
 
@@ -24,8 +24,8 @@ export default function EventsCalendar() {
   const [date, setDate] = useState(new Date())
 
   useEffect(() => {
-    fetchAllEvents()
-  }, [fetchAllEvents])
+    fetchAllEvents(organizerId)
+  }, [fetchAllEvents, organizerId])
 
   const components = useMemo(
     () => ({

@@ -1,7 +1,75 @@
-import type { CollectionConfig } from 'payload'
+import type { Access, CollectionConfig } from 'payload'
 import { randomUUID } from 'crypto'
 
 import { DEFAULT_CURRENCY } from '@/lib/finance'
+
+function getUserId(user: unknown): string | number | null {
+  if (!user || typeof user !== 'object' || !('id' in user)) {
+    return null
+  }
+
+  return (user as { id?: string | number }).id ?? null
+}
+
+function getUserEmail(user: unknown): string | null {
+  if (!user || typeof user !== 'object' || !('email' in user)) {
+    return null
+  }
+
+  return (user as { email?: string | null }).email ?? null
+}
+
+function isAdmin(user: unknown): boolean {
+  if (!user || typeof user !== 'object') {
+    return false
+  }
+
+  const role = (user as { role?: unknown; roleName?: string | null }).role
+  const roleName = (user as { roleName?: string | null }).roleName
+
+  return (
+    roleName === 'admin' ||
+    (typeof role === 'object' &&
+      role !== null &&
+      'name' in role &&
+      (role as { name?: string }).name === 'admin')
+  )
+}
+
+const readTickets: Access = ({ req }) => {
+  if (!req.user) {
+    return false
+  }
+
+  if (isAdmin(req.user)) {
+    return true
+  }
+
+  const userId = getUserId(req.user)
+  const email = getUserEmail(req.user)
+
+  return {
+    or: [
+      ...(userId ? [{ 'event.organizer': { equals: userId } }] : []),
+      ...(email ? [{ purchaserEmail: { equals: email } }] : []),
+    ],
+  } as any
+}
+
+const manageTickets: Access = ({ req }) => {
+  if (isAdmin(req.user)) {
+    return true
+  }
+
+  const userId = getUserId(req.user)
+  if (!userId || !req.user?.isOrganizer) {
+    return false
+  }
+
+  return {
+    'event.organizer': { equals: userId },
+  } as any
+}
 
 export const Tickets: CollectionConfig = {
   slug: 'tickets',
@@ -26,10 +94,10 @@ export const Tickets: CollectionConfig = {
     },
   },
   access: {
-    read: ({ req }) => Boolean(req.user),
+    read: readTickets,
     create: ({ req }) => Boolean(req.user),
-    update: ({ req }) => Boolean(req.user),
-    delete: ({ req }) => Boolean(req.user),
+    update: manageTickets,
+    delete: manageTickets,
   },
   hooks: {
     beforeValidate: [
