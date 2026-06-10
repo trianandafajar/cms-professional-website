@@ -315,7 +315,7 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
         </main>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-100 bg-white/95 backdrop-blur-sm md:left-[320px]">
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-100 bg-white/95 backdrop-blur-sm md:left-[410px]">
         <div className="flex flex-col-reverse gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:px-8">
           {currentStep > 0 && !isCreatePage ? (
             <button
@@ -327,7 +327,7 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
                   router.push(prevHref)
                 }
               }}
-              className="w-full rounded-lg border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 sm:w-auto"
+              className="w-full rounded-lg border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 sm:w-auto cursor-pointer"
             >
               Back
             </button>
@@ -339,7 +339,7 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
             type="button"
             onClick={handleSaveAndContinue}
             disabled={isSaving}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#5151eb] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#4040d9] disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#5151eb] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#4040d9] cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
           >
             {isSaving && (
               <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />

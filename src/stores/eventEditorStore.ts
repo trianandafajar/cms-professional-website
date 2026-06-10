@@ -3,6 +3,7 @@ import type { Event, Location } from '@/payload-types'
 import { apiClient } from '@/lib/apiClient'
 import { DEFAULT_CURRENCY } from '@/lib/finance'
 import { resolveCategoryId } from '@/lib/eventCategories'
+import { presets as ticketDesignPresets } from '@/lib/ticket-designs'
 
 export interface EventImage {
   id: number
@@ -40,6 +41,8 @@ export interface EventTicketType {
   designId: string | null
   designSource: 'designer' | 'preset'
 }
+
+const presetDesignIds = new Set(ticketDesignPresets.map((preset) => preset.id))
 
 function normalizeTagList(tags: unknown): string[] {
   if (!Array.isArray(tags)) {
@@ -266,7 +269,6 @@ interface EventEditorState {
 
   isSavingTickets: boolean
 
-  eventType: string
   category: string
   subcategory: string
 
@@ -276,7 +278,6 @@ interface EventEditorState {
 
   organizerName: string
 
-  setEventType: (value: string) => void
   setCategory: (value: string) => void
   setSubcategory: (value: string) => void
 
@@ -381,7 +382,6 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
 
   isSavingTickets: false,
 
-  eventType: 'conference',
   category: '',
   subcategory: '',
 
@@ -515,11 +515,6 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
         },
       ],
     })),
-
-  setEventType: (value) =>
-    set({
-      eventType: value,
-    }),
 
   setCategory: (value) =>
     set({
@@ -777,8 +772,6 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
               : toIsoFromDatetimeLocal(ticket.salesEnd),
         })),
 
-        eventType: state.eventType,
-
         summary: state.eventSummary,
 
         tags: state.tags.map((tag) => ({ tag })),
@@ -1009,8 +1002,6 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
         locationLng: Number(doc.longitude) || 0,
 
         bannerImages,
-        eventType: doc.eventType ?? 'conference',
-
         category:
           typeof doc.category === 'object' && doc.category && 'group' in doc.category
             ? String(doc.category.group ?? '')
@@ -1063,8 +1054,11 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
             sortOrder: ticket.sortOrder ?? index,
 
             designId: ticket.designId ?? null,
-
-            designSource: ticket.designSource ?? 'designer',
+            designSource:
+              ticket.designSource ??
+              (ticket.designId && presetDesignIds.has(String(ticket.designId))
+                ? 'preset'
+                : 'designer'),
           })) ?? [],
       })
     } catch (error) {
@@ -1138,7 +1132,6 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
       bannerPosX: 50,
       bannerPosY: 50,
       tickets: [],
-      eventType: 'conference',
       category: '',
       subcategory: '',
 

@@ -5,9 +5,7 @@ import { Calendar, MapPin } from 'lucide-react'
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -21,18 +19,26 @@ interface CategoryDoc {
   group?: string | null
 }
 
-const GROUP_LABELS: Record<string, string> = {
-  'science-tech': 'Science & Tech',
-  'family-education': 'Family & Education',
-  'food-drink': 'Food & Drink',
-  business: 'Business',
-  music: 'Music',
-  arts: 'Arts',
-  community: 'Community',
-  hobbies: 'Hobbies',
-  'travel-outdoor': 'Travel & Outdoor',
-  'sports-fitness': 'Sports & Fitness',
-}
+const CATEGORY_GROUP_OPTIONS = [
+  { label: 'School Activities', value: 'school-activities' },
+  { label: 'Hobbies', value: 'hobbies' },
+  { label: 'Home & Lifestyle', value: 'home-lifestyle' },
+  { label: 'Fashion', value: 'fashion' },
+  { label: 'Government', value: 'government' },
+  { label: 'Family & Education', value: 'family-education' },
+  { label: 'Spirituality', value: 'spirituality' },
+  { label: 'Charity & Causes', value: 'charity-causes' },
+  { label: 'Travel & Outdoor', value: 'travel-outdoor' },
+  { label: 'Science & Tech', value: 'science-tech' },
+  { label: 'Health', value: 'health' },
+  { label: 'Sports & Fitness', value: 'sports-fitness' },
+  { label: 'Film & Media', value: 'film-media' },
+  { label: 'Arts', value: 'arts' },
+  { label: 'Community', value: 'community' },
+  { label: 'Food & Drink', value: 'food-drink' },
+  { label: 'Business', value: 'business' },
+  { label: 'Music', value: 'music' },
+] as const
 
 export default function PreviewPublishPage() {
   // Banner from shared store (syncs with sidebar preview)
@@ -48,14 +54,12 @@ export default function PreviewPublishPage() {
 
     locationTitle,
 
-    eventType,
     category,
     subcategory,
 
     tags,
     visibility,
 
-    setEventType,
     setCategory,
     setSubcategory,
 
@@ -126,25 +130,6 @@ export default function PreviewPublishPage() {
       setSubcategory(String(legacyCategory.id))
     }
   }, [categories, category, subcategory, setCategory, setSubcategory])
-
-  const groupedCategories = useMemo<Array<[string, CategoryDoc[]]>>(() => {
-    const groups = new Map<string, CategoryDoc[]>()
-
-    for (const categoryDoc of categories) {
-      const key = categoryDoc.group ?? 'other'
-      const items = groups.get(key) ?? []
-      items.push(categoryDoc)
-      groups.set(key, items)
-    }
-
-    return Array.from(groups.entries()).map(
-      ([groupKey, items]) =>
-        [
-          groupKey,
-          [...items].sort((left, right) => left.name.localeCompare(right.name)),
-        ] as [string, CategoryDoc[]],
-    )
-  }, [categories])
 
   const subcategoryOptions = useMemo(() => {
     if (!category) {
@@ -358,28 +343,11 @@ export default function PreviewPublishPage() {
             <div className="rounded-xl border border-zinc-200 bg-white p-4 sm:p-5">
               <h3 className="text-sm font-semibold text-zinc-900">Event Type & Category</h3>
               <div className="mt-3 space-y-3">
-                <div>
-                  <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-                    Type
-                  </label>
-                  <Select value={eventType} onValueChange={setEventType}>
-                    <SelectTrigger className="mt-1.5 h-10 w-full rounded-lg border-zinc-200 text-sm">
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="other">Other</SelectItem>
-                      <SelectItem value="conference">Conference</SelectItem>
-                      <SelectItem value="workshop">Workshop</SelectItem>
-                      <SelectItem value="music">Music</SelectItem>
-                      <SelectItem value="networking">Networking</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                   <div>
-                  <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-                    Category Group
-                  </label>
+                    <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                      Category Group
+                    </label>
                     <Select
                       value={category}
                       onValueChange={(value) => {
@@ -389,18 +357,13 @@ export default function PreviewPublishPage() {
                       disabled={loadingCategories}
                     >
                       <SelectTrigger className="mt-1.5 h-10 w-full rounded-lg border-zinc-200 text-sm">
-                        <SelectValue
-                          placeholder={
-                            loadingCategories ? 'Loading categories...' : 'Category group'
-                          }
-                        />
+                        <SelectValue placeholder="Category group" />
                       </SelectTrigger>
                       <SelectContent>
-                        {groupedCategories.map(([groupKey]) => (
-                          <SelectGroup key={groupKey}>
-                            <SelectLabel>{GROUP_LABELS[groupKey] ?? groupKey}</SelectLabel>
-                            <SelectItem value={groupKey}>Use this group</SelectItem>
-                          </SelectGroup>
+                        {CATEGORY_GROUP_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -450,14 +413,9 @@ export default function PreviewPublishPage() {
                   value={tags}
                   onValueChange={setTags}
                   options={[
-                    'Technology',
-                    'Frontend',
-                    'Backend',
-                    'React',
-                    'Next.js',
-                    'Workshop',
-                    'AI',
-                    'Startup',
+                    'Music',
+                    'Japance',
+                    'Cosplay',
                     'Business',
                     'Community',
                   ]}

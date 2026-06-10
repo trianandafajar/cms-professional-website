@@ -2,15 +2,15 @@
 
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { useEventEditorStore, type EventTicketType } from '@/stores/eventEditorStore'
-import { Plus, Trash2, GripVertical, ChevronDown, ChevronUp, Check } from 'lucide-react'
+import { Plus, Trash2, GripVertical, ChevronDown, ChevronUp, Check, DollarSign  } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import TicketPreviewCard from '@/components/organizations/ticket-preview'
 import {
   type TicketConfig,
   type TicketDesign,
   defaultConfig,
   presets,
-  initialDesigns,
   getTicketBackground,
 } from '@/lib/ticket-designs'
 import { apiClient } from '@/lib/apiClient'
@@ -82,34 +82,46 @@ export default function EventTicketsPage() {
   }, [])
 
   const designerDesigns = useMemo(() => {
-    const merged = new Map<string, TicketDesign>()
-
-    for (const design of initialDesigns) {
-      merged.set(design.id, design)
-    }
-
-    for (const design of savedDesigns) {
-      merged.set(design.id, design)
-    }
-
-    return Array.from(merged.values())
+    return savedDesigns
   }, [savedDesigns])
+
+  const presetDesignIds = useMemo(
+    () => new Set(presets.map((preset) => preset.id)),
+    [],
+  )
+
+  function getResolvedDesignSource(ticket: EventTicketType) {
+    if (ticket.designSource === 'designer' || ticket.designSource === 'preset') {
+      return ticket.designSource
+    }
+
+    if (ticket.designId && presetDesignIds.has(ticket.designId)) {
+      return 'preset'
+    }
+
+    return 'designer'
+  }
 
   function getDesignConfig(ticket: EventTicketType): TicketConfig | null {
     if (!ticket.designId) return null
-    if (ticket.designSource === 'designer') {
+    const designSource = getResolvedDesignSource(ticket)
+
+    if (designSource === 'designer') {
       const design = designerDesigns.find((d) => d.id === ticket.designId)
       return design?.config || null
-    } else {
-      const preset = presets.find((p) => p.id === ticket.designId)
-      if (preset) return { ...defaultConfig, ...preset.config }
-      return null
     }
+
+    const preset = presets.find((p) => p.id === ticket.designId)
+    if (preset) return { ...defaultConfig, ...preset.config }
+    return null
   }
 
   function getDesignName(ticket: EventTicketType): string {
     if (!ticket.designId) return ''
-    if (ticket.designSource === 'designer') {
+
+    const designSource = getResolvedDesignSource(ticket)
+
+    if (designSource === 'designer') {
       return designerDesigns.find((d) => d.id === ticket.designId)?.name || ''
     }
     return presets.find((p) => p.id === ticket.designId)?.name || ''
@@ -208,7 +220,7 @@ export default function EventTicketsPage() {
           <Button
             onClick={handleSave}
             disabled={isSavingTickets}
-            className="rounded-xl bg-[#5151eb] px-5 text-sm font-semibold text-white hover:bg-[#3d3dcc] disabled:opacity-60"
+            className="cursor-pointer rounded-xl bg-[#5151eb] px-5 text-sm font-semibold text-white hover:bg-[#3d3dcc] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSavingTickets ? 'Saving...' : 'Save Changes'}
           </Button>
@@ -259,7 +271,7 @@ export default function EventTicketsPage() {
                 <button
                   type="button"
                   onClick={() => setExpandedId(isExpanded ? null : ticket.id)}
-                  className="flex-1 min-w-0 text-left"
+                  className="flex-1 min-w-0 cursor-pointer text-left"
                 >
                   <div className="flex items-center gap-3">
                     <p className="text-sm font-semibold text-zinc-900 truncate">
@@ -276,7 +288,7 @@ export default function EventTicketsPage() {
                     <span>{ticket.quantity} available</span>
                     {ticket.designId && (
                       <span>
-                        {ticket.designSource === 'designer' ? 'Design' : 'Preset'}:{' '}
+                        {getResolvedDesignSource(ticket) === 'designer' ? 'Design' : 'Preset'}:{' '}
                         {getDesignName(ticket)}
                       </span>
                     )}
@@ -288,14 +300,14 @@ export default function EventTicketsPage() {
                   <button
                     type="button"
                     onClick={() => setExpandedId(isExpanded ? null : ticket.id)}
-                    className="rounded-lg p-1.5 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-600"
+                    className="cursor-pointer rounded-lg p-1.5 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-600"
                   >
                     {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                   </button>
                   <button
                     type="button"
                     onClick={() => removeTicket(ticket.id)}
-                    className="rounded-lg p-1.5 text-zinc-400 transition hover:bg-red-50 hover:text-red-500"
+                    className="cursor-pointer rounded-lg p-1.5 text-zinc-400 transition hover:bg-red-50 hover:text-red-500"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -306,10 +318,10 @@ export default function EventTicketsPage() {
               {isExpanded && (
                 <div className="border-t border-zinc-100 px-5 py-5 space-y-5">
                   {/* Basic Info */}
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-                        Ticket Name
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                          Ticket Name
                       </label>
                       <input
                         value={ticket.name}
@@ -320,12 +332,12 @@ export default function EventTicketsPage() {
                     </div>
                     <div>
                       <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-                        Price (USD)
+                        Price
                       </label>
-                      <div className="mt-1.5 flex gap-2">
-                        <div className="flex h-10 items-center rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm font-semibold text-zinc-700">
-                          USD
-                        </div>
+
+                      <div className="relative mt-1.5">
+                        <DollarSign className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
+
                         <input
                           type="number"
                           step="0.01"
@@ -334,11 +346,13 @@ export default function EventTicketsPage() {
                           onChange={(e) =>
                             updateTicket(ticket.id, {
                               price:
-                                e.target.value === '' ? null : Math.max(0, Number(e.target.value)),
+                                e.target.value === ''
+                                  ? null
+                                  : Math.max(0, Number(e.target.value)),
                             })
                           }
-                          placeholder="0"
-                          className="h-10 flex-1 rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-[#5151eb]"
+                          placeholder="0.00"
+                          className="h-10 w-full rounded-lg border border-zinc-200 pl-9 pr-3 text-sm outline-none focus:border-[#5151eb]"
                         />
                       </div>
                     </div>
@@ -385,7 +399,7 @@ export default function EventTicketsPage() {
                         className="mt-1.5 h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-[#5151eb]"
                       />
                     </div>
-                    <div className="flex items-end">
+                    <div className="flex items-center">
                       <label className="flex items-center gap-2.5 cursor-pointer">
                         <input
                           type="checkbox"
@@ -401,9 +415,12 @@ export default function EventTicketsPage() {
                   {/* Sales Period */}
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
-                        Sales Start
-                      </label>
+                      <div className="flex h-9 items-center">
+                        <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                          Sales Start
+                        </label>
+                      </div>
+
                       <input
                         type="datetime-local"
                         min={toDatetimeLocalValue()}
@@ -418,25 +435,32 @@ export default function EventTicketsPage() {
                         className="mt-1.5 h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-[#5151eb]"
                       />
                     </div>
+
                     <div>
-                      <div className="flex items-center justify-between">
+                      <div className="flex h-9 items-center justify-between gap-3">
                         <label className="text-xs font-medium uppercase tracking-wider text-zinc-500">
                           Sales End
                         </label>
-                        <select
+
+                        <Select
                           value={ticket.salesEndMode}
-                          onChange={(e) =>
+                          onValueChange={(value) =>
                             updateTicket(ticket.id, {
-                              salesEndMode: e.target.value as 'limited' | 'unlimited',
-                              salesEnd: e.target.value === 'unlimited' ? null : ticket.salesEnd,
+                              salesEndMode: value as 'limited' | 'unlimited',
+                              salesEnd: value === 'unlimited' ? null : ticket.salesEnd,
                             })
                           }
-                          className="h-8 rounded-md border border-zinc-200 px-2 text-xs outline-none focus:border-[#5151eb]"
                         >
-                          <option value="limited">Limited date</option>
-                          <option value="unlimited">Until sold out</option>
-                        </select>
+                          <SelectTrigger className="!h-9 min-h-9 w-[150px] rounded-lg border-zinc-200 px-3 py-0 text-sm">
+                            <SelectValue placeholder="Sales end" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="limited">Limited date</SelectItem>
+                            <SelectItem value="unlimited">Until sold out</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
+
                       {ticket.salesEndMode === 'limited' ? (
                         <input
                           type="datetime-local"
@@ -445,23 +469,20 @@ export default function EventTicketsPage() {
                           onChange={(e) =>
                             updateTicket(ticket.id, {
                               salesEnd: e.target.value
-                                ? clampDatetime(
-                                    e.target.value,
-                                    ticket.salesStart ?? toDatetimeLocalValue(),
-                                  )
+                                ? clampDatetime(e.target.value, ticket.salesStart ?? toDatetimeLocalValue())
                                 : null,
                             })
                           }
                           className="mt-1.5 h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm outline-none focus:border-[#5151eb]"
                         />
                       ) : (
-                        <div className="mt-1.5 rounded-lg border border-dashed border-zinc-200 px-3 py-2 text-xs text-zinc-500">
+                        <div className="mt-1.5 flex h-10 items-center rounded-lg border border-dashed border-zinc-200 px-3 text-xs text-zinc-500">
                           Ticket sale stays open until the quantity is sold out.
                         </div>
                       )}
                     </div>
                   </div>
-
+                  
                   {/* Perks */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
@@ -471,7 +492,7 @@ export default function EventTicketsPage() {
                       <button
                         type="button"
                         onClick={() => addPerk(ticket.id)}
-                        className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-[#5151eb] transition hover:bg-indigo-50"
+                        className="flex cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-[#5151eb] transition hover:bg-indigo-50"
                       >
                         <Plus size={12} />
                         Add
@@ -490,7 +511,7 @@ export default function EventTicketsPage() {
                             <button
                               type="button"
                               onClick={() => removePerk(ticket.id, perk.id)}
-                              className="rounded-lg p-2 text-zinc-400 transition hover:bg-red-50 hover:text-red-500"
+                              className="cursor-pointer rounded-lg p-2 text-zinc-400 transition hover:bg-red-50 hover:text-red-500"
                             >
                               <Trash2 size={13} />
                             </button>
@@ -512,14 +533,14 @@ export default function EventTicketsPage() {
                     </p>
 
                     {/* Source toggle */}
-                    <div className="mt-3 flex items-center rounded-lg border border-zinc-200 p-0.5 w-fit">
+                    <div className="mt-3 flex w-fit items-center rounded-lg border border-zinc-200 p-0.5">
                       <button
                         type="button"
                         onClick={() =>
                           updateTicket(ticket.id, { designSource: 'designer', designId: null })
                         }
-                        className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
-                          ticket.designSource === 'designer'
+                        className={`cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                          getResolvedDesignSource(ticket) === 'designer'
                             ? 'bg-[#5151eb] text-white'
                             : 'text-zinc-600 hover:bg-zinc-50'
                         }`}
@@ -531,8 +552,8 @@ export default function EventTicketsPage() {
                         onClick={() =>
                           updateTicket(ticket.id, { designSource: 'preset', designId: null })
                         }
-                        className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
-                          ticket.designSource === 'preset'
+                        className={`cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium transition ${
+                          getResolvedDesignSource(ticket) === 'preset'
                             ? 'bg-[#5151eb] text-white'
                             : 'text-zinc-600 hover:bg-zinc-50'
                         }`}
@@ -543,15 +564,16 @@ export default function EventTicketsPage() {
 
                     {/* Design grid */}
                     <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                      {ticket.designSource === 'designer'
-                        ? designerDesigns.map((design) => {
+                      {getResolvedDesignSource(ticket) === 'designer' ? (
+                        designerDesigns.length > 0 ? (
+                          designerDesigns.map((design) => {
                             const isSelected = ticket.designId === design.id
                             return (
                               <button
                                 key={design.id}
                                 type="button"
                                 onClick={() => updateTicket(ticket.id, { designId: design.id })}
-                                className={`relative overflow-hidden rounded-xl border p-2 transition text-left ${
+                                className={`cursor-pointer relative overflow-hidden rounded-xl border p-2 transition text-left ${
                                   isSelected
                                     ? 'border-[#5151eb] ring-1 ring-[#5151eb]/30'
                                     : 'border-zinc-200 hover:border-zinc-300'
@@ -574,7 +596,13 @@ export default function EventTicketsPage() {
                               </button>
                             )
                           })
-                        : presets.map((preset) => {
+                        ) : (
+                          <div className="col-span-full rounded-xl border border-dashed border-zinc-200 px-4 py-6 text-center text-xs text-zinc-400">
+                            No saved ticket designs yet. Create one in Ticket Designer first.
+                          </div>
+                        )
+                      ) : (
+                        presets.map((preset) => {
                             const isSelected = ticket.designId === preset.id
                             const fullConfig: TicketConfig = { ...defaultConfig, ...preset.config }
                             return (
@@ -582,7 +610,7 @@ export default function EventTicketsPage() {
                                 key={preset.id}
                                 type="button"
                                 onClick={() => updateTicket(ticket.id, { designId: preset.id })}
-                                className={`relative overflow-hidden rounded-xl border p-2 transition text-left ${
+                                className={`cursor-pointer relative overflow-hidden rounded-xl border p-2 transition text-left ${
                                   isSelected
                                     ? 'border-[#5151eb] ring-1 ring-[#5151eb]/30'
                                     : 'border-zinc-200 hover:border-zinc-300'
@@ -604,10 +632,11 @@ export default function EventTicketsPage() {
                                 )}
                               </button>
                             )
-                          })}
+                          })
+                      )}
                     </div>
 
-                    {ticket.designSource === 'designer' && isLoadingDesigns && (
+                    {getResolvedDesignSource(ticket) === 'designer' && isLoadingDesigns && (
                       <p className="mt-2 text-xs text-zinc-400">Loading saved ticket designs...</p>
                     )}
 
@@ -647,7 +676,7 @@ export default function EventTicketsPage() {
       <button
         type="button"
         onClick={addTicket}
-        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-200 py-4 text-sm font-medium text-zinc-500 transition hover:border-[#5151eb] hover:text-[#5151eb]"
+        className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-zinc-200 py-4 text-sm font-medium text-zinc-500 transition hover:border-[#5151eb] hover:text-[#5151eb]"
       >
         <Plus size={16} />
         Add Ticket Type

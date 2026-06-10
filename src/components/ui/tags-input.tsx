@@ -33,10 +33,58 @@ export function TagsInput({
   onValueChange,
 }: TagsInputProps) {
   const anchor = useComboboxAnchor()
+  const [inputValue, setInputValue] = React.useState('')
+
+  const normalizedOptions = React.useMemo(() => {
+    return Array.from(new Set(options.map((item) => item.trim()).filter(Boolean)))
+  }, [options])
+
+  const availableOptions = React.useMemo(() => {
+    const typedValue = inputValue.trim()
+
+    if (!typedValue) {
+      return normalizedOptions
+    }
+
+    const exists = normalizedOptions.some(
+      (option) => option.toLowerCase() === typedValue.toLowerCase(),
+    )
+
+    if (exists) {
+      return normalizedOptions
+    }
+
+    return [typedValue, ...normalizedOptions]
+  }, [inputValue, normalizedOptions])
+
+  const addTag = React.useCallback(
+    (rawValue: string) => {
+      const nextTag = rawValue.trim()
+      if (!nextTag || value.length >= max) return
+
+      const alreadySelected = value.some((item) => item.toLowerCase() === nextTag.toLowerCase())
+      if (alreadySelected) {
+        setInputValue('')
+        return
+      }
+
+      onValueChange?.([...value, nextTag])
+      setInputValue('')
+    },
+    [max, onValueChange, value],
+  )
 
   return (
     <div>
-      <Combobox multiple autoHighlight items={options} value={value} onValueChange={onValueChange}>
+      <Combobox
+        multiple
+        autoHighlight
+        items={availableOptions}
+        value={value}
+        onValueChange={onValueChange}
+        inputValue={inputValue}
+        onInputValueChange={setInputValue}
+      >
         <ComboboxChips
           ref={anchor}
           className="
@@ -58,7 +106,7 @@ export function TagsInput({
                 {values.map((value) => (
                   <ComboboxChip
                     key={value}
-                    className="rounded-full bg-gray-100 py-2 px-4 text-smfont-medium "
+                    className="rounded-full bg-gray-100 px-4 py-2 text-sm font-medium"
                   >
                     {value}
                   </ComboboxChip>
@@ -66,9 +114,15 @@ export function TagsInput({
 
                 <ComboboxChipsInput
                   placeholder={values.length === 0 ? placeholder : ''}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ',') {
+                      event.preventDefault()
+                      addTag(inputValue)
+                    }
+                  }}
                   className="
                     px-4
-                    min-w-45
+                    min-w-28
                     flex-1
                     border-0
                     bg-transparent
@@ -80,7 +134,9 @@ export function TagsInput({
             )}
           </ComboboxValue>
 
-          <div className="mt-auto w-full pt-4  px-4 text-sm text-gray-500">{placeholder}</div>
+          <div className="mt-auto w-full px-4 pt-4 text-sm text-gray-500">
+            Press Enter to add a custom tag
+          </div>
         </ComboboxChips>
 
         <ComboboxContent
@@ -112,7 +168,13 @@ export function TagsInput({
                 <div>
                   <div className="font-medium">{item}</div>
 
-                  <div className="text-xs text-gray-500">Suggested tag</div>
+                  <div className="text-xs text-gray-500">
+                    {normalizedOptions.some(
+                      (option) => option.toLowerCase() === item.toLowerCase(),
+                    )
+                      ? 'Suggested tag'
+                      : 'Press Enter to add this tag'}
+                  </div>
                 </div>
               </ComboboxItem>
             )}
