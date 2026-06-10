@@ -23,6 +23,7 @@ import {
   Pencil,
   Check,
   Upload,
+  ChevronDown,
 } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { toPng } from 'html-to-image'
@@ -547,7 +548,7 @@ export default function TicketDesignerPage() {
   const triggerFileUpload = () => fileInputRef.current?.click()
 
   return (
-    <div className="flex h-[calc(100vh-63px)] -m-7">
+    <div className="flex min-h-[calc(100vh-63px)] flex-col overflow-hidden -m-4 sm:-m-6 lg:-m-7 xl:flex-row [&_a]:cursor-pointer [&_button]:cursor-pointer">
       {/* Hidden file input */}
       <input
         ref={fileInputRef}
@@ -558,9 +559,9 @@ export default function TicketDesignerPage() {
       />
 
       {/* ─── Left Sidebar ─── */}
-      <aside className="w-[340px] shrink-0 overflow-y-auto border-r border-zinc-200 bg-white flex flex-col">
+      <aside className="flex max-h-[55vh] w-full shrink-0 flex-col overflow-y-auto border-b border-zinc-200 bg-white xl:h-auto xl:max-h-none xl:w-[340px] xl:border-b-0 xl:border-r">
         {/* Header */}
-        <div className="sticky top-0 z-10 border-b border-zinc-100 bg-white px-5 py-4">
+        <div className="sticky top-0 z-10 border-b border-zinc-100 bg-white px-4 py-4 sm:px-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sliders size={16} className="text-[#5151eb]" />
@@ -578,7 +579,7 @@ export default function TicketDesignerPage() {
 
           {/* Design Switcher */}
           <div className="mt-3">
-            <div className="flex items-center justify-between mb-2">
+            <div className="mb-2 flex items-center justify-between">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
                 Designs
               </span>
@@ -678,19 +679,19 @@ export default function TicketDesignerPage() {
         </div>
 
         {/* Tab Content */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-6">
+        <div className="flex-1 space-y-6 overflow-y-auto p-4 sm:p-5">
           {/* Presets */}
           {activeTab === 'presets' && (
-            <SidebarSection title="Color Presets" icon={<Sparkles size={14} />}>
-              <div className="grid grid-cols-2 gap-2">
+            <SidebarSection title="Color Presets" icon={<Sparkles size={14} />} mobileDefaultOpen>
+              <div className="grid grid-cols-4 gap-2 sm:grid-cols-2">
                 {presets.map((preset) => (
                   <button
                     key={preset.id}
                     onClick={() => applyPreset(preset.id)}
-                    className="group overflow-hidden rounded-xl border border-zinc-200 p-1.5 transition hover:border-[#5151eb]/50 hover:shadow-sm"
+                    className="group overflow-hidden rounded-lg border border-zinc-200 p-1 transition hover:border-[#5151eb]/50 hover:shadow-sm sm:rounded-xl sm:p-1.5"
                   >
                     <div
-                      className="h-12 w-full rounded-lg"
+                      className="h-10 w-full rounded-md sm:h-12 sm:rounded-lg"
                       style={{
                         background:
                           preset.config.bgType === 'solid'
@@ -698,7 +699,7 @@ export default function TicketDesignerPage() {
                             : `linear-gradient(135deg, ${preset.config.bgGradientFrom}, ${preset.config.bgGradientTo})`,
                       }}
                     />
-                    <p className="mt-1.5 text-[10px] font-medium text-zinc-600 group-hover:text-[#5151eb]">
+                    <p className="mt-1 text-center text-[9px] font-medium text-zinc-600 group-hover:text-[#5151eb] sm:mt-1.5 sm:text-[10px]">
                       {preset.name}
                     </p>
                   </button>
@@ -710,8 +711,8 @@ export default function TicketDesignerPage() {
           {/* Layout */}
           {activeTab === 'layout' && (
             <div className="space-y-5">
-              <SidebarSection title="Orientation" icon={<Move size={14} />}>
-                <div className="grid grid-cols-2 gap-2">
+              <SidebarSection title="Orientation" icon={<Move size={14} />} mobileDefaultOpen>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <button
                     onClick={() => updateConfig({ orientation: 'horizontal' })}
                     className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-xs font-medium transition ${
@@ -804,7 +805,7 @@ export default function TicketDesignerPage() {
           {/* Style */}
           {activeTab === 'style' && (
             <div className="space-y-5">
-              <SidebarSection title="Background" icon={<ImageIcon size={14} />}>
+              <SidebarSection title="Background" icon={<ImageIcon size={14} />} mobileDefaultOpen>
                 <div className="flex gap-1.5 mb-3">
                   {(['gradient', 'solid', 'image'] as const).map((t) => (
                     <button
@@ -940,8 +941,8 @@ export default function TicketDesignerPage() {
           {/* QR */}
           {activeTab === 'qr' && (
             <div className="space-y-5">
-              <SidebarSection title="Position" icon={<QrCode size={14} />}>
-                <div className="grid grid-cols-2 gap-1.5">
+              <SidebarSection title="Position" icon={<QrCode size={14} />} mobileDefaultOpen>
+                <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
                   {(['right', 'left', 'bottom-right', 'bottom-left'] as const).map((pos) => (
                     <button
                       key={pos}
@@ -987,12 +988,14 @@ export default function TicketDesignerPage() {
       </aside>
 
       {/* ─── Right: Preview ─── */}
-      <div className="flex-1 overflow-y-auto bg-zinc-100/50 p-8">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden bg-zinc-100/50 p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-5xl">
           {/* Top bar */}
-          <div className="mb-6 flex items-center justify-between">
+          <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Ticket Designer</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">
+                Ticket Designer
+              </h1>
               <p className="mt-0.5 text-sm text-zinc-500">
                 Editing:{' '}
                 <span className="font-semibold text-[#5151eb]">
@@ -1004,7 +1007,7 @@ export default function TicketDesignerPage() {
                   : `${designs.length} design${designs.length > 1 ? 's' : ''} total`}
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {saveMessage && (
                 <span
                   className={`text-sm font-medium ${
@@ -1050,7 +1053,7 @@ export default function TicketDesignerPage() {
           </div>
 
           {/* Preview */}
-          <div className="flex items-center justify-center rounded-2xl border border-zinc-200 bg-white p-10 shadow-sm min-h-[500px]">
+          <div className="flex min-h-[500px] items-center justify-center overflow-x-auto rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm sm:p-6 lg:p-10">
             {!activeDesign ? (
               <div className="flex max-w-md flex-col items-center text-center">
                 <div className="rounded-full bg-indigo-50 p-4 text-[#5151eb]">
@@ -1081,7 +1084,7 @@ export default function TicketDesignerPage() {
                   borderRadius: `${config.borderRadius}px`,
                   padding: `${config.padding}px`,
                 }}
-                className="relative overflow-hidden shadow-2xl"
+                className="relative min-w-[780px] overflow-hidden shadow-2xl"
               >
               {config.showDecoCircles && (
                 <>
@@ -1243,8 +1246,8 @@ export default function TicketDesignerPage() {
           {/* All designs preview */}
           {designs.length > 1 && (
             <div className="mt-8">
-              <h3 className="text-sm font-semibold text-zinc-700 mb-3">All Designs</h3>
-              <div className="grid grid-cols-2 gap-3">
+              <h3 className="mb-3 text-sm font-semibold text-zinc-700">All Designs</h3>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {designs.map((design) => (
                   <button
                     key={design.id}
@@ -1319,18 +1322,35 @@ function SidebarSection({
   title,
   icon,
   children,
+  mobileDefaultOpen = false,
 }: {
   title: string
   icon: React.ReactNode
   children: React.ReactNode
+  mobileDefaultOpen?: boolean
 }) {
   return (
     <div>
-      <div className="mb-3 flex items-center gap-1.5">
-        <span className="text-zinc-400">{icon}</span>
-        <h4 className="text-xs font-semibold text-zinc-700">{title}</h4>
+      <div className="hidden md:block">
+        <div className="mb-3 flex items-center gap-1.5">
+          <span className="text-zinc-400">{icon}</span>
+          <h4 className="text-xs font-semibold text-zinc-700">{title}</h4>
+        </div>
+        {children}
       </div>
-      {children}
+
+      <details className="group md:hidden" open={mobileDefaultOpen}>
+        <summary className="mb-0 flex cursor-pointer list-none items-center justify-between rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-left">
+          <span className="flex items-center gap-1.5">
+            <span className="text-zinc-400">{icon}</span>
+            <h4 className="text-xs font-semibold text-zinc-700">{title}</h4>
+          </span>
+          <ChevronDown className="size-4 text-zinc-400 transition group-open:rotate-180" />
+        </summary>
+        <div className="mt-3 space-y-4 rounded-xl border border-zinc-200 bg-white p-3">
+          {children}
+        </div>
+      </details>
     </div>
   )
 }
