@@ -296,8 +296,8 @@ export default function MarketingDashboardPage() {
             onValueChange={(value) => setStatusFilter(value as typeof statusFilter)}
           >
             <SelectTrigger
+              className="!h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus-visible:border-[#5151eb] focus-visible:ring-2 focus-visible:ring-[#5151eb]/10 sm:w-[180px]"
               size="default"
-              className="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus-visible:border-[#5151eb] focus-visible:ring-2 focus-visible:ring-[#5151eb]/10 sm:w-[180px]"
             >
               <SelectValue placeholder="All Statuses" />
             </SelectTrigger>
@@ -316,7 +316,7 @@ export default function MarketingDashboardPage() {
           >
             <SelectTrigger
               size="default"
-              className="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus-visible:border-[#5151eb] focus-visible:ring-2 focus-visible:ring-[#5151eb]/10 sm:w-[180px]"
+              className="!h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 focus-visible:border-[#5151eb] focus-visible:ring-2 focus-visible:ring-[#5151eb]/10 sm:w-[180px]"
             >
               <SelectValue placeholder="All Types" />
             </SelectTrigger>

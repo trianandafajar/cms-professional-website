@@ -65,7 +65,7 @@ export function EmailTemplatesTable() {
           type="button"
           onClick={handleResetAll}
           disabled={isResettingAll || isLoading || templates.length === 0}
-          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
         >
           <RotateCcw size={15} />
           {isResettingAll ? 'Setting all default...' : 'Set all default'}
@@ -90,7 +90,7 @@ export function EmailTemplatesTable() {
                   <div className="h-4 w-36 rounded bg-zinc-200" />
                   <div className="h-3 w-52 rounded bg-zinc-100" />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="h-12 rounded-lg bg-zinc-100" />
                   <div className="h-12 rounded-lg bg-zinc-100" />
                   <div className="h-12 rounded-lg bg-zinc-100" />
@@ -110,16 +110,18 @@ export function EmailTemplatesTable() {
         {!showSkeleton &&
           !isLoading &&
           templates.map((template) => (
-            <div key={template.id} className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <div key={template.id} className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
               <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-zinc-900">{template.name}</p>
-                  <p className="mt-1 text-xs text-zinc-500">
+                <div className="min-w-0">
+                  <p className="break-words text-sm font-semibold leading-tight text-zinc-900">
+                    {template.name}
+                  </p>
+                  <p className="mt-1 break-words text-xs leading-snug text-zinc-500">
                     {template.description || 'No description yet'}
                   </p>
                 </div>
                 <span
-                  className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                  className={`inline-flex shrink-0 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ${
                     template.isCustomized
                       ? 'bg-indigo-50 text-indigo-700'
                       : 'bg-zinc-100 text-zinc-700'
@@ -129,14 +131,16 @@ export function EmailTemplatesTable() {
                 </span>
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                <div className="rounded-lg bg-zinc-50 p-3">
+              <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                <div className="rounded-lg bg-zinc-50 p-2.5">
                   <p className="text-xs text-zinc-500">Key</p>
-                  <p className="mt-1 font-medium text-zinc-800">{formatEmailTemplateKey(template.key)}</p>
+                  <p className="mt-1 break-words text-xs font-medium text-zinc-800">
+                    {formatEmailTemplateKey(template.key)}
+                  </p>
                 </div>
-                <div className="rounded-lg bg-zinc-50 p-3">
+                <div className="rounded-lg bg-zinc-50 p-2.5">
                   <p className="text-xs text-zinc-500">Updated</p>
-                  <p className="mt-1 font-medium text-zinc-800">
+                  <p className="mt-1 text-xs font-medium text-zinc-800">
                     {template.updatedAt
                       ? new Date(template.updatedAt).toLocaleDateString('id-ID', {
                           day: 'numeric',
@@ -146,24 +150,24 @@ export function EmailTemplatesTable() {
                       : '-'}
                   </p>
                 </div>
-                <div className="rounded-lg bg-zinc-50 p-3">
+                <div className="rounded-lg bg-zinc-50 p-2.5">
                   <p className="text-xs text-zinc-500">Status</p>
-                  <p className="mt-1 font-medium capitalize text-zinc-800">
+                  <p className="mt-1 text-xs font-medium capitalize text-zinc-800">
                     {formatEmailTemplateStatus(template.status)}
                   </p>
                 </div>
-                <div className="rounded-lg bg-zinc-50 p-3">
+                <div className="rounded-lg bg-zinc-50 p-2.5">
                   <p className="text-xs text-zinc-500">Source</p>
-                  <p className="mt-1 font-medium text-zinc-800">
+                  <p className="mt-1 text-xs font-medium text-zinc-800">
                     {template.isCustomized ? 'Customized' : 'Default-based'}
                   </p>
                 </div>
               </div>
 
-              <div className="mt-4">
+              <div className="mt-3">
                 <Link
                   href={`/organizations/marketing/email-templates/${template.id}`}
-                  className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-medium text-[#5151eb] transition hover:bg-indigo-100"
+                  className="inline-flex w-full items-center justify-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-[#5151eb] transition hover:bg-indigo-100 sm:w-auto"
                 >
                   <FilePenLine size={13} />
                   Edit

@@ -79,26 +79,28 @@ export default function PromotionSharePage({
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-88px)] flex-col">
-      <div className="flex-1 px-8 py-10">
+    <div className="flex min-h-[calc(100dvh-88px)] flex-col">
+      <div className="flex-1 px-4 py-6 pb-28 sm:px-6 sm:py-10 sm:pb-28 lg:px-8">
         <div className="mx-auto w-full max-w-4xl">
-          <h2 className="text-4xl font-bold tracking-tight text-zinc-900">Share promo code</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl lg:text-4xl">
+            Share promo code
+          </h2>
           <p className="mt-2 text-sm text-zinc-600">
             You can share this code with attendees anytime from the Promotions tab in Marketing.
           </p>
 
-          <div className="mt-6 space-y-4">
-            <section className="rounded-xl border border-zinc-200 bg-white p-5">
+          <div className="mt-5 space-y-4 sm:mt-6">
+            <section className="rounded-xl border border-zinc-200 bg-white p-4 sm:p-5">
               <h3 className="text-2sm font-semibold text-zinc-900">Share code</h3>
               <p className="mt-1 text-sm text-zinc-600">
                 Copy the code and description, then share it to social channels.
               </p>
 
-              <div className="mt-4 flex items-center justify-between rounded-lg border border-zinc-200 bg-white px-4 py-3">
-                <p className="text-sm text-zinc-800">{message}</p>
+              <div className="mt-4 flex flex-col gap-3 rounded-lg border border-zinc-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="break-words text-sm text-zinc-800">{message}</p>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button className="ml-4 inline-flex cursor-pointer items-center gap-1 text-sm font-semibold text-[#5151eb] hover:text-[#3d3dcc]">
+                    <button className="inline-flex cursor-pointer items-center gap-1 text-sm font-semibold text-[#5151eb] hover:text-[#3d3dcc] sm:ml-4">
                       <Share2 size={14} />
                       Share
                     </button>
@@ -128,12 +130,12 @@ export default function PromotionSharePage({
               </div>
             </section>
 
-            <section className="rounded-xl border border-zinc-200 bg-white p-5">
+            <section className="rounded-xl border border-zinc-200 bg-white p-4 sm:p-5">
               <h3 className="text-2sm font-semibold text-zinc-900">Share event link</h3>
               <p className="mt-1 text-sm text-zinc-600">
                 Share this direct link to auto-apply the promo code to the attendee order.
               </p>
-              <div className="mt-4 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-800">
+              <div className="mt-4 break-words rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-800">
                 {link}
               </div>
             </section>
@@ -141,7 +143,24 @@ export default function PromotionSharePage({
         </div>
       </div>
 
-      <div className="border-t border-zinc-200 bg-white px-8 py-4">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-white/80 sm:px-8 sm:py-4 lg:hidden">
+        <div className="mx-auto grid w-full max-w-4xl grid-cols-2 gap-3">
+          <Link
+            href={`/organizations/marketing/promotions/${type}/${slug}/scope`}
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-zinc-200 bg-white text-sm font-medium text-zinc-600 transition hover:bg-zinc-50 hover:text-zinc-900"
+          >
+            Back
+          </Link>
+          <Link
+            href="/organizations/marketing/promotions"
+            className="inline-flex h-10 items-center justify-center rounded-lg bg-[#5151eb] px-5 text-sm font-semibold text-white hover:bg-[#4040d9]"
+          >
+            Done
+          </Link>
+        </div>
+      </div>
+
+      <div className="mt-10 hidden border-t border-zinc-200 bg-white pt-4 lg:ml-[380px] lg:block">
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between">
           <Link
             href={`/organizations/marketing/promotions/${type}/${slug}/scope`}

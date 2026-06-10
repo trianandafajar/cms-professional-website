@@ -18,6 +18,13 @@ import { ChevronDown, Eye, Loader2, Palette, RotateCcw, Send, Variable } from 'l
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   EMAIL_TEMPLATE_TOKEN_OPTIONS,
   INITIAL_TOKEN_DEFAULTS,
   type EmailTemplateRecord,
@@ -294,23 +301,25 @@ export function EmailTemplateEditor({ templateId }: Props) {
   }
 
   return (
-    <div className="space-y-5 pb-8">
-      <div className="rounded-xl border border-zinc-200 bg-white p-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className="space-y-4 pb-6 sm:space-y-5 sm:pb-8">
+      <div className="rounded-xl border border-zinc-200 bg-white p-4 sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-zinc-900">Edit Email Template</h2>
-            <p className="mt-1 text-sm text-zinc-500">
+            <h2 className="text-xl font-bold tracking-tight text-zinc-900 sm:text-2xl">
+              Edit Email Template
+            </h2>
+            <p className="mt-1 text-sm leading-relaxed text-zinc-500">
               Update your organization version, preview it live, or set it back to the system default.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
             <Popover open={isTestPopoverOpen} onOpenChange={setIsTestPopoverOpen}>
-              <div className="inline-flex overflow-hidden rounded-lg border border-zinc-200 bg-white">
+              <div className="inline-flex w-full overflow-hidden rounded-lg border border-zinc-200 bg-white sm:w-auto">
                 <button
                   type="button"
                   onClick={handleSendTest}
                   disabled={isSendingTest}
-                  className="inline-flex h-10 items-center gap-2 border-r border-zinc-200 px-4 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex h-10 flex-1 cursor-pointer items-center justify-center gap-2 border-r border-zinc-200 px-4 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
                 >
                   <Send size={15} />
                   {isSendingTest ? 'Sending test...' : 'Send test'}
@@ -319,7 +328,7 @@ export function EmailTemplateEditor({ templateId }: Props) {
                   <button
                     type="button"
                     aria-label="Open test email options"
-                    className="inline-flex h-10 items-center px-3 text-zinc-600 transition hover:bg-zinc-50 hover:text-zinc-900"
+                    className="inline-flex h-10 cursor-pointer items-center px-3 text-zinc-600 transition hover:bg-zinc-50 hover:text-zinc-900"
                   >
                     <ChevronDown
                       size={15}
@@ -357,7 +366,7 @@ export function EmailTemplateEditor({ templateId }: Props) {
                       type="button"
                       onClick={handleSendTest}
                       disabled={isSendingTest}
-                      className="inline-flex h-10 items-center justify-center rounded-lg bg-[#5151eb] px-4 text-sm font-semibold text-white transition hover:bg-[#4040d9] disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex h-10 cursor-pointer items-center justify-center rounded-lg bg-[#5151eb] px-4 text-sm font-semibold text-white transition hover:bg-[#4040d9] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isSendingTest ? 'Sending...' : 'Send now'}
                     </button>
@@ -369,7 +378,7 @@ export function EmailTemplateEditor({ templateId }: Props) {
               type="button"
               onClick={handleReset}
               disabled={isResetting}
-              className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
               <RotateCcw size={15} />
               {isResetting ? 'Setting default...' : 'Set default'}
@@ -378,7 +387,7 @@ export function EmailTemplateEditor({ templateId }: Props) {
               type="button"
               onClick={handleSave}
               disabled={isSaving}
-              className="inline-flex h-10 items-center rounded-lg bg-[#5151eb] px-5 text-sm font-semibold text-white transition hover:bg-[#4040d9] disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-10 w-full cursor-pointer items-center justify-center rounded-lg bg-[#5151eb] px-5 text-sm font-semibold text-white transition hover:bg-[#4040d9] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
               {isSaving ? 'Saving...' : 'Save'}
             </button>
@@ -399,10 +408,10 @@ export function EmailTemplateEditor({ templateId }: Props) {
         ) : null}
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1.1fr_1fr]">
+      <div className="grid gap-4 xl:grid-cols-[1.1fr_1fr] xl:gap-5">
         <div className="space-y-5">
-          <section className="rounded-xl border border-zinc-200 bg-white p-5">
-            <div className="mb-4 flex items-center gap-1 border-b border-zinc-200 pb-3">
+          <section className="rounded-xl border border-zinc-200 bg-white p-4 sm:p-5">
+            <div className="mb-4 flex items-center gap-1 overflow-x-auto border-b border-zinc-200 pb-3 [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               <EditorTabButton active={activeTab === 'basic'} label="Basic Info" onClick={() => setActiveTab('basic')} />
               <EditorTabButton active={activeTab === 'content'} label="Content" onClick={() => setActiveTab('content')} />
               <EditorTabButton active={activeTab === 'style'} label="Style" onClick={() => setActiveTab('style')} />
@@ -530,24 +539,28 @@ export function EmailTemplateEditor({ templateId }: Props) {
           </section>
         </div>
 
-        <section className="rounded-xl border border-zinc-200 bg-white p-5">
-          <div className="mb-4 flex items-center justify-between">
+        <section className="rounded-xl border border-zinc-200 bg-white p-4 sm:p-5">
+          <div className="mb-4 flex items-start justify-between gap-3">
             <div className="flex items-center gap-2">
               <Eye size={15} className="text-zinc-500" />
               <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Live Preview</p>
             </div>
-            <span className="text-xs text-zinc-500">
+            <span className="text-right text-xs text-zinc-500">
               {template.isCustomized ? 'Customized version' : 'Default-based version'}
             </span>
           </div>
 
           <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
-            <div className="border-b border-zinc-200 bg-zinc-50 px-4 py-3">
+            <div className="border-b border-zinc-200 bg-zinc-50 px-3 py-2.5 sm:px-4 sm:py-3">
               <p className="text-[11px] uppercase tracking-wide text-zinc-400">Subject</p>
-              <p className="text-sm font-semibold text-zinc-800">{resolvedForm.subject}</p>
-              <p className="mt-1 text-xs text-zinc-500">{resolvedForm.preheader}</p>
+              <p className="break-words text-sm font-semibold text-zinc-800">{resolvedForm.subject}</p>
+              <p className="mt-1 break-words text-xs text-zinc-500">{resolvedForm.preheader}</p>
             </div>
-            <iframe title="Email template preview" srcDoc={htmlPreview} className="h-[880px] w-full bg-white" />
+            <iframe
+              title="Email template preview"
+              srcDoc={htmlPreview}
+              className="h-[520px] w-full bg-white sm:h-[880px]"
+            />
           </div>
         </section>
       </div>
@@ -568,7 +581,7 @@ function EditorTabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-md px-3 py-2 text-sm font-medium transition ${
+      className={`shrink-0 cursor-pointer whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium transition ${
         active ? 'bg-indigo-50 text-[#5151eb]' : 'text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900'
       }`}
     >
@@ -608,17 +621,18 @@ function SelectField({
   return (
     <label className="block">
       <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-zinc-500">{label}</span>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-10 w-full rounded-lg border border-zinc-200 px-3 text-sm text-zinc-800 outline-none transition focus:border-[#5151eb]"
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-800 focus:border-[#5151eb]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent align="start">
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </label>
   )
 }

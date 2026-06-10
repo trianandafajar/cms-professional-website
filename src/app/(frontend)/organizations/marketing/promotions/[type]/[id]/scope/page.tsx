@@ -117,14 +117,14 @@ export default function PromotionScopePage({
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-88px)] flex-col">
-      <div className="flex-1 py-10">
+    <div className="flex min-h-[calc(100dvh-88px)] flex-col">
+      <div className="flex-1 px-4 py-6 pb-28 sm:px-6 sm:py-10 sm:pb-28 lg:px-8">
         <div className="mx-auto w-full max-w-4xl">
-          <h2 className="text-4xl font-bold tracking-tight text-zinc-900">
+          <h2 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl lg:text-4xl">
             Apply promo code to events
           </h2>
 
-          <div className="mt-6 rounded-xl border border-zinc-200 bg-white p-5">
+          <div className="mt-5 rounded-xl border border-zinc-200 bg-white p-4 sm:mt-6 sm:p-5">
             <div>
               <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-zinc-500">
                 Scope
@@ -174,7 +174,7 @@ export default function PromotionScopePage({
                 {scopeType === 'events' && availableEvents.length > 0 ? (
                   <div className="mt-2 max-h-44 overflow-auto rounded-md border border-zinc-200">
                     {availableEvents.map((event) => (
-                      <button
+                  <button
                         key={event.id}
                         type="button"
                         onClick={() => addEvent(event.id)}
@@ -198,7 +198,25 @@ export default function PromotionScopePage({
         </div>
       </div>
 
-      <div className="border-t border-zinc-200 bg-white px-8 py-4">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-white/80 sm:px-8 sm:py-4 lg:hidden">
+        <div className="mx-auto grid w-full max-w-4xl grid-cols-2 gap-3">
+          <Link
+            href={`/organizations/marketing/promotions/${type}/${slug}`}
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-zinc-200 bg-white text-sm font-medium text-zinc-600 transition hover:bg-zinc-50 hover:text-zinc-900"
+          >
+            Back
+          </Link>
+          <button
+            onClick={submit}
+            disabled={saving}
+            className="inline-flex h-10 cursor-pointer items-center justify-center rounded-lg bg-[#5151eb] px-5 text-sm font-semibold text-white hover:bg-[#4040d9] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {saving ? 'Saving...' : 'Next'}
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-10 hidden border-t border-zinc-200 bg-white pt-4 lg:ml-[380px] lg:block">
         <div className="mx-auto flex w-full max-w-4xl items-center justify-between">
           <Link
             href={`/organizations/marketing/promotions/${type}/${slug}`}

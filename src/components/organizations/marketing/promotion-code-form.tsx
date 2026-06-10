@@ -161,22 +161,22 @@ export function PromotionCodeForm({ mode, type, slug }: Props) {
 
   if (loading) {
     return (
-      <div className="flex h-[calc(100vh-88px)] items-center justify-center">
+      <div className="flex min-h-[calc(100dvh-88px)] items-center justify-center">
         <p className="text-sm text-zinc-500">Loading promotion...</p>
       </div>
     )
   }
 
   return (
-    <div className="flex h-[calc(100vh-88px)] flex-col overflow-hidden">
-      <div className="flex-1 overflow-auto px-8 py-6 pb-28">
+    <div className="flex min-h-[calc(100dvh-88px)] flex-col overflow-hidden">
+      <div className="flex-1 overflow-auto px-4 py-4 pb-32 sm:px-6 sm:py-6 sm:pb-28 lg:px-8">
         <div className="mx-auto w-full max-w-4xl">
-          <h2 className="text-4xl font-bold tracking-tight text-zinc-900">
+          <h2 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl lg:text-4xl">
             {isEdit ? `Edit ${label}` : `Create ${label}`}
           </h2>
 
-          <div className="mt-5 rounded-xl border border-zinc-200 bg-white p-5">
-            <div className="space-y-4">
+          <div className="mt-4 rounded-xl border border-zinc-200 bg-white p-4 sm:mt-5 sm:p-5">
+            <div className="space-y-3 sm:space-y-4">
               <Field label="Name" value={name} onChange={setName} placeholder="Early Bird Launch" />
 
               <Field
@@ -186,14 +186,14 @@ export function PromotionCodeForm({ mode, type, slug }: Props) {
                 readOnly={codeLocked}
                 placeholder="EARLY2026"
               />
-              <div className="mt-2 flex items-center gap-2">
+              <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
                 <span className="text-xs text-zinc-500">
                   {codeLocked ? 'System only (default)' : 'Manual edit enabled'}
                 </span>
                 <button
                   type="button"
                   onClick={() => setCodeLocked((value) => !value)}
-                  className="rounded-md border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
+                  className="cursor-pointer inline-flex w-full items-center justify-center rounded-md border border-zinc-200 px-2.5 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50 sm:w-auto"
                 >
                   {codeLocked ? 'Edit code' : 'Lock code'}
                 </button>
@@ -203,37 +203,39 @@ export function PromotionCodeForm({ mode, type, slug }: Props) {
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-zinc-500">
                   Discount
                 </label>
-                <div className="flex items-center gap-2 rounded-lg border border-zinc-200 p-1">
+                <div className="flex flex-col gap-2 rounded-lg border border-zinc-200 p-2 sm:flex-row sm:items-center">
                   <input
                     type="number"
                     min="0"
                     value={discountValue}
                     onChange={(e) => setDiscountValue(e.target.value)}
-                    className="h-9 w-full rounded-md border border-zinc-200 px-3 text-sm outline-none focus:border-[#5151eb]"
+                    className="h-10 w-full rounded-md border border-zinc-200 px-3 text-sm outline-none focus:border-[#5151eb]"
                   />
-                  <span className="px-1 text-xs font-semibold text-zinc-500">{discountLabel}</span>
-                  <button
-                    type="button"
-                    onClick={() => setDiscountType('flat')}
-                    className={`rounded-md px-3 py-2 text-xs font-semibold ${
-                      discountType === 'flat'
-                        ? 'bg-[#5151eb] text-white'
-                        : 'text-zinc-600 hover:bg-zinc-50'
-                    }`}
-                  >
-                    Amount
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDiscountType('percent')}
-                    className={`rounded-md px-3 py-2 text-xs font-semibold ${
-                      discountType === 'percent'
-                        ? 'bg-[#5151eb] text-white'
-                        : 'text-zinc-600 hover:bg-zinc-50'
-                    }`}
-                  >
-                    Percentage
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <span className="px-1 text-xs font-semibold text-zinc-500">{discountLabel}</span>
+                    <button
+                      type="button"
+                      onClick={() => setDiscountType('flat')}
+                      className={`flex-1 rounded-md px-3 py-2 text-xs font-semibold sm:flex-none cursor-pointer ${
+                        discountType === 'flat'
+                          ? 'bg-[#5151eb] text-white'
+                          : 'text-zinc-600 hover:bg-zinc-50'
+                      }`}
+                    >
+                      Amount
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDiscountType('percent')}
+                      className={`flex-1 rounded-md px-3 py-2 text-xs font-semibold sm:flex-none cursor-pointer ${
+                        discountType === 'percent'
+                          ? 'bg-[#5151eb] text-white'
+                          : 'text-zinc-600 hover:bg-zinc-50'
+                      }`}
+                    >
+                      Percentage
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -319,15 +321,18 @@ export function PromotionCodeForm({ mode, type, slug }: Props) {
         </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 px-8 py-4 backdrop-blur supports-[backdrop-filter]:bg-white/80 xl:left-[380px]">
-        <div className="mx-auto flex w-full max-w-4xl items-center justify-between">
-          <Link href="/organizations/marketing/promotions" className="text-sm font-medium text-zinc-600 hover:text-zinc-900">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-white/80 sm:px-8 sm:py-4 xl:left-[380px]">
+        <div className="mx-auto grid w-full max-w-4xl grid-cols-2 gap-3">
+          <Link
+            href="/organizations/marketing/promotions"
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-zinc-200 bg-white text-sm font-medium text-zinc-600 transition hover:bg-zinc-50 hover:text-zinc-900"
+          >
             Cancel
           </Link>
           <Button
             onClick={submit}
             disabled={saving}
-            className="inline-flex h-10 cursor-pointer items-center rounded-lg bg-[#5151eb] px-5 text-sm font-semibold text-white hover:bg-[#4040d9] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-10 cursor-pointer items-center justify-center rounded-lg bg-[#5151eb] px-5 text-sm font-semibold text-white hover:bg-[#4040d9] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? 'Saving...' : 'Next'}
           </Button>

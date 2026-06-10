@@ -229,7 +229,7 @@ export default function OrdersPageClient({ organizerId }: { organizerId: string 
             <button
               type="button"
               onClick={() => setEventDropdownOpen(!eventDropdownOpen)}
-              className="flex h-9 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none transition hover:border-zinc-300 focus:border-[#5151eb]"
+              className="flex h-9 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-700 outline-none transition hover:border-zinc-300 focus:border-[#5151eb] cursor-pointer"
             >
               <span className="max-w-[140px] truncate">
                 {event === 'All' ? 'All Events' : event}

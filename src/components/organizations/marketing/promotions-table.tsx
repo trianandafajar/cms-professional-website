@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ChevronDown, Edit3, Plus, Share2, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +24,8 @@ export function PromotionsTable() {
   const { promotions, isLoading, error, fetchPromotions, deletePromotionBySlug } =
     usePromotionsStore()
   const [isBootstrapping, setIsBootstrapping] = useState(true)
+  const [deleteTarget, setDeleteTarget] = useState<{ slug: string; name: string } | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -45,8 +48,17 @@ export function PromotionsTable() {
   }, [fetchPromotions])
 
   async function removeRow(slug: string) {
-    if (!window.confirm('Delete this promotion?')) return
-    await deletePromotionBySlug(slug)
+    setIsDeleting(true)
+    try {
+      await deletePromotionBySlug(slug)
+      setDeleteTarget(null)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  function openDeleteDialog(slug: string, name: string) {
+    setDeleteTarget({ slug, name })
   }
 
   const hasRows = promotions.length > 0
@@ -118,7 +130,7 @@ export function PromotionsTable() {
                   <div className="h-4 w-36 rounded bg-zinc-200" />
                   <div className="h-3 w-24 rounded bg-zinc-100" />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="h-12 rounded-lg bg-zinc-100" />
                   <div className="h-12 rounded-lg bg-zinc-100" />
                   <div className="h-12 rounded-lg bg-zinc-100" />
@@ -137,14 +149,14 @@ export function PromotionsTable() {
 
         {!showSkeleton &&
           promotions.map((item) => (
-            <div key={item.id} className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <div key={item.id} className="rounded-xl border border-zinc-200 bg-white p-3 shadow-sm">
               <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-zinc-900">{item.name}</p>
-                  <p className="text-xs text-zinc-500">{item.code}</p>
+                <div className="min-w-0">
+                  <p className="break-words text-sm font-semibold leading-tight text-zinc-900">{item.name}</p>
+                  <p className="break-words text-xs text-zinc-500">{item.code}</p>
                 </div>
                 <span
-                  className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                  className={`inline-flex shrink-0 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium ${
                     item.status === 'active'
                       ? 'bg-emerald-50 text-emerald-700'
                       : item.status === 'scheduled'
@@ -158,24 +170,24 @@ export function PromotionsTable() {
                 </span>
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                <div className="rounded-lg bg-zinc-50 p-3">
+              <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                <div className="rounded-lg bg-zinc-50 p-2.5">
                   <p className="text-xs text-zinc-500">Type</p>
-                  <p className="mt-1 font-medium text-zinc-800">
+                  <p className="mt-1 text-xs font-medium text-zinc-800">
                     {item.type === 'code' ? 'Promo Code' : 'Access Code'}
                   </p>
                 </div>
-                <div className="rounded-lg bg-zinc-50 p-3">
+                <div className="rounded-lg bg-zinc-50 p-2.5">
                   <p className="text-xs text-zinc-500">Discount</p>
-                  <p className="mt-1 font-medium text-zinc-800">{formatDiscount(item)}</p>
+                  <p className="mt-1 text-xs font-medium text-zinc-800">{formatDiscount(item)}</p>
                 </div>
-                <div className="rounded-lg bg-zinc-50 p-3">
+                <div className="rounded-lg bg-zinc-50 p-2.5">
                   <p className="text-xs text-zinc-500">Uses</p>
-                  <p className="mt-1 font-medium text-zinc-800">{formatUsage(item)}</p>
+                  <p className="mt-1 text-xs font-medium text-zinc-800">{formatUsage(item)}</p>
                 </div>
-                <div className="rounded-lg bg-zinc-50 p-3">
+                <div className="rounded-lg bg-zinc-50 p-2.5">
                   <p className="text-xs text-zinc-500">Updated</p>
-                  <p className="mt-1 font-medium text-zinc-800">
+                  <p className="mt-1 text-xs font-medium text-zinc-800">
                     {new Date(item.updatedAt).toLocaleDateString('id-ID', {
                       day: 'numeric',
                       month: 'short',
@@ -185,28 +197,29 @@ export function PromotionsTable() {
                 </div>
               </div>
 
-              <div className="mt-3 rounded-lg bg-zinc-50 p-3 text-sm text-zinc-700">
-                <p className="font-medium text-zinc-800">{formatScope(item)}</p>
+              <div className="mt-3 rounded-lg bg-zinc-50 p-2.5 text-sm text-zinc-700">
+                <p className="break-words text-xs font-medium text-zinc-800">{formatScope(item)}</p>
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-3">
+              <div className="mt-3 flex flex-wrap gap-2">
                 <Link
                   href={`/organizations/marketing/promotions/${item.type}/${item.slug}/share`}
-                  className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
+                  className="inline-flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
                 >
                   <Share2 size={13} />
                   Share
                 </Link>
                 <Link
                   href={`/organizations/marketing/promotions/${item.type}/${item.slug}`}
-                  className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-medium text-[#5151eb] transition hover:bg-indigo-100"
+                  className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-medium text-[#5151eb] transition hover:bg-indigo-100"
                 >
                   <Edit3 size={13} />
                   Edit
                 </Link>
                 <button
-                  onClick={() => removeRow(item.slug)}
-                  className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-100"
+                  type="button"
+                  onClick={() => openDeleteDialog(item.slug, item.name)}
+                  className="cursor-pointer inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-100"
                 >
                   <Trash2 size={13} />
                   Delete
@@ -217,7 +230,8 @@ export function PromotionsTable() {
       </div>
 
       <div className="hidden overflow-hidden rounded-xl border border-zinc-200 bg-white md:block">
-        <table className="w-full">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[960px]">
           <thead>
             <tr className="border-b border-zinc-100 bg-zinc-50/80">
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-zinc-500">
@@ -329,8 +343,9 @@ export function PromotionsTable() {
                       Edit
                     </Link>
                     <button
-                      onClick={() => removeRow(item.slug)}
-                      className="inline-flex items-center gap-1 font-medium text-red-600 hover:text-red-700"
+                      type="button"
+                      onClick={() => openDeleteDialog(item.slug, item.name)}
+                      className="cursor-pointer inline-flex items-center gap-1 font-medium text-red-600 hover:text-red-700"
                     >
                       <Trash2 size={13} />
                       Delete
@@ -340,8 +355,47 @@ export function PromotionsTable() {
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
+
+      <Dialog open={deleteTarget !== null} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete promotion?</DialogTitle>
+            <DialogDescription>
+              {deleteTarget ? (
+                <>
+                  This will permanently remove{' '}
+                  <span className="font-medium text-zinc-900">{deleteTarget.name}</span>.
+                </>
+              ) : (
+                'This will permanently remove the selected promotion.'
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="!flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteTarget(null)}
+              disabled={isDeleting}
+              className="flex-1 cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => deleteTarget && void removeRow(deleteTarget.slug)}
+              disabled={isDeleting}
+              className="flex-1 cursor-pointer bg-red-600 text-white hover:bg-red-700"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -68,7 +68,7 @@ function SelectTrigger({
       data-size={size}
       data-variant={variant}
       className={cn(
-        "flex items-center justify-between gap-1.5 whitespace-nowrap transition-colors outline-none select-none disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5",
+        "flex items-center justify-between gap-1.5 whitespace-nowrap transition-colors outline-none select-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5",
 
         // DEFAULT
         variant === "default" &&
@@ -159,7 +159,7 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "relative flex w-full cursor-default items-center gap-2 rounded-xl px-3 py-3 text-base text-[#1E0A3C] outline-hidden select-none transition focus:bg-blue-50 focus:text-blue-700 data-disabled:pointer-events-none data-disabled:opacity-50",
+        "relative flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-3 text-base text-[#1E0A3C] outline-hidden select-none transition focus:bg-blue-50 focus:text-blue-700 data-disabled:pointer-events-none data-disabled:opacity-50",
 
         className
       )}
