@@ -1,6 +1,12 @@
 import type { Endpoint } from 'payload'
 import { isUserOnboarded, onboardingRequiredResponse } from '@/lib/onboarding'
 
+function toNumericId(value: unknown): number | null {
+  const raw = value && typeof value === 'object' && 'id' in value ? value.id : value
+  const id = Number(raw)
+  return Number.isFinite(id) ? id : null
+}
+
 export const organizerFollowEndpoint: Endpoint = {
   path: '/organizers/follow/:organizerId',
   method: 'get',
@@ -31,9 +37,7 @@ export const organizerFollowEndpoint: Endpoint = {
       })
       const followed =
         (currentUser.followedOrganizers as Array<number | { id: number }> | undefined) ?? []
-      following = followed.some(
-        (item) => (typeof item === 'object' ? item.id : item) === organizerId,
-      )
+      following = followed.some((item) => toNumericId(item) === organizerId)
     }
 
     return Response.json({
@@ -85,8 +89,8 @@ export const organizerFollowToggleEndpoint: Endpoint = {
     const followed =
       (currentUser.followedOrganizers as Array<number | { id: number }> | undefined) ?? []
     const followedIds = followed
-      .map((item) => (typeof item === 'object' ? item.id : item))
-      .filter((id): id is number => typeof id === 'number')
+      .map(toNumericId)
+      .filter((id): id is number => id !== null)
     const isFollowing = followedIds.includes(organizerId)
     const nextFollowedIds = isFollowing
       ? followedIds.filter((id) => id !== organizerId)

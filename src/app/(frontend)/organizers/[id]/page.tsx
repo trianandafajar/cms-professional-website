@@ -624,7 +624,10 @@ export default async function OrganizerProfilePage({ params, searchParams }: Pro
                   }}
                 />
               ) : (
-                <FollowButton />
+                <FollowButton
+                  organizerId={Number(organizer.id)}
+                  initialFollowersCount={organizer.followersCount ?? 0}
+                />
               )}
             </div>
           </div>

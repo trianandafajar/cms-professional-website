@@ -73,6 +73,28 @@ function isEdited(createdAt: string, updatedAt: string): boolean {
   return new Date(updatedAt).getTime() - new Date(createdAt).getTime() > 1000
 }
 
+function getPostShareUrl(authorId: number | string | null | undefined, postId: number): string | null {
+  if (!authorId) return null
+
+  const path = `/organizers/${authorId}?tab=feed&post=${postId}`
+  if (typeof window === 'undefined') return path
+
+  return new URL(path, window.location.origin).toString()
+}
+
+async function sharePost(url: string, text: string) {
+  if (navigator.share) {
+    await navigator.share({
+      title: 'Eventbro post',
+      text,
+      url,
+    })
+    return
+  }
+
+  await navigator.clipboard.writeText(url)
+}
+
 function PostCard({
   post,
   onDelete,
@@ -88,6 +110,7 @@ function PostCard({
 }) {
   const [showMenu, setShowMenu] = useState(false)
   const [activeYouTubeId, setActiveYouTubeId] = useState<string | null>(null)
+  const [shareCopied, setShareCopied] = useState(false)
   const { gate } = useAuthGate()
   const user = useAuthStore((s) => s.user)
   const postImageUrl = getMediaUrl(post.image)
@@ -95,7 +118,7 @@ function PostCard({
   const author = typeof post.author === 'object' ? post.author : null
   const authorName = author?.name || 'Unknown'
   const authorAvatar = getMediaUrl(author?.avatar)
-  const authorId = author?.id
+  const authorId = author?.id ?? (typeof post.author === 'number' ? post.author : null)
 
   // Check if current user liked this post
   const isLiked =
@@ -109,6 +132,7 @@ function PostCard({
 
   // Detect YouTube video ID once, before render
   const youtubeId = post.link ? extractYouTubeId(post.link) : null
+  const shareUrl = getPostShareUrl(authorId, post.id)
 
   const initials = authorName
     .split(' ')
@@ -280,10 +304,22 @@ function PostCard({
           </button>
           <button
             type="button"
+            disabled={!shareUrl}
+            onClick={async () => {
+              if (!shareUrl) return
+              try {
+                await sharePost(shareUrl, post.content.slice(0, 120))
+                setShareCopied(true)
+                window.setTimeout(() => setShareCopied(false), 1800)
+              } catch {
+                // User cancelled the native share dialog or clipboard access was denied.
+              }
+            }}
             className="ml-auto flex items-center gap-1.5 text-sm text-zinc-500 hover:text-[#5151eb] transition"
+            aria-label="Share post"
           >
             <Share2 className="size-4" />
-            Share
+            {shareCopied ? 'Copied' : 'Share'}
           </button>
         </div>
       </div>

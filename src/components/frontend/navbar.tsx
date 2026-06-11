@@ -663,7 +663,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
           >
             <Link href="/organizers">Organizers</Link>
           </Button>
-          {!needsOnboarding && (
+          {!needsOnboarding && isOrganizer && (
             <Button
               asChild
               className="text-sm font-medium text-zinc-700 hover:text-[#12192f]"
@@ -671,16 +671,6 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
               variant="ghost"
             >
               <Link href="/organizations/events/create">Create Events</Link>
-            </Button>
-          )}
-          {isAuthed && !needsOnboarding && !isOrganizer && (
-            <Button
-              asChild
-              className="text-sm font-medium text-zinc-700 hover:text-[#12192f]"
-              size="sm"
-              variant="ghost"
-            >
-              <Link href="/my/tickets">Find My Tickets</Link>
             </Button>
           )}
           {isAuthed && !needsOnboarding && !isOrganizer && (
@@ -886,20 +876,12 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
             >
               Find Events
             </Link>
-            {!needsOnboarding && (
+            {!needsOnboarding && isOrganizer && (
               <Link
                 className="rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
                 href="/organizations/events/draft?onboard=1"
               >
                 Create Events
-              </Link>
-            )}
-            {isAuthed && !needsOnboarding && !isOrganizer && (
-              <Link
-                className="rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-                href="/my/tickets"
-              >
-                Find My Tickets
               </Link>
             )}
             {isAuthed && !needsOnboarding && !isOrganizer && (

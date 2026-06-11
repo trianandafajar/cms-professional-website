@@ -14,6 +14,7 @@ type OrganizerItem = Pick<
 type Props = {
   organizers: OrganizerItem[]
   followedOrganizerIds?: number[]
+  currentUserId?: number | null
 }
 
 function getAvatarUrl(avatar: unknown): string | null {
@@ -33,9 +34,11 @@ function formatFollowersCount(count: number): string {
 function PayloadOrganizerCard({
   org,
   initialFollowing,
+  isCurrentUser,
 }: {
   org: OrganizerItem
   initialFollowing: boolean
+  isCurrentUser: boolean
 }) {
   const [followersCount, setFollowersCount] = useState(org.followersCount ?? 0)
   const avatarUrl = getAvatarUrl(org.avatar)
@@ -72,18 +75,24 @@ function PayloadOrganizerCard({
         {formatFollowersCount(followersCount)} followers
       </p>
 
-      <FollowButton
-        size="sm"
-        organizerId={org.id}
-        initialFollowing={initialFollowing}
-        initialFollowersCount={org.followersCount ?? 0}
-        onFollowersCountChange={setFollowersCount}
-      />
+      {!isCurrentUser && (
+        <FollowButton
+          size="sm"
+          organizerId={org.id}
+          initialFollowing={initialFollowing}
+          initialFollowersCount={org.followersCount ?? 0}
+          onFollowersCountChange={setFollowersCount}
+        />
+      )}
     </div>
   )
 }
 
-export function FeaturedOrganizers({ organizers, followedOrganizerIds = [] }: Props) {
+export function FeaturedOrganizers({
+  organizers,
+  followedOrganizerIds = [],
+  currentUserId = null,
+}: Props) {
   return (
     <div className="destinations-scroll flex gap-3 overflow-x-auto scroll-smooth pb-3">
       {organizers.length > 0 ? (
@@ -92,6 +101,7 @@ export function FeaturedOrganizers({ organizers, followedOrganizerIds = [] }: Pr
             key={org.id}
             org={org}
             initialFollowing={followedOrganizerIds.includes(org.id)}
+            isCurrentUser={currentUserId === org.id}
           />
         ))
       ) : (

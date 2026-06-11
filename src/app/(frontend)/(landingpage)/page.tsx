@@ -299,6 +299,7 @@ export default async function HomePage() {
             <FeaturedOrganizers
               organizers={featuredOrganizers}
               followedOrganizerIds={followedOrganizerIds}
+              currentUserId={user?.id ? Number(user.id) : null}
             />
           </div>
         </section>

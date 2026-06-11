@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { UserCheck, UserPlus } from 'lucide-react'
 import { useAuthGate } from '@/hooks/useAuthGate'
 import { apiClient } from '@/lib/apiClient'
+import { useAuthStore } from '@/stores/authStore'
 
 type Props = {
   className?: string
@@ -25,6 +26,8 @@ export function FollowButton({
   const [followed, setFollowed] = useState(initialFollowing)
   const [loading, setLoading] = useState(false)
   const { gate } = useAuthGate()
+  const user = useAuthStore((state) => state.user)
+  const isSelf = organizerId != null && Number(user?.id) === Number(organizerId)
 
   const base =
     size === 'sm'
@@ -34,6 +37,7 @@ export function FollowButton({
   useEffect(() => {
     setFollowed(initialFollowing)
 
+    if (isSelf) return
     if (!organizerId) return
 
     let active = true
@@ -59,7 +63,7 @@ export function FollowButton({
     return () => {
       active = false
     }
-  }, [initialFollowersCount, initialFollowing, onFollowersCountChange, organizerId])
+  }, [initialFollowersCount, initialFollowing, isSelf, onFollowersCountChange, organizerId])
 
   const handleFollow = async () => {
     if (loading) return
@@ -80,6 +84,8 @@ export function FollowButton({
       setLoading(false)
     }
   }
+
+  if (isSelf) return null
 
   return (
     <button
