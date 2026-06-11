@@ -157,7 +157,7 @@ export function EventsSection({ allEvents, forYouEvents, isLoggedIn, activeCity 
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`shrink-0 border-b-2 pb-3 text-sm font-medium transition ${
+            className={`shrink-0 border-b-2 pb-3 text-sm font-medium transition cursor-pointer disabled:cursor-not-allowed ${
               activeTab === tab
                 ? 'border-[#5151eb] text-[#5151eb]'
                 : 'border-transparent text-zinc-500 hover:text-zinc-800'

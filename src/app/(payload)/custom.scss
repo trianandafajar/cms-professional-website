@@ -146,6 +146,119 @@
   background-clip: padding-box;
 }
 
+section[aria-label*='Notifications'] {
+  z-index: 100000 !important;
+}
+
+section[aria-label*='Notifications'] .payload-toast-container {
+  width: min(356px, calc(100vw - 32px)) !important;
+}
+
+section[aria-label*='Notifications'] .payload-toast-item {
+  display: flex !important;
+  align-items: flex-start !important;
+  position: relative !important;
+  gap: 10px !important;
+  border: 1px solid #e4e4e7 !important;
+  background: #ffffff !important;
+  color: #18181b !important;
+  box-shadow:
+    0 20px 40px rgba(24, 24, 27, 0.14),
+    0 2px 8px rgba(24, 24, 27, 0.06) !important;
+  overflow: hidden !important;
+  padding: 12px 42px 12px 14px !important;
+  backdrop-filter: blur(8px);
+}
+
+section[aria-label*='Notifications'] .payload-toast-item .toast-icon {
+  flex: 0 0 auto !important;
+  margin-top: 1px !important;
+  width: 20px !important;
+  height: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 999px !important;
+  background: #eef2ff !important;
+  color: #5151eb !important;
+}
+
+section[aria-label*='Notifications'] .payload-toast-item .toast-icon svg {
+  width: 14px !important;
+  height: 14px !important;
+  stroke-width: 2.25 !important;
+}
+
+section[aria-label*='Notifications'] .payload-toast-item .toast-content {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  color: #18181b !important;
+}
+
+section[aria-label*='Notifications'] .payload-toast-item .toast-title {
+  color: #18181b !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+}
+
+section[aria-label*='Notifications'] .payload-toast-item[data-type='success'] .toast-icon {
+  background: #dcfce7 !important;
+  color: #16a34a !important;
+}
+
+section[aria-label*='Notifications'] .payload-toast-item[data-type='error'] .toast-icon {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+}
+
+section[aria-label*='Notifications'] .payload-toast-item[data-type='loading'] .toast-icon {
+  background: #eef2ff !important;
+  color: #5151eb !important;
+}
+
+section[aria-label*='Notifications'] .payload-toast-item[data-type='loading'] .sonner-spinner {
+  width: 16px !important;
+  height: 16px !important;
+  transform: scale(0.92);
+}
+
+section[aria-label*='Notifications'] .payload-toast-item[data-type='loading'] .sonner-loading-bar {
+  background: #5151eb !important;
+  border-radius: 999px !important;
+  opacity: 0.55 !important;
+}
+
+section[aria-label*='Notifications'] .payload-toast-close-button {
+  position: absolute !important;
+  top: 10px !important;
+  right: 10px !important;
+  left: auto !important;
+  order: 3 !important;
+  cursor: pointer !important;
+  color: #71717a !important;
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 999px !important;
+  border: 1px solid #e4e4e7 !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  box-shadow: 0 1px 2px rgba(24, 24, 27, 0.05) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+section[aria-label*='Notifications'] .payload-toast-close-button:hover {
+  color: #18181b !important;
+  background: #e4e4e7 !important;
+}
+
+section[aria-label*='Notifications'] .payload-toast-close-button svg {
+  width: 12px !important;
+  height: 12px !important;
+  stroke-width: 2.5 !important;
+}
+
 .collection-list {
   @apply text-zinc-900 mx-auto px-8 py-8;
 

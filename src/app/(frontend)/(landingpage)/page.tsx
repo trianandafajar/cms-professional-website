@@ -12,6 +12,17 @@ import { buildEventWhere } from '@/lib/eventQueries'
 import type { Location, Category } from '@/payload-types'
 import config from '@/payload.config'
 
+const homepageCategoryHighlights = [
+  { id: 'music', name: 'Music', group: 'music' },
+  { id: 'business', name: 'Business', group: 'business' },
+  { id: 'science-tech', name: 'Science & Tech', group: 'science-tech' },
+  { id: 'health', name: 'Health', group: 'health' },
+  { id: 'sports-fitness', name: 'Sports & Fitness', group: 'sports-fitness' },
+  { id: 'arts', name: 'Arts', group: 'arts' },
+  { id: 'food-drink', name: 'Food & Drink', group: 'food-drink' },
+  { id: 'community', name: 'Community', group: 'community' },
+]
+
 export default async function HomePage() {
   const headers = await getHeaders()
   const payloadConfig = await config
@@ -97,13 +108,6 @@ export default async function HomePage() {
     }
   }
 
-  const { docs: homepageCategories } = await payload.find({
-    collection: 'categories',
-    depth: 0,
-    limit: 8,
-    sort: 'name',
-  })
-
   const distinctCities = Array.from(
     new Set(
       allEvents
@@ -150,11 +154,7 @@ export default async function HomePage() {
           isLoggedIn={Boolean(user)}
           cities={cityOptions}
           initialCity={initialCity}
-          categories={homepageCategories.map((category) => ({
-            id: category.id,
-            name: category.name,
-            group: category.group,
-          }))}
+          categories={homepageCategoryHighlights}
         />
 
         {/* Event Highlights */}
@@ -175,7 +175,7 @@ export default async function HomePage() {
           <div className="mx-auto max-w-[1400px] px-4 lg:px-8">
             <div className="mb-6 flex items-center justify-between">
               <h2 className="text-2xl font-bold text-[#12192f] md:text-3xl">Top destinations</h2>
-              <a href="/events" className="text-sm font-semibold text-[#5151eb] hover:underline">
+              <a href="/events" className="cursor-pointer text-sm font-semibold text-[#5151eb] hover:underline">
                 See all
               </a>
             </div>
@@ -203,7 +203,7 @@ export default async function HomePage() {
               </div>
               <a
                 href="/organizers"
-                className="text-sm font-semibold text-[#5151eb] hover:underline"
+                className="cursor-pointer text-sm font-semibold text-[#5151eb] hover:underline"
               >
                 See all →
               </a>
@@ -224,24 +224,24 @@ export default async function HomePage() {
               <ul className="mt-4 space-y-3">
                 <li>
                   <a
-                    className="text-base text-zinc-300 hover:text-white"
+                    className="cursor-pointer text-base text-zinc-300 hover:text-white"
                     href="/organizations/events/draft?onboard=1"
                   >
                     Create Events
                   </a>
                 </li>
                 <li>
-                  <a className="text-base text-zinc-300 hover:text-white" href="#">
+                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
                     Find Events
                   </a>
                 </li>
                 <li>
-                  <a className="text-base text-zinc-300 hover:text-white" href="#">
+                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
                     Find My Tickets
                   </a>
                 </li>
                 <li>
-                  <a className="text-base text-zinc-300 hover:text-white" href="#">
+                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
                     Pricing
                   </a>
                 </li>
@@ -253,22 +253,22 @@ export default async function HomePage() {
               </h3>
               <ul className="mt-4 space-y-3">
                 <li>
-                  <a className="text-base text-zinc-300 hover:text-white" href="#">
+                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
                     Sell Tickets Online
                   </a>
                 </li>
                 <li>
-                  <a className="text-base text-zinc-300 hover:text-white" href="#">
+                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
                     Event Management
                   </a>
                 </li>
                 <li>
-                  <a className="text-base text-zinc-300 hover:text-white" href="#">
+                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
                     Virtual Events
                   </a>
                 </li>
                 <li>
-                  <a className="text-base text-zinc-300 hover:text-white" href="#">
+                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
                     QR Codes for Events
                   </a>
                 </li>
@@ -280,22 +280,22 @@ export default async function HomePage() {
               </h3>
               <ul className="mt-4 space-y-3">
                 <li>
-                  <a className="text-base text-zinc-300 hover:text-white" href="#">
+                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
                     Music Events
                   </a>
                 </li>
                 <li>
-                  <a className="text-base text-zinc-300 hover:text-white" href="#">
+                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
                     Food & Drink
                   </a>
                 </li>
                 <li>
-                  <a className="text-base text-zinc-300 hover:text-white" href="#">
+                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
                     Business
                   </a>
                 </li>
                 <li>
-                  <a className="text-base text-zinc-300 hover:text-white" href="#">
+                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
                     Performing Arts
                   </a>
                 </li>
@@ -305,22 +305,22 @@ export default async function HomePage() {
               <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-400">Connect</h3>
               <ul className="mt-4 space-y-3">
                 <li>
-                  <a className="text-base text-zinc-300 hover:text-white" href="#">
+                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
                     Contact Support
                   </a>
                 </li>
                 <li>
-                  <a className="text-base text-zinc-300 hover:text-white" href="#">
+                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
                     Twitter / X
                   </a>
                 </li>
                 <li>
-                  <a className="text-base text-zinc-300 hover:text-white" href="#">
+                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
                     Instagram
                   </a>
                 </li>
                 <li>
-                  <a className="text-base text-zinc-300 hover:text-white" href="#">
+                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
                     LinkedIn
                   </a>
                 </li>
@@ -330,19 +330,19 @@ export default async function HomePage() {
           <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-6 md:flex-row">
             <span className="text-xl font-extrabold text-[#5151eb]">eventbro</span>
             <div className="flex flex-wrap items-center gap-5 text-sm text-zinc-500">
-              <a className="hover:text-zinc-300" href="#">
+              <a className="cursor-pointer hover:text-zinc-300" href="#">
                 About
               </a>
-              <a className="hover:text-zinc-300" href="#">
+              <a className="cursor-pointer hover:text-zinc-300" href="#">
                 Blog
               </a>
-              <a className="hover:text-zinc-300" href="#">
+              <a className="cursor-pointer hover:text-zinc-300" href="#">
                 Help
               </a>
-              <a className="hover:text-zinc-300" href="#">
+              <a className="cursor-pointer hover:text-zinc-300" href="#">
                 Terms
               </a>
-              <a className="hover:text-zinc-300" href="#">
+              <a className="cursor-pointer hover:text-zinc-300" href="#">
                 Privacy
               </a>
             </div>

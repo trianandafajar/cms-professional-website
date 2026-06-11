@@ -64,7 +64,7 @@ export default function OnboardingRolePage() {
               key={opt.key}
               type="button"
               onClick={() => handleSelectRole(opt.key)}
-              className={`group relative flex flex-col overflow-hidden rounded-3xl border bg-white text-left transition hover:-translate-y-0.5 hover:shadow-lg ${
+              className={`group relative flex flex-col overflow-hidden rounded-3xl border bg-white text-left transition hover:-translate-y-0.5 hover:shadow-lg cursor-pointer disabled:cursor-not-allowed ${
                 isActive
                   ? 'border-[#5151eb] shadow-lg shadow-[#5151eb]/10 ring-2 ring-[#5151eb]/20'
                   : 'border-zinc-200 hover:border-zinc-300'
@@ -123,7 +123,7 @@ export default function OnboardingRolePage() {
         <button
           type="button"
           onClick={() => router.push('/')}
-          className="font-medium text-[#5151eb] hover:text-[#3d3dcc]"
+          className="font-medium text-[#5151eb] hover:text-[#3d3dcc] cursor-pointer disabled:cursor-not-allowed"
         >
           Skip onboarding
         </button>

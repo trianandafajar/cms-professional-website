@@ -235,6 +235,9 @@ export interface Permission {
 export interface Location {
   id: number;
   name: string;
+  /**
+   * Legacy code for internal use. Not shown in onboarding.
+   */
   code?: string | null;
   /**
    * Used to group locations on the onboarding picker
@@ -244,10 +247,6 @@ export interface Location {
    * Show this location at the top of the picker
    */
   featured?: boolean | null;
-  /**
-   * Optional emoji shown next to the name (e.g., 🌋, 🏝️)
-   */
-  emoji?: string | null;
   /**
    * Image shown on the Top Destinations card
    */
@@ -281,10 +280,6 @@ export interface Media {
 export interface Category {
   id: number;
   name: string;
-  /**
-   * Nama icon (misal: Music, Coffee, etc.)
-   */
-  icon?: string | null;
   group:
     | 'school-activities'
     | 'hobbies'
@@ -993,7 +988,6 @@ export interface RolesSelect<T extends boolean = true> {
  */
 export interface CategoriesSelect<T extends boolean = true> {
   name?: T;
-  icon?: T;
   group?: T;
   status?: T;
   updatedAt?: T;
@@ -1008,7 +1002,6 @@ export interface LocationsSelect<T extends boolean = true> {
   code?: T;
   region?: T;
   featured?: T;
-  emoji?: T;
   coverImage?: T;
   updatedAt?: T;
   createdAt?: T;

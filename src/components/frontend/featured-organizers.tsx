@@ -43,7 +43,7 @@ function DummyOrganizerCard({ org }: { org: DummyOrganizer }) {
 
   return (
     <div className="flex shrink-0 flex-col items-center rounded-2xl border border-zinc-100 bg-white p-4 text-center transition hover:shadow-md hover:border-[#5151eb]/20 min-w-[140px]">
-      <Link href={`/organizers/${org.id}`} className="relative">
+      <Link href={`/organizers/${org.id}`} className="relative cursor-pointer">
         {org.avatar ? (
           <img
             src={org.avatar}
@@ -65,7 +65,7 @@ function DummyOrganizerCard({ org }: { org: DummyOrganizer }) {
         )}
       </Link>
 
-      <Link href={`/organizers/${org.id}`}>
+      <Link href={`/organizers/${org.id}`} className="cursor-pointer">
         <p className="mt-2.5 text-xs font-bold text-[#12192f] hover:text-[#5151eb] transition line-clamp-1 max-w-[120px]">
           {org.name}
         </p>
@@ -99,7 +99,7 @@ function PayloadOrganizerCard({ org }: { org: OrganizerItem }) {
 
   return (
     <div className="flex shrink-0 flex-col items-center rounded-2xl border border-zinc-100 bg-white p-4 text-center transition hover:shadow-md hover:border-[#5151eb]/20 min-w-[140px]">
-      <Link href={`/organizers/${org.id}`} className="relative">
+      <Link href={`/organizers/${org.id}`} className="relative cursor-pointer">
         {avatarUrl ? (
           <img
             src={avatarUrl}
@@ -113,7 +113,7 @@ function PayloadOrganizerCard({ org }: { org: OrganizerItem }) {
         )}
       </Link>
 
-      <Link href={`/organizers/${org.id}`}>
+      <Link href={`/organizers/${org.id}`} className="cursor-pointer">
         <p className="mt-2.5 text-xs font-bold text-[#12192f] hover:text-[#5151eb] transition line-clamp-1 max-w-[120px]">
           {org.name}
         </p>

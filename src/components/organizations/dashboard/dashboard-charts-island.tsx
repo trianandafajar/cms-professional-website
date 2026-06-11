@@ -84,7 +84,7 @@ export default function DashboardChartsIsland() {
                 key={metric}
                 type="button"
                 onClick={() => setActiveMetric(metric)}
-                className={`rounded-md px-3 py-1 text-xs font-medium transition ${
+                className={`rounded-md px-3 py-1 text-xs font-medium transition cursor-pointer disabled:cursor-not-allowed ${
                   activeMetric === metric
                     ? 'bg-[#5151eb] text-white'
                     : 'text-zinc-500 hover:text-[#12192f]'

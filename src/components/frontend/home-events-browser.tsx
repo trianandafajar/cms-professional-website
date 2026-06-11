@@ -29,7 +29,7 @@ type ResolvedEvent = Omit<Event, 'coverImage' | 'organizer' | 'location' | 'cate
 }
 
 type CategoryLink = {
-  id: number
+  id: number | string
   name: string
   group?: string | null
 }
@@ -101,7 +101,7 @@ export function HomeEventsBrowser({
                   <div className="flex size-14 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 transition group-hover:border-[#5151eb] group-hover:text-[#5151eb]">
                     <Icon className="size-6" />
                   </div>
-                  <span className="text-center text-sm font-medium text-zinc-600 group-hover:text-[#5151eb]">
+                  <span className="block w-full truncate text-center text-xs font-medium text-zinc-600 group-hover:text-[#5151eb]">
                     {cat.name}
                   </span>
                 </Link>

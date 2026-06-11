@@ -3,7 +3,31 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, ArrowRight, Loader2, Check, Sparkles } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  Atom,
+  BriefcaseBusiness,
+  Check,
+  Clapperboard,
+  Dumbbell,
+  Drama,
+  HandHeart,
+  HeartPulse,
+  Loader2,
+  Landmark,
+  Mountain,
+  Music,
+  Palette,
+  Plane,
+  Sparkles,
+  Shirt,
+  School2,
+  UsersRound,
+  UtensilsCrossed,
+  WandSparkles,
+  BookOpenText,
+} from 'lucide-react'
 
 import { useOnboardingStore } from '@/stores/onboardingStore'
 import { apiClient } from '@/lib/apiClient'
@@ -12,7 +36,6 @@ interface Category {
   id: string
   name: string
   group?: string
-  icon?: string
 }
 
 const GROUP_LABELS: Record<string, string> = {
@@ -24,6 +47,28 @@ const GROUP_LABELS: Record<string, string> = {
   hobbies: 'Hobbies',
   community: 'Community',
   nightlife: 'Nightlife',
+}
+
+const GROUP_ICONS: Record<string, typeof Music> = {
+  'school-activities': School2,
+  hobbies: WandSparkles,
+  'home-lifestyle': Mountain,
+  fashion: Shirt,
+  government: Landmark,
+  'family-education': BookOpenText,
+  spirituality: Sparkles,
+  'charity-causes': HandHeart,
+  'travel-outdoor': Plane,
+  'science-tech': Atom,
+  health: HeartPulse,
+  'sports-fitness': Dumbbell,
+  'film-media': Clapperboard,
+  arts: Palette,
+  community: UsersRound,
+  'food-drink': UtensilsCrossed,
+  business: BriefcaseBusiness,
+  music: Music,
+  nightlife: Drama,
 }
 
 export default function OnboardingTagsPage() {
@@ -98,8 +143,12 @@ export default function OnboardingTagsPage() {
         <div className="mx-auto max-w-3xl space-y-6">
           {grouped.map(([groupKey, items]) => (
             <div key={groupKey}>
-              <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-zinc-500">
-                {GROUP_LABELS[groupKey] ?? groupKey}
+              <h3 className="mb-3 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-500">
+                {(() => {
+                  const Icon = GROUP_ICONS[groupKey] ?? Sparkles
+                  return <Icon className="size-3.5 shrink-0 text-[#5151eb]" />
+                })()}
+                <span>{GROUP_LABELS[groupKey] ?? groupKey}</span>
               </h3>
               <div className="flex flex-wrap gap-2.5">
                 {items.map((cat) => {
@@ -109,13 +158,12 @@ export default function OnboardingTagsPage() {
                       key={cat.id}
                       type="button"
                       onClick={() => toggleCategory(cat.id)}
-                      className={`group inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition ${
+                      className={`group inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition cursor-pointer disabled:cursor-not-allowed ${
                         selected
-                          ? 'border-[#5151eb] bg-[#5151eb] text-white shadow-sm'
-                          : 'border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50'
+                        ? 'border-[#5151eb] bg-[#5151eb] text-white shadow-sm'
+                        : 'border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50'
                       }`}
                     >
-                      {cat.icon ? <span className="text-base leading-none">{cat.icon}</span> : null}
                       <span>{cat.name}</span>
                       {selected ? (
                         <span className="ml-1 inline-flex size-4 items-center justify-center rounded-full bg-white/25">
@@ -159,7 +207,7 @@ export default function OnboardingTagsPage() {
         <button
           type="button"
           onClick={() => router.back()}
-          className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-5 py-2.5 text-sm font-medium text-zinc-600 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-[#12192f]"
+          className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-5 py-2.5 text-sm font-medium text-zinc-600 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-[#12192f] disabled:cursor-not-allowed cursor-pointer"
         >
           <ArrowLeft className="size-4" />
           Back
@@ -168,7 +216,7 @@ export default function OnboardingTagsPage() {
           type="button"
           onClick={handleNext}
           disabled={!canContinue}
-          className="inline-flex items-center gap-2 rounded-xl bg-[#5151eb] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#3d3dcc] disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-xl bg-[#5151eb] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#3d3dcc] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
         >
           Continue
           <ArrowRight className="size-4" />

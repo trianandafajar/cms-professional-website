@@ -26,13 +26,6 @@ export const Categories: CollectionConfig = {
       unique: true,
     },
     {
-      name: 'icon',
-      type: 'text',
-      admin: {
-        description: 'Nama icon (misal: Music, Coffee, etc.)',
-      },
-    },
-    {
       name: 'group',
       type: 'select',
       options: [

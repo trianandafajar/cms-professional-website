@@ -2,7 +2,7 @@
 
 import type { Location, Media } from '@/payload-types'
 
-type DestinationItem = Pick<Location, 'id' | 'name' | 'code' | 'emoji'> & {
+type DestinationItem = Pick<Location, 'id' | 'name' | 'code'> & {
   coverImage?: (number | null) | Media
 }
 
@@ -29,7 +29,7 @@ export function DestinationsScroll({ destinations }: DestinationsScrollProps) {
         <a
           key={dest.id}
           href={`/events/${nameToSlug(dest.name)}`}
-          className="group relative min-w-[160px] shrink-0 overflow-hidden rounded-lg sm:min-w-[180px]"
+          className="group relative min-w-[160px] shrink-0 overflow-hidden rounded-lg cursor-pointer sm:min-w-[180px]"
         >
           <div className="aspect-3/2 overflow-hidden">
             <img
@@ -46,7 +46,6 @@ export function DestinationsScroll({ destinations }: DestinationsScrollProps) {
           {/* City name */}
           <div className="absolute bottom-0 left-0 p-2.5 transition-all duration-300 group-hover:p-3">
             <p className="text-xs font-semibold text-white transition-all duration-300 group-hover:text-sm">
-              {dest.emoji ? `${dest.emoji} ` : ''}
               {dest.name}
             </p>
           </div>

@@ -3,7 +3,7 @@
 import { ArrowRight } from 'lucide-react'
 import type { Location } from '@/payload-types'
 
-type CityItem = Pick<Location, 'id' | 'name' | 'emoji'>
+type CityItem = Pick<Location, 'id' | 'name'>
 
 type PopularCitiesProps = {
   cities: CityItem[]
@@ -20,11 +20,10 @@ export function PopularCities({ cities }: PopularCitiesProps) {
         <a
           key={item.id}
           href={`/events/${nameToSlug(item.name)}`}
-          className="group flex items-center justify-between border-b border-zinc-100 py-3.5 transition last:border-0 hover:border-zinc-200"
+          className="group flex cursor-pointer items-center justify-between border-b border-zinc-100 py-3.5 transition last:border-0 hover:border-zinc-200"
         >
           <div>
             <p className="text-base font-medium text-[#12192f] group-hover:text-[#5151eb]">
-              {item.emoji ? `${item.emoji} ` : ''}
               {item.name}
             </p>
           </div>

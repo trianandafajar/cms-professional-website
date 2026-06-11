@@ -14,7 +14,6 @@ interface Location {
 interface Category {
   id: string;
   name: string;
-  icon?: string;
   group: string;
 }
 
@@ -82,11 +81,10 @@ export default function Step2Preferences({ onNext, onPrev }: { onNext: () => voi
               onClick={() => toggleCategory(cat.id)}
               className={`text-left px-3 py-2 rounded-full text-sm transition ${
                 categoryIds.includes(cat.id)
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
               }`}
             >
-              {cat.icon && <span className="mr-2">{cat.icon}</span>}
               {cat.name}
             </button>
           ))}

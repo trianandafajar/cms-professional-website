@@ -140,7 +140,7 @@ export default function OnboardingConfirmPage() {
           <button
             type="button"
             onClick={() => router.push('/onboarding')}
-            className="shrink-0 text-xs font-semibold text-[#5151eb] transition hover:text-[#3d3dcc]"
+            className="shrink-0 text-xs font-semibold text-[#5151eb] transition hover:text-[#3d3dcc] cursor-pointer disabled:cursor-not-allowed"
           >
             Edit
           </button>
@@ -163,7 +163,7 @@ export default function OnboardingConfirmPage() {
           <button
             type="button"
             onClick={() => router.push('/onboarding/locations')}
-            className="shrink-0 text-xs font-semibold text-[#5151eb] transition hover:text-[#3d3dcc]"
+            className="shrink-0 text-xs font-semibold text-[#5151eb] transition hover:text-[#3d3dcc] cursor-pointer disabled:cursor-not-allowed"
           >
             Edit
           </button>
@@ -188,7 +188,7 @@ export default function OnboardingConfirmPage() {
           <button
             type="button"
             onClick={() => router.push('/onboarding/tags')}
-            className="shrink-0 text-xs font-semibold text-[#5151eb] transition hover:text-[#3d3dcc]"
+            className="shrink-0 text-xs font-semibold text-[#5151eb] transition hover:text-[#3d3dcc] cursor-pointer disabled:cursor-not-allowed"
           >
             Edit
           </button>
@@ -206,7 +206,7 @@ export default function OnboardingConfirmPage() {
         <button
           type="button"
           onClick={() => router.back()}
-          className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-5 py-2.5 text-sm font-medium text-zinc-600 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-[#12192f]"
+          className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-5 py-2.5 text-sm font-medium text-zinc-600 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-[#12192f] disabled:cursor-not-allowed cursor-pointer  "
         >
           <ArrowLeft className="size-4" />
           Back
@@ -215,7 +215,7 @@ export default function OnboardingConfirmPage() {
           type="button"
           onClick={handleConfirm}
           disabled={isSubmitting}
-          className="inline-flex items-center gap-2 rounded-xl bg-[#5151eb] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#3d3dcc] disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-xl bg-[#5151eb] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#3d3dcc] disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
         >
           <CheckCircle2 className="size-4" />
           {isSubmitting ? 'Saving...' : 'Finish setup'}

@@ -6,7 +6,7 @@ export const Locations: CollectionConfig = {
   admin: {
     useAsTitle: 'name',
     group: 'Master Data',
-    defaultColumns: ['name', 'code', 'region', 'featured'],
+    defaultColumns: ['name', 'region', 'featured'],
   },
   custom: {
     nav: {
@@ -32,6 +32,9 @@ export const Locations: CollectionConfig = {
       type: 'text',
       unique: true,
       label: 'Location Code (e.g., JTG, JKT)',
+      admin: {
+        description: 'Legacy code for internal use. Not shown in onboarding.',
+      },
     },
     {
       name: 'region',
@@ -56,14 +59,6 @@ export const Locations: CollectionConfig = {
       label: 'Popular',
       admin: {
         description: 'Show this location at the top of the picker',
-      },
-    },
-    {
-      name: 'emoji',
-      type: 'text',
-      label: 'Emoji / Flag',
-      admin: {
-        description: 'Optional emoji shown next to the name (e.g., 🌋, 🏝️)',
       },
     },
     {

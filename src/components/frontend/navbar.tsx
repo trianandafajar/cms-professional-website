@@ -23,6 +23,14 @@ import {
 import { useState, useRef, useEffect, useCallback } from 'react'
 
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useAuthStore } from '@/stores/authStore'
 import NotificationDrawer from '@/components/organizations/layouts/notification'
@@ -149,6 +157,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
   const [locationSearch, setLocationSearch] = useState('')
   const [locations, setLocations] = useState<string[]>([])
   const [loggingOut, setLoggingOut] = useState(false)
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([])
   const [loadingSuggestions, setLoadingSuggestions] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -296,11 +305,16 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
     }
   }
 
+  function confirmLogout() {
+    if (loggingOut) return
+    setLogoutConfirmOpen(true)
+  }
+
   return (
     <header className="sticky top-0 z-50 border-b border-zinc-100 bg-white">
       <div className="mx-auto flex w-full max-w-[1400px] items-center gap-4 px-4 py-3 lg:px-8">
         {/* Logo */}
-        <Link className="flex shrink-0 items-center gap-2" href="/">
+        <Link className="flex shrink-0 cursor-pointer items-center gap-2" href="/">
           <Image
             src="/icon.png"
             alt="Eventbro"
@@ -355,7 +369,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                         setSearchFocused(false)
                         router.push(`/search?q=${encodeURIComponent(term)}&type=events`)
                       }}
-                      className="rounded-full border border-zinc-200 px-3 py-1 text-xs font-medium text-zinc-600 transition hover:border-[#5151eb] hover:text-[#5151eb]"
+              className="cursor-pointer rounded-full border border-zinc-200 px-3 py-1 text-xs font-medium text-zinc-600 transition hover:border-[#5151eb] hover:text-[#5151eb]"
                     >
                       {term}
                     </button>
@@ -389,7 +403,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                               : 'event'
                             router.push(`/events/${cityPath}/${item.slug}`)
                           }}
-                          className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-zinc-50"
+                          className="flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left transition hover:bg-zinc-50"
                         >
                           <CalendarDays className="size-4 shrink-0 text-[#5151eb]" />
                           <div className="min-w-0 flex-1">
@@ -535,7 +549,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
               size="sm"
               variant="ghost"
             >
-              <Link href="/my/likes" className="flex items-center gap-1.5">
+              <Link href="/my/likes" className="flex cursor-pointer items-center gap-1.5">
                 <Heart className="size-4" />
                 Likes
               </Link>
@@ -550,7 +564,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 py-1 pl-1 pr-3 text-sm font-medium text-[#5151eb] transition hover:bg-indigo-100 cursor-pointer disabled:cursor-not-allowed"
+                  className="flex cursor-pointer items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 py-1 pl-1 pr-3 text-sm font-medium text-[#5151eb] transition hover:bg-indigo-100 disabled:cursor-not-allowed"
                   aria-label="Open profile menu"
                 >
                   {avatarUrl ? (
@@ -603,7 +617,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                 {needsOnboarding && (
                   <Link
                     href="/onboarding"
-                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-indigo-50 hover:text-[#5151eb]"
+                    className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-indigo-50 hover:text-[#5151eb]"
                   >
                     <ClipboardCheck className="size-4 text-zinc-500" />
                     Complete onboarding
@@ -614,7 +628,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                   <Link
                     key={href}
                     href={href}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-indigo-50 hover:text-[#5151eb]"
+                    className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-indigo-50 hover:text-[#5151eb]"
                   >
                     <Icon className="size-4 text-zinc-500" />
                     {label}
@@ -625,9 +639,9 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
 
                 <button
                   type="button"
-                  onClick={handleLogout}
+                  onClick={confirmLogout}
                   disabled={loggingOut}
-                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-rose-600 transition hover:bg-rose-50 disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
+                  className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-rose-600 transition hover:bg-rose-50 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <LogOut className="size-4" />
                   {loggingOut ? 'Logging out…' : 'Log out'}
@@ -716,7 +730,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
             )}
             {isAuthed && !needsOnboarding && !isOrganizer && (
               <Link
-                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
                 href="/my/likes"
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -752,7 +766,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                   <Link
                     href="/onboarding"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                    className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
                   >
                     <ClipboardCheck className="size-4 text-zinc-500" />
                     Complete onboarding
@@ -763,7 +777,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                     key={href}
                     href={href}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                    className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
                   >
                     <Icon className="size-4 text-zinc-500" />
                     {label}
@@ -771,9 +785,9 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                 ))}
                 <button
                   type="button"
-                  onClick={handleLogout}
+                  onClick={confirmLogout}
                   disabled={loggingOut}
-                  className="mt-1 flex items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-60"
+                  className="mt-1 flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-left text-sm font-medium text-rose-600 hover:bg-rose-50 disabled:opacity-60"
                 >
                   <LogOut className="size-4" />
                   {loggingOut ? 'Logging out…' : 'Log out'}
@@ -799,6 +813,39 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
           </nav>
         </div>
       )}
+
+      <Dialog open={logoutConfirmOpen} onOpenChange={setLogoutConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Log out?</DialogTitle>
+            <DialogDescription>
+              Kamu akan keluar dari akun ini. Pastikan semua perubahan sudah disimpan.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="cursor-pointer"
+              onClick={() => setLogoutConfirmOpen(false)}
+              disabled={loggingOut}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="cursor-pointer bg-rose-600 text-white hover:bg-rose-700"
+              onClick={async () => {
+                setLogoutConfirmOpen(false)
+                await handleLogout()
+              }}
+              disabled={loggingOut}
+            >
+              {loggingOut ? 'Logging out…' : 'Log out'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </header>
   )
 }
