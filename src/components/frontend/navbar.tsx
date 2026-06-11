@@ -121,9 +121,18 @@ function getInitials(value?: string | null) {
 }
 
 function getAvatarUrl(avatar: unknown): string | null {
+  if (typeof avatar === 'string') {
+    return avatar || null
+  }
+
   if (avatar && typeof avatar === 'object' && 'url' in avatar) {
     return (avatar as { url?: string }).url ?? null
   }
+
+  if (avatar && typeof avatar === 'object' && 'src' in avatar) {
+    return (avatar as { src?: string }).src ?? null
+  }
+
   return null
 }
 
@@ -423,7 +432,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
             <button
               type="button"
               onClick={() => setLocationOpen(!locationOpen)}
-              className="flex h-11 items-center gap-2 rounded-r-lg border border-zinc-200 bg-[#fdfdfd] px-4 text-sm text-zinc-700 transition hover:bg-zinc-100"
+              className="flex h-11 items-center gap-2 rounded-r-lg border border-zinc-200 bg-[#fdfdfd] px-4 text-sm text-zinc-700 transition hover:bg-zinc-100 cursor-pointer disabled:cursor-not-allowed"
             >
               <MapPin className="size-4 text-[#5151eb]" />
               <span className="max-w-[120px] truncate">{selectedLocation}</span>
@@ -449,7 +458,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                       setLocationOpen(false)
                       setLocationSearch('')
                     }}
-                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-zinc-50 ${selectedLocation === 'All Locations' ? 'bg-indigo-50 font-medium text-[#5151eb]' : 'text-zinc-700'}`}
+                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-zinc-50 cursor-pointer disabled:cursor-not-allowed ${selectedLocation === 'All Locations' ? 'bg-indigo-50 font-medium text-[#5151eb]' : 'text-zinc-700'}`}
                   >
                     <MapPin className="size-3.5" />
                     All Locations
@@ -463,7 +472,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                         setLocationOpen(false)
                         setLocationSearch('')
                       }}
-                      className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-zinc-50 ${selectedLocation === loc ? 'bg-indigo-50 font-medium text-[#5151eb]' : 'text-zinc-700'}`}
+                      className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition hover:bg-zinc-50 cursor-pointer disabled:cursor-not-allowed ${selectedLocation === loc ? 'bg-indigo-50 font-medium text-[#5151eb]' : 'text-zinc-700'}`}
                     >
                       <MapPin className="size-3.5" />
                       {loc}
@@ -537,98 +546,95 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
         {/* Auth */}
         <div className="hidden items-center gap-2 lg:flex">
           {isAuthed ? (
-            <>
-              <NotificationDrawer />
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    className="flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 py-1 pl-1 pr-3 text-sm font-medium text-[#5151eb] transition hover:bg-indigo-100"
-                    aria-label="Open profile menu"
-                  >
-                    {avatarUrl ? (
-                      <img
-                        src={avatarUrl}
-                        alt={displayName || 'User'}
-                        className="size-8 rounded-full object-cover"
-                      />
-                    ) : (
-                      <span className="flex size-8 items-center justify-center rounded-full bg-[#5151eb] text-xs font-semibold text-white">
-                        {initials}
-                      </span>
-                    )}
-                    <span className="max-w-[140px] truncate">{displayName}</span>
-                    <ChevronDown className="size-3.5 text-[#5151eb]" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent
-                  align="end"
-                  sideOffset={8}
-                  className="w-[300px] overflow-hidden rounded-2xl border border-zinc-200 bg-white p-0 shadow-xl ring-0"
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 py-1 pl-1 pr-3 text-sm font-medium text-[#5151eb] transition hover:bg-indigo-100 cursor-pointer disabled:cursor-not-allowed"
+                  aria-label="Open profile menu"
                 >
-                {/* Header */}
-                <div className="border-b border-zinc-100 px-4 py-4">
-                  <div className="flex items-center gap-3">
-                    {avatarUrl ? (
-                      <img
-                        src={avatarUrl}
-                        alt={displayName || 'User'}
-                        className="size-11 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex size-11 items-center justify-center rounded-full bg-[#5151eb] text-base font-semibold text-white">
-                        {initials}
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-zinc-900">
-                        {displayName || 'User'}
-                      </p>
-                      {displayEmail && (
-                        <p className="truncate text-xs text-zinc-500">{displayEmail}</p>
-                      )}
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={displayName || 'User'}
+                      className="size-8 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="flex size-8 items-center justify-center rounded-full bg-[#5151eb] text-xs font-semibold text-white">
+                      {initials}
+                    </span>
+                  )}
+                  <span className="max-w-[140px] truncate">{displayName}</span>
+                  <ChevronDown className="size-3.5 text-[#5151eb]" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="end"
+                sideOffset={8}
+                className="w-[300px] overflow-hidden rounded-2xl border border-zinc-200 bg-white p-0 shadow-xl ring-0"
+              >
+              {/* Header */}
+              <div className="border-b border-zinc-100 px-4 py-4">
+                <div className="flex items-center gap-3">
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={displayName || 'User'}
+                      className="size-11 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex size-11 items-center justify-center rounded-full bg-[#5151eb] text-base font-semibold text-white">
+                      {initials}
                     </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-zinc-900">
+                      {displayName || 'User'}
+                    </p>
+                    {displayEmail && (
+                      <p className="truncate text-xs text-zinc-500">{displayEmail}</p>
+                    )}
                   </div>
                 </div>
+              </div>
 
-                {/* Menu */}
-                <div className="p-1.5">
-                  {needsOnboarding && (
-                    <Link
-                      href="/onboarding"
-                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-indigo-50 hover:text-[#5151eb]"
-                    >
-                      <ClipboardCheck className="size-4 text-zinc-500" />
-                      Complete onboarding
-                    </Link>
-                  )}
-
-                  {filteredProfileMenu.map(({ label, href, icon: Icon }) => (
-                    <Link
-                      key={href}
-                      href={href}
-                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-indigo-50 hover:text-[#5151eb]"
-                    >
-                      <Icon className="size-4 text-zinc-500" />
-                      {label}
-                    </Link>
-                  ))}
-
-                  <div className="my-1 border-t border-zinc-100" />
-
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    disabled={loggingOut}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-rose-600 transition hover:bg-rose-50 disabled:opacity-60"
+              {/* Menu */}
+              <div className="p-1.5">
+                {needsOnboarding && (
+                  <Link
+                    href="/onboarding"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-indigo-50 hover:text-[#5151eb]"
                   >
-                    <LogOut className="size-4" />
-                    {loggingOut ? 'Logging out…' : 'Log out'}
-                  </button>
-                </div>
-                </PopoverContent>
-              </Popover>
-            </>
+                    <ClipboardCheck className="size-4 text-zinc-500" />
+                    Complete onboarding
+                  </Link>
+                )}
+
+                {filteredProfileMenu.map(({ label, href, icon: Icon }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-indigo-50 hover:text-[#5151eb]"
+                  >
+                    <Icon className="size-4 text-zinc-500" />
+                    {label}
+                  </Link>
+                ))}
+
+                <div className="my-1 border-t border-zinc-100" />
+
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-rose-600 transition hover:bg-rose-50 disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <LogOut className="size-4" />
+                  {loggingOut ? 'Logging out…' : 'Log out'}
+                </button>
+              </div>
+              </PopoverContent>
+            </Popover>
           ) : (
             <>
               <Button

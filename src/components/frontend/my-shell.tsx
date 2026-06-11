@@ -86,7 +86,7 @@ export function MyShell({ children, user: initialUser }: { children: React.React
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 py-1 pl-1 pr-3 text-sm font-medium text-[#5151eb] transition hover:bg-indigo-100"
+                  className="flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 py-1 pl-1 pr-3 text-sm font-medium text-[#5151eb] transition hover:bg-indigo-100 cursor-pointer disabled:cursor-not-allowed"
                   aria-label="Open profile menu"
                 >
                   <span className="flex size-8 items-center justify-center rounded-full bg-[#5151eb] text-xs font-semibold text-white">
@@ -143,7 +143,7 @@ export function MyShell({ children, user: initialUser }: { children: React.React
                     type="button"
                     onClick={handleLogout}
                     disabled={loggingOut}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-rose-600 transition hover:bg-rose-50 disabled:opacity-60"
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-rose-600 transition hover:bg-rose-50 disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
                   >
                     <LogOut className="size-4" />
                     {loggingOut ? 'Logging out...' : 'Log out'}

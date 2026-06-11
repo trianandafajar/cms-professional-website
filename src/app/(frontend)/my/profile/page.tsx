@@ -195,7 +195,7 @@ export default function MyProfilePage() {
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2 rounded-xl bg-[#5151eb] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#4040d0] disabled:opacity-60"
+            className="flex items-center gap-2 rounded-xl bg-[#5151eb] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#4040d0] disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
           >
             {saving ? (
               <>

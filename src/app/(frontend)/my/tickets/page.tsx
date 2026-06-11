@@ -213,7 +213,7 @@ export default function MyTicketsPage() {
           <button
             key={opt.value}
             onClick={() => setFilter(opt.value)}
-            className={`rounded-md px-3.5 py-1.5 text-sm font-medium transition ${
+            className={`rounded-md px-3.5 py-1.5 text-sm font-medium transition cursor-pointer disabled:cursor-not-allowed ${
               filter === opt.value ? 'bg-[#5151eb] text-white' : 'text-zinc-600 hover:bg-zinc-50'
             }`}
           >
@@ -316,7 +316,7 @@ export default function MyTicketsPage() {
                       <button
                         type="button"
                         onClick={() => downloadTicket(ticket.id)}
-                        className="flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-700"
+                        className="flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-700 cursor-pointer disabled:cursor-not-allowed"
                       >
                         <Download className="size-3" />
                         Download

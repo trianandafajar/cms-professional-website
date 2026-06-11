@@ -50,7 +50,7 @@ export function LikeButton({ eventId, onToggle, variant = 'card', className = ''
         type="button"
         onClick={handleClick}
         aria-label={isLiked ? 'Remove from saved' : 'Save event'}
-        className={`flex size-8 items-center justify-center rounded-full transition ${
+        className={`flex size-8 items-center justify-center rounded-full transition cursor-pointer disabled:cursor-not-allowed ${
           isLiked
             ? 'bg-[#5151eb] text-white'
             : 'bg-white/90 text-zinc-500 hover:bg-white hover:text-[#5151eb]'
@@ -67,7 +67,7 @@ export function LikeButton({ eventId, onToggle, variant = 'card', className = ''
       type="button"
       onClick={handleClick}
       aria-label={isLiked ? 'Remove from saved' : 'Save event'}
-      className={`absolute right-3 top-3 flex size-8 items-center justify-center rounded-full transition backdrop-blur-sm ${
+      className={`absolute right-3 top-3 flex size-8 items-center justify-center rounded-full transition backdrop-blur-sm cursor-pointer disabled:cursor-not-allowed ${
         isLiked
           ? 'bg-[#5151eb] text-white'
           : 'bg-white/90 text-zinc-500 hover:bg-white hover:text-[#5151eb]'

@@ -430,6 +430,18 @@ export interface Event {
          * Saved ticket design key or built-in preset key
          */
         designId?: string | null;
+        /**
+         * Snapshot of the selected ticket design config
+         */
+        designConfig?:
+          | {
+              [k: string]: unknown;
+            }
+          | unknown[]
+          | string
+          | number
+          | boolean
+          | null;
         id?: string | null;
       }[]
     | null;
@@ -1060,6 +1072,7 @@ export interface EventsSelect<T extends boolean = true> {
         sortOrder?: T;
         designSource?: T;
         designId?: T;
+        designConfig?: T;
         id?: T;
       };
   updatedAt?: T;

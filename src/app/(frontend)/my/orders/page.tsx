@@ -222,7 +222,7 @@ export default function MyOrdersPage() {
                 setStatus(tab)
                 setPage(1)
               }}
-              className={`rounded-lg px-3.5 py-1.5 text-sm font-medium transition ${
+              className={`rounded-lg px-3.5 py-1.5 text-sm font-medium transition cursor-pointer disabled:cursor-not-allowed ${
                 status === tab ? 'bg-[#5151eb] text-white' : 'text-zinc-600 hover:bg-zinc-50'
               }`}
             >
@@ -327,7 +327,7 @@ export default function MyOrdersPage() {
                   type="button"
                   onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                   disabled={page === 1}
-                  className="inline-flex size-9 items-center justify-center rounded-xl border border-zinc-200 text-zinc-500 transition hover:bg-zinc-50 disabled:opacity-40"
+                  className="inline-flex size-9 items-center justify-center rounded-xl border border-zinc-200 text-zinc-500 transition hover:bg-zinc-50 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
                 >
                   <ChevronLeft className="size-4" />
                 </button>
@@ -336,10 +336,10 @@ export default function MyOrdersPage() {
                     key={value}
                     type="button"
                     onClick={() => setPage(value)}
-                    className={`inline-flex size-9 items-center justify-center rounded-xl border text-sm font-semibold transition ${
+                    className={`inline-flex size-9 items-center justify-center rounded-xl border text-sm font-semibold transition cursor-pointer disabled:cursor-not-allowed ${
                       page === value
                         ? 'border-[#5151eb] bg-[#5151eb] text-white'
-                        : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50'
+                        : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50 '
                     }`}
                   >
                     {value}
@@ -349,7 +349,7 @@ export default function MyOrdersPage() {
                   type="button"
                   onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
                   disabled={page === totalPages}
-                  className="inline-flex size-9 items-center justify-center rounded-xl border border-zinc-200 text-zinc-500 transition hover:bg-zinc-50 disabled:opacity-40"
+                  className="inline-flex size-9 items-center justify-center rounded-xl border border-zinc-200 text-zinc-500 transition hover:bg-zinc-50 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
                 >
                   <ChevronRight className="size-4" />
                 </button>

@@ -42,9 +42,29 @@ interface TicketPreviewProps {
   designName: string
   /** Scale factor for the ticket (default 1). Use < 1 for thumbnails */
   scale?: number
+  eventName?: string
+  eventDate?: string
+  eventTime?: string
+  venue?: string
+  attendee?: string
+  status?: string
+  ticketCode?: string
+  qrValue?: string
 }
 
-export default function TicketPreviewCard({ config, designName, scale = 1 }: TicketPreviewProps) {
+export default function TicketPreviewCard({
+  config,
+  designName,
+  scale = 1,
+  eventName = sampleEvent.name,
+  eventDate = sampleEvent.date,
+  eventTime = sampleEvent.time,
+  venue = sampleEvent.venue,
+  attendee = 'Alex Johnson',
+  status = 'Ready to scan',
+  ticketCode = 'TKT-PREVIEW-001',
+  qrValue = 'https://eventbro.id/checkin/TKT-PREVIEW-001',
+}: TicketPreviewProps) {
   const bgStyle = getTicketBackground(config)
   const w = config.width * scale
   const h = (config.orientation === 'vertical' ? config.height + 200 : config.height) * scale
@@ -70,6 +90,10 @@ export default function TicketPreviewCard({ config, designName, scale = 1 }: Tic
             className="pointer-events-none absolute -bottom-12 -left-12 rounded-full bg-white/5"
             style={{ width: 40 * scale * 4, height: 40 * scale * 4 }}
           />
+          <div
+            className="pointer-events-none absolute right-1/4 top-1/3 rounded-full bg-white/3"
+            style={{ width: 24 * scale * 4, height: 24 * scale * 4 }}
+          />
         </>
       )}
       {config.bgType === 'image' && (
@@ -77,7 +101,7 @@ export default function TicketPreviewCard({ config, designName, scale = 1 }: Tic
       )}
 
       <div
-        className={`relative flex h-full ${config.orientation === 'vertical' ? 'flex-col' : 'flex-row items-stretch'} gap-${scale >= 0.6 ? '6' : '3'}`}
+        className={`relative flex h-full ${config.orientation === 'vertical' ? 'flex-col' : 'flex-row items-stretch'}`}
         style={{ gap: `${6 * scale * 4}px` }}
       >
         {/* Info */}
@@ -105,7 +129,7 @@ export default function TicketPreviewCard({ config, designName, scale = 1 }: Tic
               }}
               className="font-bold leading-tight"
             >
-              {sampleEvent.name}
+              {eventName}
             </h3>
           </div>
           <div
@@ -117,28 +141,28 @@ export default function TicketPreviewCard({ config, designName, scale = 1 }: Tic
               valueColor={config.valueColor}
               icon={<Calendar size={Math.max(8, 12 * scale)} />}
               label="Date"
-              value={sampleEvent.date}
+              value={eventDate}
             />
             <TicketDetail
               labelColor={config.labelColor}
               valueColor={config.valueColor}
               icon={<Clock size={Math.max(8, 12 * scale)} />}
               label="Time"
-              value={sampleEvent.time}
+              value={eventTime}
             />
             <TicketDetail
               labelColor={config.labelColor}
               valueColor={config.valueColor}
               icon={<MapPin size={Math.max(8, 12 * scale)} />}
               label="Venue"
-              value={sampleEvent.venue}
+              value={venue}
             />
             <TicketDetail
               labelColor={config.labelColor}
               valueColor={config.valueColor}
               icon={<User size={Math.max(8, 12 * scale)} />}
               label="Attendee"
-              value="Alex Johnson"
+              value={attendee}
             />
           </div>
           {config.showBranding && (
@@ -153,7 +177,7 @@ export default function TicketPreviewCard({ config, designName, scale = 1 }: Tic
                 Powered by eventbro
               </p>
               <p style={{ color: config.labelColor, fontSize: `${Math.max(7, 10 * scale)}px` }}>
-                TKT-PREVIEW-001
+                {ticketCode}
               </p>
             </div>
           )}
@@ -181,6 +205,7 @@ export default function TicketPreviewCard({ config, designName, scale = 1 }: Tic
         <div
           className={`flex flex-col items-center justify-center ${config.orientation === 'horizontal' ? '' : 'w-full'} ${config.qrPosition === 'left' ? 'order-1' : 'order-3'}`}
           style={{ width: config.orientation === 'horizontal' ? `${48 * scale * 4}px` : undefined }}
+          aria-label={status}
         >
           <div
             style={{
@@ -190,7 +215,7 @@ export default function TicketPreviewCard({ config, designName, scale = 1 }: Tic
             className="bg-white"
           >
             <QRCodeSVG
-              value="https://eventbro.id/checkin/TKT-PREVIEW-001"
+              value={qrValue}
               size={config.qrSize * scale}
               bgColor={config.qrBgColor}
               fgColor={config.qrFgColor}

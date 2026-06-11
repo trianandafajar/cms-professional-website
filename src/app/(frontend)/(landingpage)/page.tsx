@@ -121,19 +121,16 @@ export default async function HomePage() {
       ? String((user.defaultLocation as Location).name ?? '').trim()
       : null
 
-  const fallbackCities = distinctCities.length > 0
-    ? distinctCities
-    : allLocations
-        .map((loc) => String(loc?.name ?? '').trim())
-        .filter(Boolean)
+  const fallbackCities =
+    distinctCities.length > 0
+      ? distinctCities
+      : allLocations.map((loc) => String(loc?.name ?? '').trim()).filter(Boolean)
 
   const randomFallbackCity =
-    fallbackCities.length > 0
-      ? fallbackCities[new Date().getDate() % fallbackCities.length]!
-      : null
+    fallbackCities.length > 0 ? fallbackCities[new Date().getDate() % fallbackCities.length]! : null
 
   const initialCity = explicitUserCity || randomFallbackCity
-  const cityOptions = fallbackCities.length > 0 ? fallbackCities : (initialCity ? [initialCity] : [])
+  const cityOptions = fallbackCities.length > 0 ? fallbackCities : initialCity ? [initialCity] : []
 
   return (
     <div className="min-h-screen bg-white">

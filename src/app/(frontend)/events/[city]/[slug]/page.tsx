@@ -40,7 +40,9 @@ type TicketTypeLike = {
 // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function getMediaUrl(media: unknown): string | null {
+  if (typeof media === 'string') return media || null
   if (media && typeof media === 'object' && 'url' in media) return (media as Media).url ?? null
+  if (media && typeof media === 'object' && 'src' in media) return (media as { src?: string }).src ?? null
   return null
 }
 
@@ -651,8 +653,8 @@ export default async function EventDetailPage({ params }: Props) {
           </div>
 
           {/* â”€â”€ RIGHT COLUMN (sticky) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-          <div className="w-full shrink-0 space-y-4 lg:w-80 xl:w-96">
-            <div className="sticky top-24 space-y-4">
+          <div className="w-full shrink-0 space-y-4 lg:sticky lg:top-24 lg:self-start lg:w-80 xl:w-96">
+            <div className="space-y-4">
               <EventDetailActions
                 eventId={Number(ev.id)}
                 eventTitle={ev.title}

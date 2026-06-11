@@ -85,6 +85,47 @@ export default function EventTicketsPage() {
     return savedDesigns
   }, [savedDesigns])
 
+  useEffect(() => {
+    if (!tickets.length) return
+
+    let changed = false
+
+    const nextTickets = tickets.map((ticket) => {
+      if (ticket.designConfig) {
+        return ticket
+      }
+
+      if (ticket.designSource === 'preset' && ticket.designId) {
+        const preset = presets.find((item) => item.id === ticket.designId)
+        if (preset) {
+          changed = true
+          return {
+            ...ticket,
+            designConfig: { ...defaultConfig, ...preset.config },
+          }
+        }
+      }
+
+      if (ticket.designId) {
+        const savedDesign = savedDesigns.find((design) => design.id === ticket.designId)
+        if (savedDesign) {
+          changed = true
+          return {
+            ...ticket,
+            designSource: 'designer' as const,
+            designConfig: savedDesign.config,
+          }
+        }
+      }
+
+      return ticket
+    })
+
+    if (changed) {
+      useEventEditorStore.setState({ tickets: nextTickets })
+    }
+  }, [savedDesigns, tickets])
+
   const presetDesignIds = useMemo(
     () => new Set(presets.map((preset) => preset.id)),
     [],
@@ -537,7 +578,11 @@ export default function EventTicketsPage() {
                       <button
                         type="button"
                         onClick={() =>
-                          updateTicket(ticket.id, { designSource: 'designer', designId: null })
+                          updateTicket(ticket.id, {
+                            designSource: 'designer',
+                            designId: null,
+                            designConfig: null,
+                          })
                         }
                         className={`cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium transition ${
                           getResolvedDesignSource(ticket) === 'designer'
@@ -550,7 +595,11 @@ export default function EventTicketsPage() {
                       <button
                         type="button"
                         onClick={() =>
-                          updateTicket(ticket.id, { designSource: 'preset', designId: null })
+                          updateTicket(ticket.id, {
+                            designSource: 'preset',
+                            designId: null,
+                            designConfig: null,
+                          })
                         }
                         className={`cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium transition ${
                           getResolvedDesignSource(ticket) === 'preset'
@@ -572,7 +621,13 @@ export default function EventTicketsPage() {
                               <button
                                 key={design.id}
                                 type="button"
-                                onClick={() => updateTicket(ticket.id, { designId: design.id })}
+                                onClick={() =>
+                                  updateTicket(ticket.id, {
+                                    designId: design.id,
+                                    designSource: 'designer',
+                                    designConfig: design.config,
+                                  })
+                                }
                                 className={`cursor-pointer relative overflow-hidden rounded-xl border p-2 transition text-left ${
                                   isSelected
                                     ? 'border-[#5151eb] ring-1 ring-[#5151eb]/30'
@@ -609,7 +664,13 @@ export default function EventTicketsPage() {
                               <button
                                 key={preset.id}
                                 type="button"
-                                onClick={() => updateTicket(ticket.id, { designId: preset.id })}
+                                onClick={() =>
+                                  updateTicket(ticket.id, {
+                                    designId: preset.id,
+                                    designSource: 'preset',
+                                    designConfig: fullConfig,
+                                  })
+                                }
                                 className={`cursor-pointer relative overflow-hidden rounded-xl border p-2 transition text-left ${
                                   isSelected
                                     ? 'border-[#5151eb] ring-1 ring-[#5151eb]/30'

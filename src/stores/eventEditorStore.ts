@@ -40,6 +40,36 @@ export interface EventTicketType {
 
   designId: string | null
   designSource: 'designer' | 'preset'
+  designConfig: TicketDesignConfig | null
+}
+
+export type TicketDesignConfig = {
+  orientation: 'horizontal' | 'vertical'
+  width: number
+  height: number
+  borderRadius: number
+  padding: number
+  bgType: 'gradient' | 'solid' | 'image'
+  bgGradientFrom: string
+  bgGradientTo: string
+  bgGradientDirection: string
+  bgSolid: string
+  bgImage: string
+  titleSize: number
+  titleColor: string
+  labelColor: string
+  valueColor: string
+  qrSize: number
+  qrPosition: 'right' | 'left' | 'bottom-right' | 'bottom-left'
+  qrBgColor: string
+  qrFgColor: string
+  qrBorderRadius: number
+  showDecoCircles: boolean
+  showDivider: boolean
+  dividerStyle: 'dashed' | 'solid' | 'dotted'
+  showBranding: boolean
+  badgeBg: string
+  badgeText: string
 }
 
 const presetDesignIds = new Set(ticketDesignPresets.map((preset) => preset.id))
@@ -512,6 +542,7 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
 
           designId: null,
           designSource: 'designer',
+          designConfig: null,
         },
       ],
     })),
@@ -1059,6 +1090,9 @@ export const useEventEditorStore = create<EventEditorState>((set) => ({
               (ticket.designId && presetDesignIds.has(String(ticket.designId))
                 ? 'preset'
                 : 'designer'),
+            designConfig:
+              (ticket.designConfig as TicketDesignConfig | null | undefined) ??
+              null,
           })) ?? [],
       })
     } catch (error) {

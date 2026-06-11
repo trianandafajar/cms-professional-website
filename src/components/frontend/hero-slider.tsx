@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 type SlideItem = {
@@ -50,36 +50,82 @@ const slides: SlideItem[] = [
 
 export function HeroSlider() {
   const [current, setCurrent] = useState(0)
+  const [isHovered, setIsHovered] = useState(false)
+  const touchStartX = useRef<number | null>(null)
 
   useEffect(() => {
+    if (isHovered) return
+
     const timer = setInterval(() => {
       setCurrent((prev) => (prev + 1) % slides.length)
     }, 5000)
+
     return () => clearInterval(timer)
+  }, [isHovered])
+
+  const prev = () =>
+    setCurrent((c) => (c - 1 + slides.length) % slides.length)
+
+  const next = () =>
+    setCurrent((c) => (c + 1) % slides.length)
+
+  // keyboard support
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') prev()
+      if (e.key === 'ArrowRight') next()
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
   }, [])
 
-  const prev = () => setCurrent((c) => (c - 1 + slides.length) % slides.length)
-  const next = () => setCurrent((c) => (c + 1) % slides.length)
+  // swipe support
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStartX.current) return
+    const diff = touchStartX.current - e.changedTouches[0].clientX
+    if (diff > 50) next()
+    if (diff < -50) prev()
+    touchStartX.current = null
+  }
 
   return (
-    <div className="relative w-full overflow-hidden rounded-xl">
+    <div
+      className="relative w-full overflow-hidden rounded-xl"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Slides */}
       <div
-        className="flex transition-transform duration-700 ease-in-out"
+        className="flex transition-transform duration-700 ease-out"
         style={{ transform: `translateX(-${current * 100}%)` }}
       >
-        {slides.map((slide) => (
+        {slides.map((slide, index) => (
           <div key={slide.title} className="relative min-w-full">
-            <div className="relative aspect-2.5/1 w-full overflow-hidden">
-              <img src={slide.image} alt={slide.title} className="h-full w-full object-cover" />
-              <div className="absolute inset-0 bg-linear-to-r from-black/60 via-black/30 to-transparent" />
-              <div className="absolute inset-0 flex flex-col justify-end p-6 md:justify-center md:p-12">
-                <h2 className="max-w-md text-xl font-bold text-white md:text-3xl lg:text-4xl">
+            <div className="relative aspect-[2.5/1] w-full overflow-hidden">
+              <img
+                src={slide.image}
+                alt={slide.title}
+                loading={index === 0 ? 'eager' : 'lazy'}
+                className="h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
+
+              <div className="absolute inset-0 flex flex-col justify-center px-6 md:px-12">
+                <h2 className="max-w-xl text-2xl font-bold text-white md:text-4xl">
                   {slide.title}
                 </h2>
-                <p className="mt-1 max-w-sm text-sm text-white/80 md:text-base">{slide.subtitle}</p>
+                <p className="mt-2 max-w-md text-white/80 md:text-base">
+                  {slide.subtitle}
+                </p>
                 <a
                   href="/events"
-                  className="mt-4 inline-flex w-fit rounded-md bg-white px-5 py-2 text-sm font-semibold text-[#12192f] transition hover:bg-zinc-100"
+                  className="mt-6 inline-flex w-fit rounded-lg bg-white px-6 py-2 text-sm font-semibold text-[#12192f] transition hover:bg-zinc-100 cursor-pointer disabled:cursor-not-allowed"
                 >
                   {slide.cta}
                 </a>
@@ -92,32 +138,35 @@ export function HeroSlider() {
       {/* Arrows */}
       <button
         onClick={prev}
-        className="absolute left-3 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 text-zinc-700 transition hover:bg-white"
+        className="absolute left-4 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 text-zinc-700 backdrop-blur transition hover:bg-white cursor-pointer disabled:cursor-not-allowed"
         type="button"
         aria-label="Previous slide"
       >
-        <ChevronLeft className="size-4" />
+        <ChevronLeft className="size-5" />
       </button>
+
       <button
         onClick={next}
-        className="absolute right-3 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 text-zinc-700 transition hover:bg-white"
+        className="absolute right-4 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 text-zinc-700 backdrop-blur transition hover:bg-white cursor-pointer disabled:cursor-not-allowed"
         type="button"
         aria-label="Next slide"
       >
-        <ChevronRight className="size-4" />
+        <ChevronRight className="size-5" />
       </button>
 
       {/* Dots */}
-      <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5">
+      <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2">
         {slides.map((_, index) => (
           <button
             key={index}
             onClick={() => setCurrent(index)}
-            className={`rounded-full transition-all ${
-              index === current ? 'h-2 w-5 bg-white' : 'size-2 bg-white/50'
+            aria-current={index === current}
+            className={`transition-all cursor-pointer disabled:cursor-not-allowed ${
+              index === current
+                ? 'h-2 w-6 rounded-full bg-white'
+                : 'size-2 rounded-full bg-white/40 hover:bg-white/70'
             }`}
             type="button"
-            aria-label={`Go to slide ${index + 1}`}
           />
         ))}
       </div>

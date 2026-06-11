@@ -1,27 +1,30 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import {
   ArrowLeft,
-  Calendar,
-  Clock,
+  QrCode,
+  CheckCircle2,
   Download,
-  MapPin,
   Mail,
   Phone,
-  QrCode,
   Ticket,
-  CheckCircle2,
+  Clock,
+  MapPin,
+  Calendar,
 } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { toPng } from 'html-to-image'
 
 import { apiClient } from '@/lib/apiClient'
 import { formatMoneyAmount } from '@/lib/finance'
+import { defaultConfig, getTicketBackground, presets, type TicketConfig } from '@/lib/ticket-designs'
+import TicketPreviewCard from '@/components/organizations/ticket-preview'
 import { useAuthStore } from '@/stores/authStore'
 import type { Ticket as TicketRecord } from '@/payload-types'
+import type { TicketDesignConfig } from '@/stores/eventEditorStore'
 
 function getEventTitle(ticket: TicketRecord) {
   const event = ticket.event
@@ -87,6 +90,47 @@ function formatTime(value?: string | null) {
 function getQrValue(ticket: TicketRecord) {
   const token = ticket.qrToken ? `?token=${encodeURIComponent(ticket.qrToken)}` : ''
   return `https://eventbro.id/checkin/${ticket.id}${token}`
+}
+
+function getEventTicketType(ticket: TicketRecord) {
+  const event = ticket.event
+
+  if (!event || typeof event !== 'object' || !Array.isArray(event.ticketTypes)) {
+    return null
+  }
+
+  return (
+    event.ticketTypes.find(
+      (ticketType) =>
+        String(ticketType?.id ?? '') === String(ticket.ticketType) ||
+        String(ticketType?.name ?? '') === String(ticket.ticketType),
+    ) ?? null
+  )
+}
+
+function resolveTicketDesignConfig(ticket: TicketRecord): TicketConfig {
+  const ticketType = getEventTicketType(ticket)
+  const snapshot = ticketType?.designConfig as TicketDesignConfig | null | undefined
+
+  if (snapshot && typeof snapshot === 'object') {
+    return {
+      ...defaultConfig,
+      ...snapshot,
+    }
+  }
+
+  if (ticketType?.designSource === 'preset' && ticketType.designId) {
+    const preset = presets.find((item) => item.id === ticketType.designId)
+
+    if (preset) {
+      return {
+        ...defaultConfig,
+        ...preset.config,
+      }
+    }
+  }
+
+  return defaultConfig
 }
 
 export default function MyOrderDetailPage() {
@@ -288,74 +332,154 @@ export default function MyOrderDetailPage() {
 
         {tickets.map((ticket) => (
           <div key={ticket.id} className="space-y-3">
-            <div
-              ref={(el) => {
-                ticketRefs.current[ticket.id] = el
-              }}
-              className="overflow-hidden rounded-2xl border border-zinc-200 bg-linear-to-br from-[#1e1b4b] to-[#312e81] p-6 text-white shadow-lg"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <p className="text-xs font-medium text-indigo-300">
-                    {ticket.ticketType} • #{ticket.id}
-                  </p>
-                  <h4 className="mt-1 text-lg font-bold">{eventTitle}</h4>
+            {(() => {
+              const designConfig = resolveTicketDesignConfig(ticket)
+              const ticketType = getEventTicketType(ticket)
+              const ticketTypeLabel = ticketType?.name || ticket.ticketType
+              const eventDate = getEventDate(ticket)
+              const attendeeName = ticket.attendeeName ?? ticket.purchaserName
 
-                  <div className="mt-4 grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wider text-indigo-300">Date</p>
-                      <p className="text-sm font-semibold">
-                        {eventDate ? formatDate(eventDate) : 'N/A'}
-                      </p>
+              return (
+                <Fragment>
+                  <div className="flex justify-center overflow-x-auto rounded-2xl border border-zinc-200 bg-zinc-100/50 p-6 shadow-lg">
+                    <div
+                      ref={(el) => {
+                        ticketRefs.current[ticket.id] = el
+                      }}
+                      className="inline-block"
+                    >
+                      <TicketPreviewCard
+                        config={designConfig}
+                        designName={
+                          ticket.price === 0 ? 'free' : formatMoneyAmount(ticket.price, 'USD')
+                        }
+                        eventName={eventTitle}
+                        eventDate={eventDate ? formatDate(eventDate) : 'N/A'}
+                        eventTime={eventDate ? formatTime(eventDate) : 'N/A'}
+                        venue={locationName || venue}
+                        attendee={ticket.attendeeName ?? ticket.purchaserName}
+                        status={ticket.status === 'checked_in' ? 'Checked in' : 'Ready to scan'}
+                        ticketCode={`#${ticket.id}`}
+                        qrValue={getQrValue(ticket)}
+                      />
                     </div>
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wider text-indigo-300">Time</p>
-                      <p className="text-sm font-semibold">
-                        {eventDate ? formatTime(eventDate) : 'N/A'}
-                      </p>
+                  </div>
+                  <div
+                    className="hidden overflow-hidden rounded-2xl border border-zinc-200 p-6 shadow-lg"
+                    style={getTicketBackground(designConfig)}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <p className="text-xs font-medium" style={{ color: designConfig.labelColor }}>
+                          {ticketTypeLabel} • #{ticket.id}
+                        </p>
+                        <h4
+                          className="mt-1 text-lg font-bold"
+                          style={{ color: designConfig.titleColor }}
+                        >
+                          {eventTitle}
+                        </h4>
+
+                        <div className="mt-4 grid grid-cols-2 gap-3">
+                          <div>
+                            <p
+                              className="text-[10px] uppercase tracking-wider"
+                              style={{ color: designConfig.labelColor }}
+                            >
+                              Date
+                            </p>
+                            <p
+                              className="text-sm font-semibold"
+                              style={{ color: designConfig.valueColor }}
+                            >
+                              {eventDate ? formatDate(eventDate) : 'N/A'}
+                            </p>
+                          </div>
+                          <div>
+                            <p
+                              className="text-[10px] uppercase tracking-wider"
+                              style={{ color: designConfig.labelColor }}
+                            >
+                              Time
+                            </p>
+                            <p
+                              className="text-sm font-semibold"
+                              style={{ color: designConfig.valueColor }}
+                            >
+                              {eventDate ? formatTime(eventDate) : 'N/A'}
+                            </p>
+                          </div>
+                          <div>
+                            <p
+                              className="text-[10px] uppercase tracking-wider"
+                              style={{ color: designConfig.labelColor }}
+                            >
+                              Venue
+                            </p>
+                            <p
+                              className="text-sm font-semibold"
+                              style={{ color: designConfig.valueColor }}
+                            >
+                              {locationName || venue}
+                            </p>
+                          </div>
+                          <div>
+                            <p
+                              className="text-[10px] uppercase tracking-wider"
+                              style={{ color: designConfig.labelColor }}
+                            >
+                              QR Status
+                            </p>
+                            <p
+                              className="text-sm font-semibold"
+                              style={{ color: designConfig.valueColor }}
+                            >
+                              {ticket.status === 'checked_in' ? 'Checked In' : 'Ready to scan'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <p className="mt-4 text-xs" style={{ color: designConfig.labelColor }}>
+                          Attendee: {ticket.attendeeName ?? ticket.purchaserName}
+                        </p>
+                      </div>
+
+                      <div className="shrink-0 rounded-xl bg-white p-2">
+                        <QRCodeSVG
+                          value={getQrValue(ticket)}
+                          size={100}
+                          bgColor="#ffffff"
+                          fgColor={designConfig.qrFgColor}
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wider text-indigo-300">Venue</p>
-                      <p className="text-sm font-semibold">{locationName || venue}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wider text-indigo-300">
-                        QR Status
-                      </p>
-                      <p className="text-sm font-semibold">
-                        {ticket.status === 'checked_in' ? 'Checked In' : 'Ready to scan'}
-                      </p>
+
+                    <div
+                      className="mt-4 flex items-center justify-between border-t pt-3"
+                      style={{ borderTopColor: `${designConfig.labelColor}4D` }}
+                    >
+                      <span
+                        className="text-[10px] font-medium"
+                        style={{ color: designConfig.labelColor }}
+                      >
+                        eventbro
+                      </span>
+                      <span className="text-[10px]" style={{ color: designConfig.labelColor }}>
+                        Show this QR at the venue
+                      </span>
                     </div>
                   </div>
 
-                  <p className="mt-4 text-xs text-indigo-300">
-                    Attendee: {ticket.attendeeName ?? ticket.purchaserName}
-                  </p>
-                </div>
-
-                <div className="shrink-0 rounded-xl bg-white p-2">
-                  <QRCodeSVG
-                    value={getQrValue(ticket)}
-                    size={100}
-                    bgColor="#ffffff"
-                    fgColor="#1e1b4b"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-4 border-t border-indigo-400/30 pt-3 flex items-center justify-between">
-                <span className="text-[10px] font-medium text-indigo-300">eventbro</span>
-                <span className="text-[10px] text-indigo-300">Show this QR at the venue</span>
-              </div>
-            </div>
-
-            <button
-              onClick={() => downloadTicket(ticket.id)}
-              className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
-            >
-              <Download className="size-4" />
-              Download Ticket
-            </button>
+                  <button
+                    onClick={() => downloadTicket(ticket.id)}
+                    className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 cursor-pointer"
+                  >
+                    <Download className="size-4" />
+                    Download Ticket
+                  </button>
+                </Fragment>
+              )
+            })()}
           </div>
         ))}
       </div>

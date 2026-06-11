@@ -484,6 +484,15 @@ export const Events: CollectionConfig = {
             description: 'Saved ticket design key or built-in preset key',
           },
         },
+        {
+          name: 'designConfig',
+          type: 'json',
+          label: 'Design Config',
+          admin: {
+            hidden: true,
+            description: 'Snapshot of the selected ticket design config',
+          },
+        },
       ],
     },
   ],
