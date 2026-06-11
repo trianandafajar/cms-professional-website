@@ -400,8 +400,22 @@ export default buildConfig({
         }
 
         await payload.delete({
+          collection: 'comments',
+          where: {
+            post: {
+              equals: postId,
+            },
+          },
+          req,
+          context: {
+            skipCommentCountUpdate: true,
+          },
+        })
+
+        await payload.delete({
           collection: 'posts',
           id: postId,
+          req,
         })
 
         return Response.json({ success: true })

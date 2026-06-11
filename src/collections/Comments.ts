@@ -79,6 +79,8 @@ export const Comments: CollectionConfig = {
     ],
     afterDelete: [
       async ({ doc, req }) => {
+        if (req.context?.skipCommentCountUpdate) return
+
         // Decrement commentsCount on the post.
         // Run outside the current transaction to avoid deadlock.
         const postId = typeof doc.post === 'object' ? doc.post.id : doc.post

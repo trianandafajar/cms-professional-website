@@ -6,7 +6,8 @@ import { HeroSlider } from '@/components/frontend/hero-slider'
 import { DestinationsScroll } from '@/components/frontend/destinations-scroll'
 import { PopularCities } from '@/components/frontend/popular-cities'
 import { HomeEventsBrowser } from '@/components/frontend/home-events-browser'
-import { VideoSection } from '@/components/frontend/video-section'
+import { VideoSection, type VideoHighlight } from '@/components/frontend/video-section'
+import { extractYouTubeId } from '@/lib/youtube'
 import { FeaturedOrganizers } from '@/components/frontend/featured-organizers'
 import { buildEventWhere } from '@/lib/eventQueries'
 import type { Location, Category } from '@/payload-types'
@@ -108,6 +109,44 @@ export default async function HomePage() {
     }
   }
 
+  // Fetch posts with links to find YouTube highlights for Event Highlights section
+  let videoHighlights: VideoHighlight[] = []
+  try {
+    const { docs: linkPosts } = await payload.find({
+      collection: 'posts',
+      where: { link: { exists: true } },
+      depth: 1,
+      limit: 50,
+      sort: '-createdAt',
+    })
+
+    videoHighlights = linkPosts
+      .filter((p) => p.link && extractYouTubeId(p.link))
+      .sort((a, b) => {
+        const scoreA = (a.likesCount ?? 0) + (a.commentsCount ?? 0)
+        const scoreB = (b.likesCount ?? 0) + (b.commentsCount ?? 0)
+        return scoreB - scoreA
+      })
+      .slice(0, 8)
+      .map((p) => ({
+        youtubeId: extractYouTubeId(p.link!)!,
+        title: p.linkTitle || p.content.slice(0, 80),
+        postId: p.id,
+        authorId: typeof p.author === 'object' ? p.author.id : p.author,
+        authorName:
+          typeof p.author === 'object' ? (p.author as { name?: string }).name ?? 'Organizer' : 'Organizer',
+      }))
+  } catch {
+    videoHighlights = []
+  }
+
+  const { docs: homepageCategories } = await payload.find({
+    collection: 'categories',
+    depth: 0,
+    limit: 8,
+    sort: 'name',
+  })
+
   const distinctCities = Array.from(
     new Set(
       allEvents
@@ -157,18 +196,19 @@ export default async function HomePage() {
           categories={homepageCategoryHighlights}
         />
 
-        {/* Event Highlights */}
-        <section className="bg-[#fdfdfd] py-12">
-          <div className="mx-auto max-w-[1400px] px-4 lg:px-8">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-[#12192f] md:text-3xl">Event highlights</h2>
-              <p className="mt-2 text-base text-zinc-500">
-                Watch moments from events that already happened
-              </p>
+        {videoHighlights.length > 0 && (
+          <section className="bg-[#fdfdfd] py-12">
+            <div className="mx-auto max-w-[1400px] px-4 lg:px-8">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-[#12192f] md:text-3xl">Event highlights</h2>
+                <p className="mt-2 text-base text-zinc-500">
+                  Watch moments from events that already happened
+                </p>
+              </div>
+              <VideoSection highlights={videoHighlights} />
             </div>
-            <VideoSection />
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* Top Destinations */}
         <section className="py-12">

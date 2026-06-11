@@ -11,10 +11,13 @@ import {
   Loader2,
   ExternalLink,
   ImageIcon,
+  Play,
+  X,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { apiClient } from '@/lib/apiClient'
+import { extractYouTubeId } from '@/lib/youtube'
 import { useAuthGate } from '@/hooks/useAuthGate'
 import { useAuthStore } from '@/stores/authStore'
 import { CommentsModal } from './comments-modal'
@@ -66,6 +69,10 @@ function timeAgo(dateStr: string): string {
   return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+function isEdited(createdAt: string, updatedAt: string): boolean {
+  return new Date(updatedAt).getTime() - new Date(createdAt).getTime() > 1000
+}
+
 function PostCard({
   post,
   onDelete,
@@ -80,6 +87,7 @@ function PostCard({
   onOpenComments: (postId: number) => void
 }) {
   const [showMenu, setShowMenu] = useState(false)
+  const [activeYouTubeId, setActiveYouTubeId] = useState<string | null>(null)
   const { gate } = useAuthGate()
   const user = useAuthStore((s) => s.user)
   const postImageUrl = getMediaUrl(post.image)
@@ -98,6 +106,9 @@ function PostCard({
 
   // Check if current user owns this post
   const isOwner = authorId === Number(user?.id)
+
+  // Detect YouTube video ID once, before render
+  const youtubeId = post.link ? extractYouTubeId(post.link) : null
 
   const initials = authorName
     .split(' ')
@@ -128,7 +139,12 @@ function PostCard({
             )}
             <div>
               <p className="text-sm font-semibold text-[#12192f]">{authorName}</p>
-              <p className="text-xs text-zinc-400">{timeAgo(post.createdAt)}</p>
+              <p className="text-xs text-zinc-400">
+                {timeAgo(post.createdAt)}
+                {isEdited(post.createdAt, post.updatedAt) && (
+                  <span className="ml-1 text-zinc-400">(Edited)</span>
+                )}
+              </p>
             </div>
           </Link>
 
@@ -191,8 +207,39 @@ function PostCard({
           </div>
         )}
 
-        {/* Link Preview */}
-        {post.link && (
+        {/* YouTube video preview */}
+        {youtubeId && (
+          <button
+            type="button"
+            onClick={() => setActiveYouTubeId(youtubeId)}
+            className="group mt-3 block w-full text-left cursor-pointer"
+          >
+            <div className="relative aspect-video overflow-hidden rounded-lg bg-zinc-200">
+              <img
+                src={`https://img.youtube.com/vi/${youtubeId}/mqdefault.jpg`}
+                alt={post.linkTitle || 'YouTube video'}
+                className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition group-hover:bg-black/30">
+                <div className="flex size-11 items-center justify-center rounded-full bg-white/90 text-[#5151eb] shadow-md transition group-hover:scale-110">
+                  <Play className="size-5 fill-current" />
+                </div>
+              </div>
+              <span className="absolute left-2 top-2 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-700">
+                YouTube
+              </span>
+            </div>
+            {post.linkTitle && (
+              <p className="mt-2.5 line-clamp-1 text-base font-medium text-[#12192f] group-hover:text-[#5151eb]">
+                {post.linkTitle}
+              </p>
+            )}
+          </button>
+        )}
+
+        {/* Generic link preview — only shown when link is NOT a YouTube URL */}
+        {post.link && !youtubeId && (
           <a
             href={post.link}
             target="_blank"
@@ -241,6 +288,33 @@ function PostCard({
         </div>
       </div>
 
+      {/* YouTube Player Modal */}
+      {activeYouTubeId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setActiveYouTubeId(null)}
+        >
+          <div className="relative w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setActiveYouTubeId(null)}
+              className="absolute -right-2 -top-10 flex size-8 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+              aria-label="Close video"
+            >
+              <X className="size-5" />
+            </button>
+            <div className="aspect-video w-full overflow-hidden rounded-lg">
+              <iframe
+                src={`https://www.youtube.com/embed/${activeYouTubeId}?autoplay=1`}
+                title="Video player"
+                className="h-full w-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

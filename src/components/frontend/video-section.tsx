@@ -1,78 +1,115 @@
 'use client'
 
 import { useState } from 'react'
-import { Play, X } from 'lucide-react'
+import Link from 'next/link'
+import { ExternalLink, Play, UserRound, X } from 'lucide-react'
 
 type VideoItem = {
   title: string
   youtubeId: string
-  duration: string
+  postId?: number
+  duration?: string | null
   category: string
+  postHref?: string | null
+  profileHref?: string | null
 }
 
-const videos: VideoItem[] = [
-  {
-    title: 'Ed Sheeran - Perfect (Official Video)',
-    youtubeId: '2Vv-BfVoq4g',
-    duration: '4:40',
-    category: 'Music',
-  },
-  {
-    title: 'Inside The Worlds Biggest Food Festival',
-    youtubeId: 'Q1lL-hXO27Q',
-    duration: '12:18',
-    category: 'Food & Drink',
-  },
-  {
-    title: 'Can AI Really Help You Be More Creative?',
-    youtubeId: '5p248yoa3oE',
-    duration: '9:35',
-    category: 'Conference',
-  },
-  {
-    title: 'Coldplay - A Sky Full Of Stars (Live)',
-    youtubeId: 'VPRjCeoBqrI',
-    duration: '4:28',
-    category: 'Concert',
-  },
-]
+export type VideoHighlight = {
+  youtubeId: string
+  title: string
+  authorName: string
+  postId?: number
+  authorId?: number
+}
 
-export function VideoSection() {
+type Props = {
+  highlights?: VideoHighlight[]
+}
+
+export function VideoSection({ highlights }: Props) {
   const [activeVideo, setActiveVideo] = useState<string | null>(null)
+
+  const videos: VideoItem[] =
+    highlights && highlights.length > 0
+      ? highlights.slice(0, 8).map((h) => ({
+          youtubeId: h.youtubeId,
+          title: h.title,
+          postId: h.postId,
+          category: h.authorName,
+          duration: null,
+          postHref:
+            h.authorId && h.postId ? `/organizers/${h.authorId}?tab=feed&post=${h.postId}` : null,
+          profileHref: h.authorId ? `/organizers/${h.authorId}` : null,
+        }))
+      : []
+
+  if (videos.length === 0) return null
 
   return (
     <>
       <div className="destinations-scroll flex gap-4 overflow-x-auto scroll-smooth pb-3">
         {videos.map((video) => (
-          <button
-            key={video.youtubeId}
-            type="button"
-            onClick={() => setActiveVideo(video.youtubeId)}
-            className="group min-w-[260px] shrink-0 text-left sm:min-w-[280px]"
+          <article
+            key={video.postId ?? video.youtubeId}
+            className="min-w-65 shrink-0 pb-3 text-left sm:min-w-70"
           >
-            <div className="relative aspect-video overflow-hidden rounded-lg bg-zinc-200">
+            <div className="group relative aspect-video overflow-hidden rounded-lg bg-zinc-200">
               <img
                 src={`https://img.youtube.com/vi/${video.youtubeId}/mqdefault.jpg`}
                 alt={video.title}
                 className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                 loading="lazy"
               />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/20 transition group-hover:bg-black/30">
-                <div className="flex size-11 items-center justify-center rounded-full bg-white/90 text-[#5151eb] shadow-md transition group-hover:scale-110">
+              <button
+                type="button"
+                onClick={() => setActiveVideo(video.youtubeId)}
+                className="absolute inset-0 z-10 flex cursor-pointer items-center justify-center bg-black/20 transition group-hover:bg-black/30"
+                aria-label={`Play ${video.title}`}
+              >
+                <span className="sr-only">Play video</span>
+                <span className="flex size-11 items-center justify-center rounded-full bg-white/90 text-[#5151eb] shadow-md transition group-hover:scale-110">
                   <Play className="size-5 fill-current" />
+                </span>
+              </button>
+              {(video.postHref || video.profileHref) && (
+                <div className="absolute inset-x-2 bottom-2 z-20 flex flex-wrap items-center gap-2">
+                  {video.postHref && (
+                    <Link
+                      href={video.postHref}
+                      className="inline-flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-[#5151eb] shadow-sm transition hover:bg-white"
+                    >
+                      <ExternalLink className="size-3" />
+                      View post
+                    </Link>
+                  )}
+                  {video.profileHref && (
+                    <Link
+                      href={video.profileHref}
+                      className="inline-flex max-w-40 items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-white hover:text-[#5151eb]"
+                    >
+                      <UserRound className="size-3 shrink-0" />
+                      <span className="truncate">{video.category}</span>
+                    </Link>
+                  )}
                 </div>
-              </div>
-              <span className="absolute bottom-2 right-2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                {video.duration}
-              </span>
-              <span className="absolute left-2 top-2 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-700">
-                {video.category}
-              </span>
+              )}
+              {video.duration && (
+                <span className="absolute right-2 top-2 z-20 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                  {video.duration}
+                </span>
+              )}
+              {!video.profileHref && (
+                <span className="absolute left-2 top-2 z-20 max-w-[75%] truncate rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-700">
+                  {video.category}
+                </span>
+              )}
             </div>
-            <p className="mt-2.5 line-clamp-1 text-base font-medium text-[#12192f] group-hover:text-[#5151eb]">
-              {video.title}
-            </p>
-          </button>
+            <div className="px-3">
+              <p className="mt-2.5 line-clamp-1 text-base font-medium text-[#12192f]">
+                {video.title}
+              </p>
+            </div>
+          </article>
         ))}
       </div>
 
