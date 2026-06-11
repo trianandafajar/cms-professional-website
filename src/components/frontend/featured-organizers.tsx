@@ -1,12 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { CheckCircle2 } from 'lucide-react'
-import { DUMMY_ORGANIZERS, formatFollowers, type DummyOrganizer } from '@/lib/dummy-organizers'
-import { FollowButton } from '@/components/frontend/follow-button'
-import type { User, Media } from '@/payload-types'
+import { useState } from 'react'
 
-// ─── types ───────────────────────────────────────────────────────────────────
+import { FollowButton } from '@/components/frontend/follow-button'
+import type { Media, User } from '@/payload-types'
 
 type OrganizerItem = Pick<
   User,
@@ -14,91 +12,42 @@ type OrganizerItem = Pick<
 >
 
 type Props = {
-  /** Real organizers from Payload — shown first when available */
   organizers: OrganizerItem[]
+  followedOrganizerIds?: number[]
 }
 
 function getAvatarUrl(avatar: unknown): string | null {
   if (avatar && typeof avatar === 'object' && 'url' in avatar) {
     return (avatar as Media).url ?? null
   }
+
   return null
 }
 
-function formatFollowersCount(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}jt`
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}rb`
-  return String(n)
+function formatFollowersCount(count: number): string {
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}jt`
+  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}rb`
+  return String(count)
 }
 
-// ─── Card for Dummy Organizer ────────────────────────────────────────────────
-
-function DummyOrganizerCard({ org }: { org: DummyOrganizer }) {
-  const initials = org.name
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-
-  return (
-    <div className="flex shrink-0 flex-col items-center rounded-2xl border border-zinc-100 bg-white p-4 text-center transition hover:shadow-md hover:border-[#5151eb]/20 min-w-[140px]">
-      <Link href={`/organizers/${org.id}`} className="relative cursor-pointer">
-        {org.avatar ? (
-          <img
-            src={org.avatar}
-            alt={org.name}
-            className="size-14 rounded-full object-cover ring-2 ring-zinc-100"
-          />
-        ) : (
-          <div
-            className="size-14 rounded-full flex items-center justify-center text-white text-base font-bold ring-2 ring-zinc-100"
-            style={{ backgroundColor: org.avatarColor }}
-          >
-            {initials}
-          </div>
-        )}
-        {org.isVerified && (
-          <span className="absolute -bottom-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-white">
-            <CheckCircle2 className="size-3.5 text-[#5151eb]" />
-          </span>
-        )}
-      </Link>
-
-      <Link href={`/organizers/${org.id}`} className="cursor-pointer">
-        <p className="mt-2.5 text-xs font-bold text-[#12192f] hover:text-[#5151eb] transition line-clamp-1 max-w-[120px]">
-          {org.name}
-        </p>
-      </Link>
-
-      <p className="mt-0.5 text-[11px] text-zinc-400">
-        {formatFollowers(org.followersCount)} followers
-      </p>
-
-      {org.upcomingEvents > 0 && (
-        <span className="mt-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
-          {org.upcomingEvents} events
-        </span>
-      )}
-
-      <FollowButton size="sm" />
-    </div>
-  )
-}
-
-// ─── Card for Real Payload Organizer ─────────────────────────────────────────
-
-function PayloadOrganizerCard({ org }: { org: OrganizerItem }) {
+function PayloadOrganizerCard({
+  org,
+  initialFollowing,
+}: {
+  org: OrganizerItem
+  initialFollowing: boolean
+}) {
+  const [followersCount, setFollowersCount] = useState(org.followersCount ?? 0)
   const avatarUrl = getAvatarUrl(org.avatar)
   const initials = org.name
     .split(' ')
-    .map((w) => w[0])
+    .map((word) => word[0])
     .join('')
     .toUpperCase()
     .slice(0, 2)
 
   return (
-    <div className="flex shrink-0 flex-col items-center rounded-2xl border border-zinc-100 bg-white p-4 text-center transition hover:shadow-md hover:border-[#5151eb]/20 min-w-[140px]">
+    <div className="flex min-w-[140px] shrink-0 flex-col items-center rounded-2xl border border-zinc-100 bg-white p-4 text-center transition hover:border-[#5151eb]/20 hover:shadow-md">
       <Link href={`/organizers/${org.id}`} className="relative cursor-pointer">
         {avatarUrl ? (
           <img
@@ -107,38 +56,49 @@ function PayloadOrganizerCard({ org }: { org: OrganizerItem }) {
             className="size-14 rounded-full object-cover ring-2 ring-zinc-100"
           />
         ) : (
-          <div className="size-14 rounded-full bg-linear-to-br from-[#5151eb] to-indigo-400 flex items-center justify-center text-white text-base font-bold ring-2 ring-zinc-100">
+          <div className="flex size-14 items-center justify-center rounded-full bg-linear-to-br from-[#5151eb] to-indigo-400 text-base font-bold text-white ring-2 ring-zinc-100">
             {initials}
           </div>
         )}
       </Link>
 
       <Link href={`/organizers/${org.id}`} className="cursor-pointer">
-        <p className="mt-2.5 text-xs font-bold text-[#12192f] hover:text-[#5151eb] transition line-clamp-1 max-w-[120px]">
+        <p className="mt-2.5 line-clamp-1 max-w-[120px] text-xs font-bold text-[#12192f] transition hover:text-[#5151eb]">
           {org.name}
         </p>
       </Link>
 
       <p className="mt-0.5 text-[11px] text-zinc-400">
-        {formatFollowersCount(org.followersCount ?? 0)} followers
+        {formatFollowersCount(followersCount)} followers
       </p>
 
-      <FollowButton size="sm" />
+      <FollowButton
+        size="sm"
+        organizerId={org.id}
+        initialFollowing={initialFollowing}
+        initialFollowersCount={org.followersCount ?? 0}
+        onFollowersCountChange={setFollowersCount}
+      />
     </div>
   )
 }
 
-// ─── Main export ─────────────────────────────────────────────────────────────
-
-export function FeaturedOrganizers({ organizers }: Props) {
-  // Use real Payload organizers when available, fallback to dummy data
-  const hasRealOrganizers = organizers.length > 0
-
+export function FeaturedOrganizers({ organizers, followedOrganizerIds = [] }: Props) {
   return (
     <div className="destinations-scroll flex gap-3 overflow-x-auto scroll-smooth pb-3">
-      {hasRealOrganizers
-        ? organizers.map((org) => <PayloadOrganizerCard key={org.id} org={org} />)
-        : DUMMY_ORGANIZERS.slice(0, 6).map((org) => <DummyOrganizerCard key={org.id} org={org} />)}
+      {organizers.length > 0 ? (
+        organizers.map((org) => (
+          <PayloadOrganizerCard
+            key={org.id}
+            org={org}
+            initialFollowing={followedOrganizerIds.includes(org.id)}
+          />
+        ))
+      ) : (
+        <div className="rounded-2xl border border-zinc-200 bg-white px-5 py-8 text-sm text-zinc-500">
+          No organizers available yet.
+        </div>
+      )}
     </div>
   )
 }

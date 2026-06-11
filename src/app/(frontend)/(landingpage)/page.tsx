@@ -29,6 +29,26 @@ export default async function HomePage() {
   const payloadConfig = await config
   const payload = await getPayload({ config: payloadConfig })
   const { user } = await payload.auth({ headers })
+  const preferredCategoryIds = ((user?.preferredCategories as (Category | number)[] | null | undefined) ?? [])
+    .map((category) => (typeof category === 'object' ? category.id : category))
+    .filter((id): id is number => typeof id === 'number')
+  const locationId =
+    user?.defaultLocation != null
+      ? typeof user.defaultLocation === 'object'
+        ? (user.defaultLocation as Location).id
+        : user.defaultLocation
+      : null
+  const followedOrganizerIds = (
+    (user?.followedOrganizers as Array<{ id?: number | string } | number | string> | null | undefined) ?? []
+  )
+    .map((organizer) => {
+      if (typeof organizer === 'object' && organizer) {
+        return Number(organizer.id)
+      }
+
+      return Number(organizer)
+    })
+    .filter((id) => Number.isFinite(id))
 
   // Fetch featured locations for "Top Destinations"
   const { docs: featuredLocations } = await payload.find({
@@ -65,7 +85,11 @@ export default async function HomePage() {
         website: true,
       },
     })
-    featuredOrganizers = docs
+    featuredOrganizers = docs.sort((left, right) => {
+      const leftFollowed = followedOrganizerIds.includes(left.id) ? 1 : 0
+      const rightFollowed = followedOrganizerIds.includes(right.id) ? 1 : 0
+      return rightFollowed - leftFollowed || (right.followersCount ?? 0) - (left.followersCount ?? 0)
+    })
   } catch {
     featuredOrganizers = []
   }
@@ -82,17 +106,42 @@ export default async function HomePage() {
   // Fetch personalised "For you" events based on user preferences
   let forYouEvents: typeof allEvents = []
   if (user) {
-    const preferredCategoryIds = (user.preferredCategories ?? [])
-      .map((c) => (typeof c === 'object' ? (c as Category).id : c))
-      .filter((id): id is number => typeof id === 'number')
+    const withScores = allEvents
+      .map((event, index) => {
+        const organizerId =
+          typeof event.organizer === 'object' && event.organizer ? event.organizer.id : event.organizer
+        const categoryId =
+          typeof event.category === 'object' && event.category ? event.category.id : event.category
+        const eventLocationId =
+          typeof event.location === 'object' && event.location ? event.location.id : event.location
 
-    const locationId =
-      user.defaultLocation != null
-        ? typeof user.defaultLocation === 'object'
-          ? (user.defaultLocation as Location).id
-          : user.defaultLocation
-        : null
+        const followedScore = followedOrganizerIds.includes(Number(organizerId)) ? 1000 : 0
+        const categoryScore =
+          categoryId != null && preferredCategoryIds.includes(Number(categoryId)) ? 100 : 0
+        const locationScore =
+          locationId != null && eventLocationId != null && Number(eventLocationId) === Number(locationId)
+            ? 50
+            : 0
+        const baseScore = Number(event.interestedCount ?? 0)
 
+        return {
+          event,
+          index,
+          score: followedScore + categoryScore + locationScore + baseScore,
+        }
+      })
+
+    if (followedOrganizerIds.length > 0) {
+      forYouEvents = withScores
+        .sort((left, right) => right.score - left.score || left.index - right.index)
+        .map(({ event }) => event)
+    } else {
+      forYouEvents = [...allEvents].sort((left, right) => {
+        const leftSeed = (Number(left.id) * 9301 + 49297) % 233280
+        const rightSeed = (Number(right.id) * 9301 + 49297) % 233280
+        return leftSeed - rightSeed
+      })
+    }
     if (preferredCategoryIds.length > 0 || locationId) {
       const { docs } = await payload.find({
         collection: 'events',
@@ -146,7 +195,6 @@ export default async function HomePage() {
     limit: 8,
     sort: 'name',
   })
-
   const distinctCities = Array.from(
     new Set(
       allEvents
@@ -197,17 +245,17 @@ export default async function HomePage() {
         />
 
         {videoHighlights.length > 0 && (
-          <section className="bg-[#fdfdfd] py-12">
-            <div className="mx-auto max-w-[1400px] px-4 lg:px-8">
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-[#12192f] md:text-3xl">Event highlights</h2>
-                <p className="mt-2 text-base text-zinc-500">
-                  Watch moments from events that already happened
-                </p>
-              </div>
-              <VideoSection highlights={videoHighlights} />
+        <section className="bg-[#fdfdfd] py-12">
+          <div className="mx-auto max-w-[1400px] px-4 lg:px-8">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-[#12192f] md:text-3xl">Event highlights</h2>
+              <p className="mt-2 text-base text-zinc-500">
+                Watch moments from events that already happened
+              </p>
             </div>
-          </section>
+              <VideoSection highlights={videoHighlights} />
+          </div>
+        </section>
         )}
 
         {/* Top Destinations */}
@@ -245,10 +293,13 @@ export default async function HomePage() {
                 href="/organizers"
                 className="cursor-pointer text-sm font-semibold text-[#5151eb] hover:underline"
               >
-                See all →
+                See all
               </a>
             </div>
-            <FeaturedOrganizers organizers={featuredOrganizers} />
+            <FeaturedOrganizers
+              organizers={featuredOrganizers}
+              followedOrganizerIds={followedOrganizerIds}
+            />
           </div>
         </section>
       </main>

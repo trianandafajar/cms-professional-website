@@ -3,7 +3,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useEventEditorStore } from '@/stores/eventEditorStore'
 
 import MediaSection from '@/components/organizations/event-editor/sections/media-section'
@@ -13,8 +13,36 @@ import DescriptionSection from '@/components/organizations/event-editor/sections
 
 export default function CreateEventsPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [saving, setSaving] = useState(false)
-  const { createDraftEvent } = useEventEditorStore()
+  const { createDraftEvent, setEventDate, setEventStartTime } = useEventEditorStore()
+
+  useEffect(() => {
+    const dateParam = searchParams.get('date')
+
+    if (!dateParam) {
+      return
+    }
+
+    const parsedDate = new Date(dateParam)
+
+    if (Number.isNaN(parsedDate.getTime())) {
+      return
+    }
+
+    const localDate = [
+      parsedDate.getFullYear(),
+      String(parsedDate.getMonth() + 1).padStart(2, '0'),
+      String(parsedDate.getDate()).padStart(2, '0'),
+    ].join('-')
+    const localTime = [
+      String(parsedDate.getHours()).padStart(2, '0'),
+      String(parsedDate.getMinutes()).padStart(2, '0'),
+    ].join(':')
+
+    setEventDate(localDate)
+    setEventStartTime(localTime)
+  }, [searchParams, setEventDate, setEventStartTime])
 
   useEffect(() => {
     function handleSave() {

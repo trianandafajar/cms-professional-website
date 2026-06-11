@@ -31,6 +31,35 @@ function getEventImage(event: ResolvedEvent): string {
   return 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=600&h=380&fit=crop&q=80'
 }
 
+function hasFreeTicket(event: ResolvedEvent): boolean {
+  if (event.isFree) {
+    return true
+  }
+
+  return (
+    event.ticketTypes?.some((ticket) => {
+      if (ticket?.isHidden) {
+        return false
+      }
+
+      const price = Number(ticket?.price ?? 0)
+      return Number.isFinite(price) && price <= 0
+    }) ?? false
+  )
+}
+
+function getEventPriceLabel(event: ResolvedEvent): string {
+  if (event.isFree) {
+    return 'Free'
+  }
+
+  if (hasFreeTicket(event)) {
+    return 'Free options'
+  }
+
+  return event.price ?? 'See details'
+}
+
 function getOrganizerName(event: ResolvedEvent): string {
   if (typeof event.organizer === 'object' && event.organizer !== null) {
     return (event.organizer as User).name ?? 'Unknown organiser'
@@ -138,7 +167,7 @@ export function EventsSection({ allEvents, forYouEvents, isLoggedIn, activeCity 
       case 'This weekend':
         return pool.filter((e) => isWeekend(e.startDate))
       case 'Free':
-        return pool.filter((e) => e.isFree)
+        return pool.filter((e) => hasFreeTicket(e))
       default:
         return pool.filter(
           (e) =>
@@ -179,7 +208,7 @@ export function EventsSection({ allEvents, forYouEvents, isLoggedIn, activeCity 
               title={event.title}
               date={`${formatEventDate(event.startDate)} • ${formatEventTime(event.startDate)}`}
               location={getLocationName(event)}
-              price={event.isFree ? 'Free' : (event.price ?? 'See details')}
+              price={getEventPriceLabel(event)}
               image={getEventImage(event)}
               organizer={getOrganizerName(event)}
               interested={event.interestedCount ?? 0}

@@ -22,8 +22,9 @@ export function SocialAuthButtons({ mode = 'signin', onProvider }: SocialAuthBut
     <div className="space-y-3">
       <button
         type="button"
+        disabled
         onClick={handleClick('google')}
-        className="flex w-full items-center justify-center gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-[#12192f] shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
+        className="cursor-pointer disabled:cursor-not-allowed flex w-full items-center justify-center gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-[#12192f] shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
       >
         <GoogleIcon className="size-5" />
         <span>{verb} Google</span>
@@ -32,16 +33,18 @@ export function SocialAuthButtons({ mode = 'signin', onProvider }: SocialAuthBut
       <div className="grid grid-cols-2 gap-3">
         <button
           type="button"
+          disabled
           onClick={handleClick('apple')}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#12192f] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-black"
+          className="cursor-pointer disabled:cursor-not-allowed flex w-full items-center justify-center gap-2 rounded-xl bg-[#12192f] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-black"
         >
           <AppleIcon className="size-[18px]" />
           <span>Apple</span>
         </button>
         <button
           type="button"
+          disabled  
           onClick={handleClick('facebook')}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1877F2] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0f63d4]"
+          className="cursor-pointer disabled:cursor-not-allowed flex w-full items-center justify-center gap-2 rounded-xl bg-[#1877F2] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#0f63d4]"
         >
           <FacebookIcon className="size-[18px]" />
           <span>Facebook</span>

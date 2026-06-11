@@ -1,7 +1,8 @@
 'use client'
 
+import Link from 'next/link'
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
-import { Calendar, MapPin } from 'lucide-react'
+import { AlertTriangle, Calendar, MapPin } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -9,8 +10,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { TagsInput } from '@/components/ui/tags-input'
 import { apiClient } from '@/lib/apiClient'
+import { useFinanceStore } from '@/stores/financeStore'
 import { useEventEditorStore } from '@/stores/eventEditorStore'
 
 interface CategoryDoc {
@@ -70,6 +73,9 @@ export default function PreviewPublishPage() {
     setBannerZoom: setZoom,
     setBannerPosition,
   } = useEventEditorStore()
+  const financeConnections = useFinanceStore((state) => state.connections)
+  const financeLoading = useFinanceStore((state) => state.isLoading)
+  const fetchFinanceWorkspace = useFinanceStore((state) => state.fetchWorkspace)
 
   const bannerImage = bannerImages[0]?.url ?? ''
   const [categories, setCategories] = useState<CategoryDoc[]>([])
@@ -78,6 +84,14 @@ export default function PreviewPublishPage() {
   const [isDragging, setIsDragging] = useState(false)
   const dragStart = useRef({ x: 0, y: 0, posX: 50, posY: 50 })
   const editorRef = useRef<HTMLDivElement>(null)
+  const hasConnectedPayoutAccount = financeConnections.some(
+    (connection) => connection.status === 'connected',
+  )
+  const publicVisibilityLocked = !hasConnectedPayoutAccount
+
+  useEffect(() => {
+    void fetchFinanceWorkspace()
+  }, [fetchFinanceWorkspace])
 
   useEffect(() => {
     let active = true
@@ -104,6 +118,12 @@ export default function PreviewPublishPage() {
       active = false
     }
   }, [])
+
+  useEffect(() => {
+    if (publicVisibilityLocked && visibility === 'public') {
+      setVisibility('private')
+    }
+  }, [publicVisibilityLocked, setVisibility, visibility])
 
   useEffect(() => {
     if (!categories.length) {
@@ -330,7 +350,7 @@ export default function PreviewPublishPage() {
                         : 'bg-zinc-100 text-zinc-600'
                     }`}
                   >
-                    {visibility === 'public' ? 'Public Event' : 'Private Event'}
+                    {visibility === 'public' ? 'Public Event' : 'Draft Only'}
                   </span>
                 </div>
               </div>
@@ -425,27 +445,46 @@ export default function PreviewPublishPage() {
 
             {/* Visibility */}
             <div className="rounded-xl border border-zinc-200 bg-white p-4 sm:p-5">
-              <h3 className="text-sm font-semibold text-zinc-900">Visibility</h3>
+              <div>
+                <h3 className="text-sm font-semibold text-zinc-900">Visibility</h3>
+              </div>
               <div className="mt-3 space-y-2">
-                <label
-                  className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3.5 transition ${
-                    visibility === 'public'
-                      ? 'border-[#5151eb]/30 bg-[#5151eb]/5'
-                      : 'border-zinc-200 hover:border-zinc-300'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="visibility"
-                    checked={visibility === 'public'}
-                    onChange={() => setVisibility('public')}
-                    className="mt-0.5 size-4 accent-[#5151eb]"
-                  />
-                  <div>
-                    <p className="text-sm font-semibold text-zinc-900">Public</p>
-                    <p className="text-xs text-zinc-500">Visible on Eventbro and search engines</p>
-                  </div>
-                </label>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div
+                      className={`flex items-start gap-3 rounded-lg border p-3.5 transition ${
+                        publicVisibilityLocked
+                          ? 'cursor-not-allowed border-zinc-200 bg-zinc-50 opacity-70'
+                          : visibility === 'public'
+                            ? 'cursor-pointer border-[#5151eb]/30 bg-[#5151eb]/5'
+                            : 'cursor-pointer border-zinc-200 hover:border-zinc-300'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="visibility"
+                        checked={visibility === 'public'}
+                        onChange={() => setVisibility('public')}
+                        disabled={publicVisibilityLocked || financeLoading}
+                        className="mt-0.5 size-4 accent-[#5151eb]"
+                      />
+                      <div>
+                        <p className="text-sm font-semibold text-zinc-900">Public</p>
+                        <p className="text-xs text-zinc-500">Visible on Eventbro and search engines</p>
+                      </div>
+                    </div>
+                  </TooltipTrigger>
+                  {publicVisibilityLocked ? (
+                    <TooltipContent className="max-w-[240px] rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 shadow-md">
+                      <div className="space-y-2">
+                        <p>Connect an account first to enable public events.</p>
+                        <Link href="/organizations/finance/settings" className="inline-flex font-semibold text-[#5151eb] hover:underline">
+                          Open finance settings
+                        </Link>
+                      </div>
+                    </TooltipContent>
+                  ) : null}
+                </Tooltip>
                 <label
                   className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3.5 transition ${
                     visibility === 'private'
@@ -461,8 +500,8 @@ export default function PreviewPublishPage() {
                     className="mt-0.5 size-4 accent-[#5151eb]"
                   />
                   <div>
-                    <p className="text-sm font-semibold text-zinc-900">Private</p>
-                    <p className="text-xs text-zinc-500">Only accessible via direct link</p>
+                    <p className="text-sm font-semibold text-zinc-900">Draft only</p>
+                    <p className="text-xs text-zinc-500">Keep this event unpublished until your payout account is connected</p>
                   </div>
                 </label>
               </div>

@@ -2,6 +2,7 @@ import * as migration_20260608_071946 from './20260608_071946';
 import * as migration_20260609_033000_add_ticket_attendees from './20260609_033000_add_ticket_attendees';
 import * as migration_20260609_041000_ticket_design_presets from './20260609_041000_ticket_design_presets';
 import * as migration_20260609_060601 from './20260609_060601';
+import * as migration_20260611_085348 from './20260611_085348';
 
 export const migrations = [
   {
@@ -22,6 +23,11 @@ export const migrations = [
   {
     up: migration_20260609_060601.up,
     down: migration_20260609_060601.down,
-    name: '20260609_060601'
+    name: '20260609_060601',
+  },
+  {
+    up: migration_20260611_085348.up,
+    down: migration_20260611_085348.down,
+    name: '20260611_085348'
   },
 ];

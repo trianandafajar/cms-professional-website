@@ -10,9 +10,11 @@ import {
   CheckCircle2,
   Circle,
   Menu,
+  AlertTriangle,
 } from 'lucide-react'
 
 import { useEventEditorStore } from '@/stores/eventEditorStore'
+import { useFinanceStore } from '@/stores/financeStore'
 import {
   Drawer,
   DrawerContent,
@@ -20,6 +22,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 export default function EventEditorLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -36,6 +39,7 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
     eventTitle,
     eventDate,
     eventStatus,
+    visibility,
 
     locationQuery,
 
@@ -49,8 +53,20 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
     publishEvent,
     resetEvent,
   } = useEventEditorStore()
+  const financeConnections = useFinanceStore((state) => state.connections)
+  const financeLoading = useFinanceStore((state) => state.isLoading)
+  const fetchFinanceWorkspace = useFinanceStore((state) => state.fetchWorkspace)
 
   const bannerImage = bannerImages[0]?.url ?? ''
+  const currentStep = pathname.includes('/tickets')
+    ? 1
+    : pathname.includes('/preview_publish')
+      ? 2
+      : 0
+  const hasConnectedPayoutAccount = financeConnections.some(
+    (connection) => connection.status === 'connected',
+  )
+  const publicPublishBlocked = currentStep === 2 && !hasConnectedPayoutAccount
 
   const segments = pathname.split('/')
   const eventsIdx = segments.indexOf('events')
@@ -65,11 +81,9 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
     loadEvent(eventKey)
   }, [eventKey, isCreatePage, loadEvent])
 
-  const currentStep = pathname.includes('/tickets')
-    ? 1
-    : pathname.includes('/preview_publish')
-      ? 2
-      : 0
+  useEffect(() => {
+    void fetchFinanceWorkspace()
+  }, [fetchFinanceWorkspace])
 
   const steps = useMemo(
     () => [
@@ -126,6 +140,10 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
     }
 
     if (currentStep === 2) {
+      if (!hasConnectedPayoutAccount) {
+        return
+      }
+
       await saveEventSettings()
       await publishEvent()
 
@@ -335,22 +353,50 @@ export default function EventEditorLayout({ children }: { children: React.ReactN
             <div className="hidden sm:block" />
           )}
 
-          <button
-            type="button"
-            onClick={handleSaveAndContinue}
-            disabled={isSaving}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#5151eb] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#4040d9] cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
-          >
-            {isSaving && (
-              <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-            )}
+          {publicPublishBlocked ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="w-full sm:w-auto">
+                  <button
+                    type="button"
+                    disabled
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-zinc-300 px-5 py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-80 sm:w-auto"
+                  >
+                    <AlertTriangle className="size-4" />
+                    Publish Event
+                  </button>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[260px] rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 shadow-md">
+                <div className="space-y-2">
+                  <p>Connect a payout account first before you can publish this event.</p>
+                  <Link
+                    href="/organizations/finance/settings"
+                    className="inline-flex font-semibold text-[#5151eb] hover:underline"
+                  >
+                    Open finance settings
+                  </Link>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <button
+              type="button"
+              onClick={handleSaveAndContinue}
+              disabled={isSaving || financeLoading}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#5151eb] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#4040d9] cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+            >
+              {isSaving && (
+                <span className="size-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              )}
 
-            {isSavingEvent
-              ? 'Saving...'
-              : currentStep === 2
-                ? 'Publish Event'
-                : 'Save and continue'}
-          </button>
+              {isSavingEvent
+                ? 'Saving...'
+                : currentStep === 2
+                  ? 'Publish Event'
+                  : 'Save and continue'}
+            </button>
+          )}
         </div>
       </div>
     </div>

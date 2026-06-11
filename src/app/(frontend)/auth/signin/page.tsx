@@ -9,6 +9,7 @@ import { AlertCircle, Eye, EyeOff, Lock, Mail } from 'lucide-react'
 
 import { AuthShell } from '@/components/frontend/auth-shell'
 import { SocialAuthButtons } from '@/components/frontend/social-auth-buttons'
+import { PORTFOLIO_LOGIN_OPTIONS } from '@/lib/demo-accounts'
 import { signInSchema, type SignInInput } from '@/schemas/auth'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -35,11 +36,12 @@ export default function SignInPage() {
     setWasRegistered(params.get('registered') === '1')
   }, [setValue])
 
-  const onSubmit = async (data: SignInInput) => {
+  const handleSignedInUser = async (email: string, password: string) => {
     setFormError(null)
     clearError()
+
     try {
-      const user = await login(data.email, data.password)
+      const user = await login(email, password)
       const isOnboardingDone = Boolean(user.isOnboarded) || (user.onboardingStep ?? 0) >= 4
       const params = new URLSearchParams(window.location.search)
       const redirect = params.get('redirect') ?? sessionStorage.getItem('postLoginRedirect')
@@ -64,6 +66,8 @@ export default function SignInPage() {
       setFormError(err.message || 'Sign in failed')
     }
   }
+
+  const onSubmit = async (data: SignInInput) => handleSignedInUser(data.email, data.password)
 
   const displayError = formError || storeError
 
@@ -130,7 +134,7 @@ export default function SignInPage() {
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 transition hover:text-[#12192f]"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 transition hover:text-[#12192f] cursor-pointer"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -149,10 +153,24 @@ export default function SignInPage() {
         <button
           type="submit"
           disabled={isLoading}
-          className="mt-2 flex h-11 w-full items-center justify-center rounded-xl bg-[#5151eb] text-sm font-semibold text-white shadow-sm transition hover:bg-[#3d3dcc] disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-2 flex h-11 w-full items-center justify-center rounded-xl bg-[#5151eb] text-sm font-semibold text-white shadow-sm transition hover:bg-[#3d3dcc] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isLoading ? 'Signing in...' : 'Sign in'}
         </button>
+
+        <div className="grid grid-cols-2 gap-2">
+          {PORTFOLIO_LOGIN_OPTIONS.map((option) => (
+            <button
+              key={option.email}
+              type="button"
+              onClick={() => handleSignedInUser(option.email, option.password)}
+              disabled={isLoading}
+              className="cursor-pointer rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm font-medium text-zinc-700 transition hover:border-[#5151eb] hover:text-[#5151eb] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
       </form>
 
       <p className="mt-6 text-center text-sm text-zinc-600">

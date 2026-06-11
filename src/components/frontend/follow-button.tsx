@@ -32,6 +32,8 @@ export function FollowButton({
       : 'rounded-xl px-6 py-2.5 text-sm font-semibold transition shadow-sm flex items-center gap-2'
 
   useEffect(() => {
+    setFollowed(initialFollowing)
+
     if (!organizerId) return
 
     let active = true
@@ -57,7 +59,7 @@ export function FollowButton({
     return () => {
       active = false
     }
-  }, [organizerId])
+  }, [initialFollowersCount, initialFollowing, onFollowersCountChange, organizerId])
 
   const handleFollow = async () => {
     if (loading) return

@@ -13,6 +13,7 @@
     "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
     "lint": "cross-env NODE_OPTIONS=--no-deprecation eslint .",
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
+    "seed:demo": "tsx scripts/seedDemoAccounts.ts",
     "seed:checkins": "tsx scripts/seedCheckins.ts",
     "seed:roles": "tsx scripts/seedRoles.ts",
     "seed:all": "tsx scripts/seedAll.ts",

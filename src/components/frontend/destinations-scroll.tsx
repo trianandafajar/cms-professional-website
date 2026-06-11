@@ -25,11 +25,11 @@ function nameToSlug(name: string): string {
 export function DestinationsScroll({ destinations }: DestinationsScrollProps) {
   return (
     <div className="destinations-scroll flex gap-3 overflow-x-auto scroll-smooth pb-3">
-      {destinations.map((dest) => (
+      {destinations.slice(0, 8).map((dest) => (
         <a
           key={dest.id}
           href={`/events/${nameToSlug(dest.name)}`}
-          className="group relative min-w-[160px] shrink-0 overflow-hidden rounded-lg cursor-pointer sm:min-w-[180px]"
+          className="group relative w-[220px] shrink-0 overflow-hidden rounded-2xl cursor-pointer sm:w-[260px] lg:w-[280px]"
         >
           <div className="aspect-3/2 overflow-hidden">
             <img
