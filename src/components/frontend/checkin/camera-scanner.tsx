@@ -216,7 +216,7 @@ export function CameraScanner({ onScanResult, isActive }: CameraScannerProps) {
         type="button"
         onClick={() => setAudioEnabled(!audioEnabled)}
         className="absolute right-3 top-3 z-20 rounded-full bg-black/50 p-2 text-white transition-colors hover:bg-black/70"
-        title={audioEnabled ? 'Mute scan sound' : 'Enable scan sound'}
+        aria-label={audioEnabled ? 'Mute scan sound' : 'Enable scan sound'}
       >
         {audioEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
       </button>

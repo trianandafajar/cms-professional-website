@@ -238,6 +238,15 @@ export const Users: CollectionConfig = {
       label: 'Profile Photo',
     },
     {
+      name: 'banner',
+      type: 'upload',
+      relationTo: 'media',
+      label: 'Profile Banner',
+      admin: {
+        description: 'Wide cover image shown at the top of the organizer profile',
+      },
+    },
+    {
       name: 'bio',
       type: 'textarea',
       label: 'Bio / About',

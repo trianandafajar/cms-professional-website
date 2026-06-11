@@ -504,6 +504,7 @@ export default async function OrganizerProfilePage({ params, searchParams }: Pro
   }
 
   const avatarUrl = getMediaUrl(organizer.avatar)
+  const bannerUrl = getMediaUrl((organizer as { banner?: unknown }).banner)
   const initials = organizer.name
     .split(' ')
     .map((w: string) => w[0])
@@ -516,11 +517,20 @@ export default async function OrganizerProfilePage({ params, searchParams }: Pro
       <FrontendNavbar user={navUser} />
 
       {/* Cover / Banner */}
-      <div className="relative h-48 bg-linear-to-br from-[#12192f] via-[#1e2a4a] to-[#5151eb] md:h-64">
-        <div className="pointer-events-none absolute inset-0 opacity-20">
-          <div className="absolute -left-20 -top-20 size-96 rounded-full bg-[#5151eb] blur-3xl" />
-          <div className="absolute -bottom-10 right-10 size-64 rounded-full bg-indigo-400 blur-3xl" />
-        </div>
+      <div className="relative h-48 overflow-hidden bg-linear-to-br from-[#12192f] via-[#1e2a4a] to-[#5151eb] md:h-64">
+        {bannerUrl ? (
+          <img
+            src={bannerUrl}
+            alt={`${organizer.name} banner`}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="pointer-events-none absolute inset-0 opacity-20">
+            <div className="absolute -left-20 -top-20 size-96 rounded-full bg-[#5151eb] blur-3xl" />
+            <div className="absolute -bottom-10 right-10 size-64 rounded-full bg-indigo-400 blur-3xl" />
+          </div>
+        )}
+        <div className="absolute inset-0 bg-black/30" />
         <Link
           href="/organizers"
           className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-white/30"
@@ -610,6 +620,7 @@ export default async function OrganizerProfilePage({ params, searchParams }: Pro
                     website: organizer.website,
                     instagram: organizer.instagram,
                     avatarUrl,
+                    bannerUrl,
                   }}
                 />
               ) : (

@@ -254,6 +254,7 @@ export function OrganizationsShell({
   const displayEmail = user?.email || ''
   const initials = getInitials(user?.name || user?.email)
   const avatarUrl = getAvatarUrl(user?.avatar)
+  const organizerProfileHref = user?.isOrganizer && user?.id ? `/organizers/${user.id}` : null
   const topItems = sidebarItems.filter((item) => !item.isBottom)
   const bottomItems = sidebarItems.filter((item) => item.isBottom)
 
@@ -1047,21 +1048,42 @@ export function OrganizationsShell({
                 sideOffset={8}
                 className="w-[300px] overflow-hidden rounded-2xl border border-zinc-200 bg-white p-0 shadow-xl ring-0"
               >
-                <div className="border-b border-zinc-100 px-4 py-4">
-                  <div className="flex items-center gap-3">
-                    {avatarUrl ? (
-                      <img src={avatarUrl} alt={displayName || 'User'} className="size-11 rounded-full object-cover" />
-                    ) : (
-                      <div className="flex size-11 items-center justify-center rounded-full bg-[#5151eb] text-base font-semibold text-white">
-                        {initials}
+                {organizerProfileHref ? (
+                  <Link
+                    href={organizerProfileHref}
+                    className="block border-b border-zinc-100 px-4 py-4 transition hover:bg-indigo-50"
+                  >
+                    <div className="flex items-center gap-3">
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt={displayName || 'User'} className="size-11 rounded-full object-cover" />
+                      ) : (
+                        <div className="flex size-11 items-center justify-center rounded-full bg-[#5151eb] text-base font-semibold text-white">
+                          {initials}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-zinc-900">{displayName || 'User'}</p>
+                        {displayEmail && <p className="truncate text-xs text-zinc-500">{displayEmail}</p>}
                       </div>
-                    )}
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-zinc-900">{displayName || 'User'}</p>
-                      {displayEmail && <p className="truncate text-xs text-zinc-500">{displayEmail}</p>}
+                    </div>
+                  </Link>
+                ) : (
+                  <div className="border-b border-zinc-100 px-4 py-4">
+                    <div className="flex items-center gap-3">
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt={displayName || 'User'} className="size-11 rounded-full object-cover" />
+                      ) : (
+                        <div className="flex size-11 items-center justify-center rounded-full bg-[#5151eb] text-base font-semibold text-white">
+                          {initials}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-zinc-900">{displayName || 'User'}</p>
+                        {displayEmail && <p className="truncate text-xs text-zinc-500">{displayEmail}</p>}
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 <div className="p-1.5">
                   {profileMenu.map(({ label, href, icon: Icon, organizerOnly, attendeeOnly }) => {

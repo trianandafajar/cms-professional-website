@@ -297,7 +297,7 @@ function PostCard({
             <div className="aspect-video w-full overflow-hidden rounded-lg">
               <iframe
                 src={`https://www.youtube.com/embed/${activeYouTubeId}?autoplay=1`}
-                title="Video player"
+                aria-label="Video player"
                 className="h-full w-full"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen

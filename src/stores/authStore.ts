@@ -16,6 +16,7 @@ export interface User {
   onboardingStep?: number | null
   isOrganizer?: boolean | null
   avatar?: any
+  banner?: any
   bio?: string | null
   website?: string | null
   instagram?: string | null

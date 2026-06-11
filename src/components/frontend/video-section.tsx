@@ -131,7 +131,7 @@ export function VideoSection({ highlights }: Props) {
             <div className="aspect-video w-full overflow-hidden rounded-lg">
               <iframe
                 src={`https://www.youtube.com/embed/${activeVideo}?autoplay=1`}
-                title="Video player"
+                aria-label="Video player"
                 className="h-full w-full"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen

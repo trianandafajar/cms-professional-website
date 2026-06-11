@@ -14,6 +14,7 @@ export type OrganizerSettingsUser = {
   website?: string | null
   instagram?: string | null
   avatar?: unknown
+  banner?: unknown
   createdAt?: string | null
   role?: { name?: string | null } | string | null
 }

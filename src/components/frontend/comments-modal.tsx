@@ -107,14 +107,14 @@ function renderContentWithMentions(
           key={key++}
           href={`/organizers/${mentionedUserId}`}
           className="font-medium text-[#5151eb] hover:underline"
-          title={mentionedUser?.name}
+          aria-label={mentionedUser?.name ? `Open ${mentionedUser.name}` : undefined}
         >
           {match[0]}
         </Link>,
       )
     } else {
       parts.push(
-        <span key={key++} className="font-medium text-blue-500" title={mentionedUser?.name}>
+        <span key={key++} className="font-medium text-blue-500">
           {match[0]}
         </span>,
       )
@@ -519,7 +519,7 @@ export function CommentsModal({
                     inputRef.current?.focus()
                   }}
                   className="absolute right-2 bottom-2 p-1 text-zinc-400 hover:text-[#5151eb] transition"
-                  title="Mention someone"
+                  aria-label="Mention someone"
                 >
                   <AtSign className="size-4" />
                 </button>

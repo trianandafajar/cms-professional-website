@@ -11,6 +11,7 @@ type Props = {
     website?: string | null
     instagram?: string | null
     avatarUrl?: string | null
+    bannerUrl?: string | null
   }
 }
 

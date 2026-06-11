@@ -9,11 +9,13 @@ import {
   ExternalLink,
   FileText,
   Globe,
+  ImageIcon,
   Loader2,
   Mail,
   Save,
   Shield,
   Info,
+  Trash2,
   User,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -49,9 +51,13 @@ export default function SettingsClient({ initialUser }: { initialUser: Organizer
   const [instagram, setInstagram] = useState(initialUser?.instagram ?? '')
   const [avatarPreview, setAvatarPreview] = useState<string | null>(getAvatarUrl(initialUser?.avatar))
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [bannerPreview, setBannerPreview] = useState<string | null>(getAvatarUrl(initialUser?.banner))
+  const [bannerFile, setBannerFile] = useState<File | null>(null)
+  const [removeBanner, setRemoveBanner] = useState(false)
   const [cropFile, setCropFile] = useState<File | null>(null)
   const [cropOpen, setCropOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const bannerInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const source = user ?? initialUser
@@ -62,6 +68,9 @@ export default function SettingsClient({ initialUser }: { initialUser: Organizer
     setWebsite(source.website ?? '')
     setInstagram(source.instagram ?? '')
     setAvatarPreview(getAvatarUrl(source.avatar))
+    setBannerPreview(getAvatarUrl(source.banner))
+    setBannerFile(null)
+    setRemoveBanner(false)
   }, [initialUser, user])
 
   function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -73,6 +82,35 @@ export default function SettingsClient({ initialUser }: { initialUser: Organizer
     e.target.value = ''
   }
 
+  function handleBannerChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file for the banner')
+      e.target.value = ''
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Banner image size must be less than 5MB')
+      e.target.value = ''
+      return
+    }
+
+    setBannerFile(file)
+    setBannerPreview(URL.createObjectURL(file))
+    setRemoveBanner(false)
+    setError(null)
+    e.target.value = ''
+  }
+
+  function handleRemoveBanner() {
+    setBannerFile(null)
+    setBannerPreview(null)
+    setRemoveBanner(true)
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
@@ -82,6 +120,8 @@ export default function SettingsClient({ initialUser }: { initialUser: Organizer
     try {
       let avatarId: number | undefined
       let uploadedAvatar: unknown
+      let bannerId: number | null | undefined
+      let uploadedBanner: unknown
 
       if (avatarFile) {
         const formData = new FormData()
@@ -97,8 +137,25 @@ export default function SettingsClient({ initialUser }: { initialUser: Organizer
         uploadedAvatar = data.doc
       }
 
+      if (bannerFile) {
+        const formData = new FormData()
+        formData.append('file', bannerFile)
+        const res = await fetch('/api/media', {
+          method: 'POST',
+          credentials: 'include',
+          body: formData,
+        })
+        if (!res.ok) throw new Error('Failed to upload banner')
+        const data = await res.json()
+        bannerId = data.doc.id
+        uploadedBanner = data.doc
+      } else if (removeBanner) {
+        bannerId = null
+      }
+
       const updateData: Record<string, any> = { name, bio, website, instagram }
       if (avatarId) updateData.avatar = avatarId
+      if (bannerId !== undefined) updateData.banner = bannerId
 
       const response = await apiClient.patch<{ doc: any }>('/api/organizer/profile', updateData)
 
@@ -107,6 +164,8 @@ export default function SettingsClient({ initialUser }: { initialUser: Organizer
           ...user,
           ...response.doc,
           ...(uploadedAvatar ? { avatar: uploadedAvatar } : {}),
+          ...(uploadedBanner ? { banner: uploadedBanner } : {}),
+          ...(removeBanner ? { banner: null } : {}),
         } as any)
       }
 
@@ -114,6 +173,8 @@ export default function SettingsClient({ initialUser }: { initialUser: Organizer
 
       setSuccess(true)
       setAvatarFile(null)
+      setBannerFile(null)
+      setRemoveBanner(false)
       setTimeout(() => setSuccess(false), 3000)
     } catch (submitError: any) {
       setError(submitError?.message || 'Failed to update profile')
@@ -139,6 +200,72 @@ export default function SettingsClient({ initialUser }: { initialUser: Organizer
       <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
         <div className="min-w-0 flex-1 lg:max-w-2xl">
           <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
+            <div className="rounded-2xl border border-zinc-200 bg-white p-4 sm:p-6">
+              <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-[#12192f]">
+                <ImageIcon className="size-5 text-[#5151eb]" />
+                Profile Banner
+              </h2>
+              <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-linear-to-br from-[#12192f] via-[#1e2a4a] to-[#5151eb]">
+                <div className="relative aspect-[3/1] min-h-36">
+                  {bannerPreview ? (
+                    <img
+                      src={bannerPreview}
+                      alt="Profile banner preview"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 opacity-30">
+                      <div className="absolute -left-12 -top-16 size-56 rounded-full bg-[#5151eb] blur-3xl" />
+                      <div className="absolute -bottom-12 right-8 size-44 rounded-full bg-indigo-400 blur-3xl" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/20" />
+                </div>
+              </div>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => bannerInputRef.current?.click()}
+                  className="cursor-pointer gap-2 rounded-xl"
+                >
+                  <Camera className="size-4" />
+                  {bannerPreview ? 'Change banner' : 'Add banner'}
+                </Button>
+                {bannerPreview && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleRemoveBanner}
+                    className="cursor-pointer gap-2 rounded-xl border-red-200 text-red-600 hover:bg-red-50"
+                  >
+                    <Trash2 className="size-4" />
+                    Remove banner
+                  </Button>
+                )}
+                <input
+                  ref={bannerInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleBannerChange}
+                  className="hidden"
+                />
+              </div>
+              <p className="mt-2 text-xs text-zinc-400">
+                JPG, PNG. Recommended wide image around 1600x500px. Max 5MB.
+              </p>
+              {bannerFile && (
+                <p className="mt-1 text-xs font-medium text-[#5151eb]">
+                  New banner selected - save to apply
+                </p>
+              )}
+              {removeBanner && (
+                <p className="mt-1 text-xs font-medium text-red-500">
+                  Banner will be removed after saving.
+                </p>
+              )}
+            </div>
+
             <div className="rounded-2xl border border-zinc-200 bg-white p-4 sm:p-6">
               <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-[#12192f]">
                 <User className="size-5 text-[#5151eb]" />

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { X, Camera, Loader2 } from 'lucide-react'
+import { X, Camera, Loader2, Trash2 } from 'lucide-react'
 import { apiClient } from '@/lib/apiClient'
 import { useAuthStore } from '@/stores/authStore'
 import { AvatarCropModal } from './avatar-crop-modal'
@@ -16,6 +16,7 @@ type Props = {
     website?: string | null
     instagram?: string | null
     avatarUrl?: string | null
+    bannerUrl?: string | null
   }
   onUpdated: () => void
 }
@@ -27,11 +28,15 @@ export function OrganizerProfileEditModal({ isOpen, onClose, organizer, onUpdate
   const [instagram, setInstagram] = useState(organizer.instagram ?? '')
   const [avatarPreview, setAvatarPreview] = useState<string | null>(organizer.avatarUrl ?? null)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [bannerPreview, setBannerPreview] = useState<string | null>(organizer.bannerUrl ?? null)
+  const [bannerFile, setBannerFile] = useState<File | null>(null)
+  const [removeBanner, setRemoveBanner] = useState(false)
   const [cropFile, setCropFile] = useState<File | null>(null)
   const [cropOpen, setCropOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const bannerInputRef = useRef<HTMLInputElement>(null)
   const { setUser, user, refreshUser } = useAuthStore()
 
   if (!isOpen) return null
@@ -44,6 +49,26 @@ export function OrganizerProfileEditModal({ isOpen, onClose, organizer, onUpdate
     e.target.value = ''
   }
 
+  function handleBannerChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file for the banner')
+      e.target.value = ''
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Banner image size must be less than 5MB')
+      e.target.value = ''
+      return
+    }
+    setBannerFile(file)
+    setBannerPreview(URL.createObjectURL(file))
+    setRemoveBanner(false)
+    setError(null)
+    e.target.value = ''
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
@@ -52,6 +77,8 @@ export function OrganizerProfileEditModal({ isOpen, onClose, organizer, onUpdate
     try {
       let avatarId: number | undefined
       let uploadedAvatar: any
+      let bannerId: number | null | undefined
+      let uploadedBanner: any
 
       // Upload avatar if changed
       if (avatarFile) {
@@ -68,8 +95,25 @@ export function OrganizerProfileEditModal({ isOpen, onClose, organizer, onUpdate
         uploadedAvatar = data.doc
       }
 
+      if (bannerFile) {
+        const formData = new FormData()
+        formData.append('file', bannerFile)
+        const res = await fetch('/api/media', {
+          method: 'POST',
+          credentials: 'include',
+          body: formData,
+        })
+        if (!res.ok) throw new Error('Failed to upload banner')
+        const data = await res.json()
+        bannerId = data.doc.id
+        uploadedBanner = data.doc
+      } else if (removeBanner) {
+        bannerId = null
+      }
+
       const updateData: Record<string, any> = { name, bio, website, instagram }
       if (avatarId) updateData.avatar = avatarId
+      if (bannerId !== undefined) updateData.banner = bannerId
 
       const response = await apiClient.patch<{ doc: any }>('/api/organizer/profile', updateData)
 
@@ -79,6 +123,8 @@ export function OrganizerProfileEditModal({ isOpen, onClose, organizer, onUpdate
           ...user,
           ...response.doc,
           ...(uploadedAvatar ? { avatar: uploadedAvatar } : {}),
+          ...(uploadedBanner ? { banner: uploadedBanner } : {}),
+          ...(removeBanner ? { banner: null } : {}),
         })
       }
       await refreshUser()
@@ -109,6 +155,56 @@ export function OrganizerProfileEditModal({ isOpen, onClose, organizer, onUpdate
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {/* Banner */}
+          <div>
+            <div className="relative aspect-[3/1] overflow-hidden rounded-xl bg-linear-to-br from-[#12192f] via-[#1e2a4a] to-[#5151eb]">
+              {bannerPreview ? (
+                <img
+                  src={bannerPreview}
+                  alt="Banner preview"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="absolute inset-0 opacity-30">
+                  <div className="absolute -left-12 -top-16 size-56 rounded-full bg-[#5151eb] blur-3xl" />
+                  <div className="absolute -bottom-12 right-8 size-44 rounded-full bg-indigo-400 blur-3xl" />
+                </div>
+              )}
+              <div className="absolute inset-0 bg-black/20" />
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => bannerInputRef.current?.click()}
+                className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-50"
+              >
+                <Camera className="size-3.5" />
+                {bannerPreview ? 'Change banner' : 'Add banner'}
+              </button>
+              {bannerPreview && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBannerFile(null)
+                    setBannerPreview(null)
+                    setRemoveBanner(true)
+                  }}
+                  className="flex items-center gap-2 rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                >
+                  <Trash2 className="size-3.5" />
+                  Remove banner
+                </button>
+              )}
+              <input
+                ref={bannerInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleBannerChange}
+                className="hidden"
+              />
+            </div>
+          </div>
+
           {/* Avatar */}
           <div className="flex items-center gap-4">
             <div className="relative">

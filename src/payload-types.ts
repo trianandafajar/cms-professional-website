@@ -172,6 +172,10 @@ export interface User {
   isOrganizer?: boolean | null;
   avatar?: (number | null) | Media;
   /**
+   * Wide cover image shown at the top of the organizer profile
+   */
+  banner?: (number | null) | Media;
+  /**
    * Short description shown on the organizer profile page
    */
   bio?: string | null;
@@ -920,6 +924,7 @@ export interface UsersSelect<T extends boolean = true> {
   onboardingStep?: T;
   isOrganizer?: T;
   avatar?: T;
+  banner?: T;
   bio?: T;
   website?: T;
   instagram?: T;

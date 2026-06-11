@@ -557,7 +557,7 @@ export function EmailTemplateEditor({ templateId }: Props) {
               <p className="mt-1 break-words text-xs text-zinc-500">{resolvedForm.preheader}</p>
             </div>
             <iframe
-              title="Email template preview"
+              aria-label="Email template preview"
               srcDoc={htmlPreview}
               className="h-[520px] w-full bg-white sm:h-[880px]"
             />

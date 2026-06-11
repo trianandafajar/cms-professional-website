@@ -251,7 +251,7 @@ export default buildConfig({
         }
 
         const body = await (req.json as () => Promise<any>)()
-        const allowedFields = ['name', 'bio', 'website', 'instagram', 'avatar']
+        const allowedFields = ['name', 'bio', 'website', 'instagram', 'avatar', 'banner']
         const updateData: Record<string, any> = {}
 
         for (const field of allowedFields) {

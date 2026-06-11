@@ -570,7 +570,7 @@ export default async function EventDetailPage({ params }: Props) {
                 </h2>
                 <div className="overflow-hidden rounded-xl border border-zinc-100">
                   <iframe
-                    title="Event location map"
+                    aria-label="Event location map"
                     width="100%"
                     height="320"
                     style={{ border: 0 }}

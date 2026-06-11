@@ -46,6 +46,7 @@ type SearchSuggestion = {
 }
 
 type NavbarUser = {
+  id?: string | number | null
   name?: string | null
   email?: string | null
   isOnboarded?: boolean | null
@@ -63,21 +64,92 @@ type NavbarProps = {
   userName?: string
 }
 
-const trendingSearches = [
-  'Music Festival',
-  'Food & Wine',
-  'Tech Conference',
-  'Yoga Retreat',
-  'Comedy Show',
-  'Art Exhibition',
-  'Networking',
-  'Workshop',
-]
+type TrendingSearch = {
+  term: string
+  source: 'history' | 'personalized' | 'popular'
+}
+
+type StoredSearch = {
+  term: string
+  count: number
+  lastSearchedAt: number
+}
+
+const SEARCH_HISTORY_KEY = 'eventbro.searchHistory'
+
+function normalizeSearchTerm(term: string) {
+  return term.trim().replace(/\s+/g, ' ').slice(0, 80)
+}
+
+function readSearchHistory(): StoredSearch[] {
+  if (typeof window === 'undefined') return []
+
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(SEARCH_HISTORY_KEY) || '[]')
+    if (!Array.isArray(parsed)) return []
+
+    return parsed
+      .map((item) => ({
+        term: normalizeSearchTerm(String(item?.term ?? '')),
+        count: Number(item?.count ?? 0),
+        lastSearchedAt: Number(item?.lastSearchedAt ?? 0),
+      }))
+      .filter((item) => item.term && item.count > 0)
+  } catch {
+    return []
+  }
+}
+
+function writeSearchHistory(history: StoredSearch[]) {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history.slice(0, 20)))
+}
+
+function mergeTrendingSearches(serverTrends: TrendingSearch[]): TrendingSearch[] {
+  const scored = new Map<string, TrendingSearch & { score: number }>()
+  const now = Date.now()
+
+  for (const item of readSearchHistory()) {
+    const key = item.term.toLowerCase()
+    const ageDays = Math.max(0, (now - item.lastSearchedAt) / 86_400_000)
+    const recencyScore = Math.max(0, 30 - ageDays)
+    scored.set(key, {
+      term: item.term,
+      source: 'history',
+      score: item.count * 100 + recencyScore,
+    })
+  }
+
+  serverTrends.forEach((item, index) => {
+    const term = normalizeSearchTerm(item.term)
+    if (!term) return
+
+    const key = term.toLowerCase()
+    const source = item.source === 'personalized' ? 'personalized' : 'popular'
+    const score = (source === 'personalized' ? 90 : 60) - index * 4
+    const existing = scored.get(key)
+
+    if (existing) {
+      existing.score += score
+      if (existing.source !== 'history' && source === 'personalized') {
+        existing.source = source
+      }
+      return
+    }
+
+    scored.set(key, { term, source, score })
+  })
+
+  return Array.from(scored.values())
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 8)
+    .map(({ term, source }) => ({ term, source }))
+}
 
 const profileMenu = [
   {
     label: 'My Profile',
-    href: '/organizers/me',
+    href: '/organizations/settings',
     icon: UserIcon,
     organizerOnly: true,
   },
@@ -153,6 +225,8 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
   const [locationOpen, setLocationOpen] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [trendingSearches, setTrendingSearches] = useState<TrendingSearch[]>([])
+  const [loadingTrending, setLoadingTrending] = useState(false)
   const [selectedLocation, setSelectedLocation] = useState('All Locations')
   const [locationSearch, setLocationSearch] = useState('')
   const [locations, setLocations] = useState<string[]>([])
@@ -201,6 +275,8 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
     Boolean(resolvedUser?.isOnboarded) || (resolvedUser?.onboardingStep ?? 0) >= 4
   const needsOnboarding = isAuthed && hasOnboardingState && !isOnboardingDone
   const isOrganizer = isOnboardingDone && Boolean(resolvedUser?.isOrganizer)
+  const organizerProfileHref =
+    isOrganizer && resolvedUser?.id ? `/organizers/${resolvedUser.id}` : null
 
   const filteredProfileMenu = profileMenu.filter((item) => {
     if (needsOnboarding) return false
@@ -257,6 +333,46 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
     loc.toLowerCase().includes(locationSearch.toLowerCase()),
   )
 
+  const fetchTrendingSearches = useCallback(async () => {
+    setLoadingTrending(true)
+    try {
+      const res = await fetch('/api/trending-searches?limit=8')
+      const data = res.ok ? await res.json() : { trends: [] }
+      const serverTrends = Array.isArray(data?.trends) ? data.trends : []
+      setTrendingSearches(mergeTrendingSearches(serverTrends))
+    } catch {
+      setTrendingSearches(mergeTrendingSearches([]))
+    } finally {
+      setLoadingTrending(false)
+    }
+  }, [])
+
+  const recordSearch = useCallback(
+    (term: string) => {
+      const normalized = normalizeSearchTerm(term)
+      if (!normalized) return
+
+      const history = readSearchHistory()
+      const key = normalized.toLowerCase()
+      const existing = history.find((item) => item.term.toLowerCase() === key)
+
+      if (existing) {
+        existing.count += 1
+        existing.lastSearchedAt = Date.now()
+      } else {
+        history.unshift({
+          term: normalized,
+          count: 1,
+          lastSearchedAt: Date.now(),
+        })
+      }
+
+      writeSearchHistory(history.sort((a, b) => b.count - a.count || b.lastSearchedAt - a.lastSearchedAt))
+      void fetchTrendingSearches()
+    },
+    [fetchTrendingSearches],
+  )
+
   const fetchSuggestions = useCallback(async (q: string) => {
     if (!q.trim() || q.trim().length < 2) {
       setSuggestions([])
@@ -289,6 +405,12 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
   }, [searchQuery, fetchSuggestions])
+
+  useEffect(() => {
+    if (searchFocused && !searchQuery.trim()) {
+      void fetchTrendingSearches()
+    }
+  }, [fetchTrendingSearches, searchFocused, searchQuery])
 
   async function handleLogout() {
     if (loggingOut) return
@@ -334,9 +456,11 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
           ref={searchRef}
           onSubmit={(e) => {
             e.preventDefault()
-            if (searchQuery.trim()) {
+            const term = normalizeSearchTerm(searchQuery)
+            if (term) {
+              recordSearch(term)
               setSearchFocused(false)
-              router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}&type=events`)
+              router.push(`/search?q=${encodeURIComponent(term)}&type=events`)
             }
           }}
         >
@@ -347,6 +471,9 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
               name="q"
               placeholder="Search events"
               type="search"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setSearchFocused(true)}
@@ -359,22 +486,35 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                   <TrendingUp className="size-3" />
                   Trending searches
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  {trendingSearches.map((term) => (
+                {loadingTrending && trendingSearches.length === 0 ? (
+                  <p className="px-1 py-1 text-xs text-zinc-400">Loading trends...</p>
+                ) : trendingSearches.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                  {trendingSearches.map(({ term, source }) => (
                     <button
                       key={term}
                       type="button"
                       onClick={() => {
+                        recordSearch(term)
                         setSearchQuery(term)
                         setSearchFocused(false)
                         router.push(`/search?q=${encodeURIComponent(term)}&type=events`)
                       }}
-              className="cursor-pointer rounded-full border border-zinc-200 px-3 py-1 text-xs font-medium text-zinc-600 transition hover:border-[#5151eb] hover:text-[#5151eb]"
+                      className={`cursor-pointer rounded-full border px-3 py-1 text-xs font-medium transition ${
+                        source === 'history'
+                          ? 'border-[#5151eb]/30 bg-[#5151eb]/5 text-[#5151eb] hover:bg-[#5151eb]/10'
+                          : 'border-zinc-200 text-zinc-600 hover:border-[#5151eb] hover:text-[#5151eb]'
+                      }`}
                     >
                       {term}
                     </button>
                   ))}
-                </div>
+                  </div>
+                ) : (
+                  <p className="px-1 py-1 text-xs text-zinc-400">
+                    No trending events yet. Published event activity will appear here.
+                  </p>
+                )}
               </div>
             )}
 
@@ -425,6 +565,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                         <button
                           type="button"
                           onClick={() => {
+                            recordSearch(searchQuery)
                             setSearchFocused(false)
                             router.push(
                               `/search?q=${encodeURIComponent(searchQuery.trim())}&type=events`,
@@ -588,7 +729,35 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                 className="w-[300px] overflow-hidden rounded-2xl border border-zinc-200 bg-white p-0 shadow-xl ring-0"
               >
               {/* Header */}
-              <div className="border-b border-zinc-100 px-4 py-4">
+              {organizerProfileHref ? (
+                <Link
+                  href={organizerProfileHref}
+                  className="block border-b border-zinc-100 px-4 py-4 transition hover:bg-indigo-50"
+                >
+                  <div className="flex items-center gap-3">
+                    {avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt={displayName || 'User'}
+                        className="size-11 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-11 items-center justify-center rounded-full bg-[#5151eb] text-base font-semibold text-white">
+                        {initials}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-zinc-900">
+                        {displayName || 'User'}
+                      </p>
+                      {displayEmail && (
+                        <p className="truncate text-xs text-zinc-500">{displayEmail}</p>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              ) : (
+                <div className="border-b border-zinc-100 px-4 py-4">
                 <div className="flex items-center gap-3">
                   {avatarUrl ? (
                     <img
@@ -611,6 +780,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Menu */}
               <div className="p-1.5">
@@ -692,6 +862,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
               const formData = new FormData(e.currentTarget)
               const q = (formData.get('q') as string)?.trim()
               if (q) {
+                recordSearch(q)
                 setMobileMenuOpen(false)
                 router.push(`/search?q=${encodeURIComponent(q)}&type=events`)
               }
@@ -703,6 +874,9 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
               name="q"
               placeholder="Cari event, organizer, user..."
               type="search"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
             />
           </form>
           <nav className="flex flex-col gap-2">
@@ -741,7 +915,34 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
             <hr className="my-2 border-zinc-100" />
             {isAuthed ? (
               <>
-                <div className="flex items-center gap-3 rounded-lg bg-indigo-50 px-3 py-3">
+                {organizerProfileHref ? (
+                  <Link
+                    href={organizerProfileHref}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 rounded-lg bg-indigo-50 px-3 py-3 transition hover:bg-indigo-100"
+                  >
+                    {avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt={displayName || 'User'}
+                        className="size-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-10 items-center justify-center rounded-full bg-[#5151eb] text-sm font-semibold text-white">
+                        {initials}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-[#12192f]">
+                        {displayName || 'User'}
+                      </p>
+                      {displayEmail && (
+                        <p className="truncate text-xs text-zinc-500">{displayEmail}</p>
+                      )}
+                    </div>
+                  </Link>
+                ) : (
+                  <div className="flex items-center gap-3 rounded-lg bg-indigo-50 px-3 py-3">
                   {avatarUrl ? (
                     <img
                       src={avatarUrl}
@@ -762,6 +963,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
                     )}
                   </div>
                 </div>
+                )}
                 {needsOnboarding && (
                   <Link
                     href="/onboarding"
