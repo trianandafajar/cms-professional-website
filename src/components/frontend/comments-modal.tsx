@@ -405,7 +405,7 @@ export function CommentsModal({
               <button
                 type="button"
                 onClick={() => startReply(comment)}
-                className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-zinc-500 transition hover:text-[#5151eb]"
+                className="mt-1 inline-flex cursor-pointer items-center gap-1 text-xs font-semibold text-zinc-500 transition hover:text-[#5151eb]"
               >
                 <CornerDownRight className="size-3" />
                 Reply
@@ -446,7 +446,7 @@ export function CommentsModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex size-8 items-center justify-center rounded-full hover:bg-zinc-100 transition"
+            className="flex size-8 cursor-pointer items-center justify-center rounded-full transition hover:bg-zinc-100"
           >
             <X className="size-5 text-zinc-500" />
           </button>
@@ -492,7 +492,7 @@ export function CommentsModal({
                   setNewComment('')
                   setSelectedMentionIds({})
                 }}
-                className="font-semibold hover:underline"
+                className="cursor-pointer font-semibold hover:underline"
               >
                 Cancel
               </button>
@@ -518,7 +518,7 @@ export function CommentsModal({
                     setShowMentions(true)
                     inputRef.current?.focus()
                   }}
-                  className="absolute right-2 bottom-2 p-1 text-zinc-400 hover:text-[#5151eb] transition"
+                  className="absolute bottom-2 right-2 cursor-pointer p-1 text-zinc-400 transition hover:text-[#5151eb]"
                   aria-label="Mention someone"
                 >
                   <AtSign className="size-4" />
@@ -527,7 +527,7 @@ export function CommentsModal({
               <button
                 type="submit"
                 disabled={submitting || !newComment.trim()}
-                className="flex items-center justify-center size-10 rounded-xl bg-[#5151eb] text-white hover:bg-[#4040d0] transition disabled:opacity-50 disabled:cursor-not-allowed shrink-0 self-end"
+                className="flex size-10 shrink-0 cursor-pointer items-center justify-center self-end rounded-xl bg-[#5151eb] text-white transition hover:bg-[#4040d0] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submitting ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -545,7 +545,7 @@ export function CommentsModal({
                     key={organizer?.id}
                     type="button"
                     onClick={() => insertMention(organizer)}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-zinc-50 transition"
+                    className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left text-sm transition hover:bg-zinc-50"
                   >
                     {getMediaUrl(organizer?.avatar) ? (
                       <img

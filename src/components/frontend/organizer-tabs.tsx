@@ -1,6 +1,7 @@
 'use client'
 
-import { useRouter, usePathname } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { Calendar, CheckCircle2, Rss, MapPin, Clock, Heart, Share2, Plus } from 'lucide-react'
 import { OrganizerFeed } from './organizer-feed'
@@ -63,7 +64,7 @@ function EventCard({ event, isPast = false }: { event: Event; isPast?: boolean }
   return (
     <Link
       href={detailHref}
-      className="group flex flex-col overflow-hidden rounded-xl border border-zinc-100 bg-white transition hover:shadow-lg"
+      className="group flex cursor-pointer flex-col overflow-hidden rounded-xl border border-zinc-100 bg-white transition hover:shadow-lg"
     >
       {/* Image */}
       <div className="relative aspect-video overflow-hidden bg-zinc-100">
@@ -150,7 +151,7 @@ function EventCard({ event, isPast = false }: { event: Event; isPast?: boolean }
               type="button"
               aria-label="Share"
               onClick={(e) => e.preventDefault()}
-              className="flex size-8 items-center justify-center rounded-full border border-zinc-200 text-zinc-400 transition hover:border-[#5151eb] hover:text-[#5151eb]"
+              className="flex size-8 cursor-pointer items-center justify-center rounded-full border border-zinc-200 text-zinc-400 transition hover:border-[#5151eb] hover:text-[#5151eb]"
             >
               <Share2 className="size-3.5" />
             </button>
@@ -180,7 +181,7 @@ function EmptyState({
       {actionHref && actionLabel && (
         <Link
           href={actionHref}
-          className="mt-4 flex items-center gap-2 rounded-xl bg-[#5151eb] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#4040d0] transition shadow-sm"
+          className="mt-4 flex cursor-pointer items-center gap-2 rounded-xl bg-[#5151eb] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#4040d0]"
         >
           <Plus className="size-4" />
           {actionLabel}
@@ -208,7 +209,13 @@ const TABS = [
   { key: 'upcoming', label: 'Upcoming Events', icon: Calendar },
   { key: 'past', label: 'Past Events', icon: CheckCircle2 },
   { key: 'feed', label: 'Feed', icon: Rss },
-]
+] as const
+
+type TabKey = (typeof TABS)[number]['key']
+
+function normalizeTab(tab: string | null | undefined): TabKey {
+  return TABS.some((item) => item.key === tab) ? (tab as TabKey) : 'upcoming'
+}
 
 export function OrganizerTabs({
   activeTab,
@@ -221,15 +228,39 @@ export function OrganizerTabs({
   avatarUrl = null,
   organizerName: orgName,
 }: Props) {
-  const router = useRouter()
   const pathname = usePathname()
+  const [selectedTab, setSelectedTab] = useState<TabKey>(() => normalizeTab(activeTab))
 
-  function switchTab(tab: string) {
-    router.push(`${pathname}?tab=${tab}`, { scroll: false })
+  useEffect(() => {
+    setSelectedTab(normalizeTab(activeTab))
+  }, [activeTab])
+
+  useEffect(() => {
+    function handlePopState() {
+      setSelectedTab(normalizeTab(new URLSearchParams(window.location.search).get('tab')))
+    }
+
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [])
+
+  function switchTab(tab: TabKey) {
+    setSelectedTab(tab)
+
+    const params = new URLSearchParams(window.location.search)
+    params.set('tab', tab)
+
+    if (tab !== 'feed') {
+      params.delete('post')
+      params.delete('comment')
+    }
+
+    window.history.pushState(null, '', `${pathname}?${params.toString()}`)
   }
 
-  // Derive initials from the first event's organizer name (fallback)
-  const avatarInitials = 'EO'
   const organizerName = orgName || 'Event Organizer'
 
   return (
@@ -241,10 +272,11 @@ export function OrganizerTabs({
             key={key}
             type="button"
             onClick={() => switchTab(key)}
-            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
-              activeTab === key
+            aria-current={selectedTab === key ? 'page' : undefined}
+            className={`flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
+              selectedTab === key
                 ? 'bg-white text-[#5151eb] shadow-sm'
-                : 'text-zinc-500 hover:text-zinc-800'
+                : 'text-zinc-500 hover:bg-white/50 hover:text-zinc-800'
             }`}
           >
             <Icon className="size-4" />
@@ -266,7 +298,7 @@ export function OrganizerTabs({
       {/* Tab content */}
       <div className="mt-6">
         {/* Upcoming Events */}
-        {activeTab === 'upcoming' && (
+        {selectedTab === 'upcoming' && (
           <>
             {upcomingEvents.length === 0 ? (
               <EmptyState
@@ -285,7 +317,7 @@ export function OrganizerTabs({
         )}
 
         {/* Past Events */}
-        {activeTab === 'past' && (
+        {selectedTab === 'past' && (
           <>
             {pastEvents.length === 0 ? (
               <EmptyState message="No past events yet" />
@@ -300,7 +332,7 @@ export function OrganizerTabs({
         )}
 
         {/* Feed */}
-        {activeTab === 'feed' && (
+        {selectedTab === 'feed' && (
           <OrganizerFeed
             organizerId={Number(organizerId)}
             isOwner={isOwner}

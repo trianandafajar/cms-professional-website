@@ -168,7 +168,7 @@ function PostCard({
               <button
                 type="button"
                 onClick={() => setShowMenu(!showMenu)}
-                className="flex size-8 items-center justify-center rounded-full hover:bg-zinc-100 transition"
+                className="flex size-8 cursor-pointer items-center justify-center rounded-full transition hover:bg-zinc-100"
               >
                 <MoreHorizontal className="size-4 text-zinc-400" />
               </button>
@@ -182,7 +182,7 @@ function PostCard({
                         setShowMenu(false)
                         onEdit(post)
                       }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-50 transition"
+                      className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-sm text-zinc-600 transition hover:bg-zinc-50"
                     >
                       <Edit3 className="size-3.5" />
                       Edit
@@ -193,7 +193,7 @@ function PostCard({
                         setShowMenu(false)
                         onDelete(post.id)
                       }}
-                      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition"
+                      className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-sm text-red-500 transition hover:bg-red-50"
                     >
                       <Trash2 className="size-3.5" />
                       Delete
@@ -259,7 +259,7 @@ function PostCard({
             href={post.link}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-3 flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3 hover:bg-zinc-100 transition"
+            className="mt-3 flex cursor-pointer items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-3 transition hover:bg-zinc-100"
           >
             <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[#5151eb]/10">
               <ExternalLink className="size-5 text-[#5151eb]" />
@@ -278,7 +278,7 @@ function PostCard({
           <button
             type="button"
             onClick={gate(() => onLike(post.id, isLiked))}
-            className={`flex items-center gap-1.5 text-sm transition ${
+            className={`flex cursor-pointer items-center gap-1.5 text-sm transition ${
               isLiked ? 'text-red-500' : 'text-zinc-500 hover:text-red-500'
             }`}
           >
@@ -288,7 +288,7 @@ function PostCard({
           <button
             type="button"
             onClick={() => onOpenComments(post.id)}
-            className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-[#5151eb] transition"
+            className="flex cursor-pointer items-center gap-1.5 text-sm text-zinc-500 transition hover:text-[#5151eb]"
           >
             <MessageCircle className="size-4" />
             <span>{post.commentsCount ?? 0} comments</span>
@@ -304,7 +304,7 @@ function PostCard({
                 // User cancelled the native share dialog or clipboard access was denied.
               }
             }}
-            className="ml-auto flex items-center gap-1.5 text-sm text-zinc-500 hover:text-[#5151eb] transition"
+            className="ml-auto flex cursor-pointer items-center gap-1.5 text-sm text-zinc-500 transition hover:text-[#5151eb]"
             aria-label="Share post"
           >
             <Share2 className="size-4" />
@@ -323,7 +323,7 @@ function PostCard({
             <button
               type="button"
               onClick={() => setActiveYouTubeId(null)}
-              className="absolute -right-2 -top-10 flex size-8 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+              className="absolute -right-2 -top-10 flex size-8 cursor-pointer items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
               aria-label="Close video"
             >
               <X className="size-5" />
@@ -383,7 +383,7 @@ function EditPostModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex size-8 items-center justify-center rounded-full hover:bg-zinc-100 transition"
+            className="flex size-8 cursor-pointer items-center justify-center rounded-full transition hover:bg-zinc-100"
           >
             <span className="text-zinc-500 text-xl">&times;</span>
           </button>
@@ -401,14 +401,14 @@ function EditPostModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl px-5 py-2.5 text-sm font-semibold text-zinc-600 hover:bg-zinc-100 transition"
+              className="cursor-pointer rounded-xl px-5 py-2.5 text-sm font-semibold text-zinc-600 transition hover:bg-zinc-100"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving || !content.trim()}
-              className="flex items-center gap-2 rounded-xl bg-[#5151eb] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#4040d0] transition disabled:opacity-50"
+              className="flex cursor-pointer items-center gap-2 rounded-xl bg-[#5151eb] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#4040d0] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {saving && <Loader2 className="size-4 animate-spin" />}
               {saving ? 'Saving...' : 'Save'}

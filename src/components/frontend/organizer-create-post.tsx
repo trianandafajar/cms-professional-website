@@ -154,7 +154,7 @@ export function OrganizerCreatePost({ onPostCreated, avatarUrl, organizerName }:
                 <button
                   type="button"
                   onClick={removeImage}
-                  className="absolute -right-2 -top-2 flex size-6 items-center justify-center rounded-full bg-red-500 text-white shadow-md hover:bg-red-600 transition"
+                  className="absolute -right-2 -top-2 flex size-6 cursor-pointer items-center justify-center rounded-full bg-red-500 text-white shadow-md transition hover:bg-red-600"
                 >
                   <X className="size-3.5" />
                 </button>
@@ -173,7 +173,7 @@ export function OrganizerCreatePost({ onPostCreated, avatarUrl, organizerName }:
                       setLink('')
                       setLinkTitle('')
                     }}
-                    className="text-zinc-400 hover:text-zinc-600"
+                    className="cursor-pointer text-zinc-400 hover:text-zinc-600"
                   >
                     <X className="size-4" />
                   </button>
@@ -203,7 +203,7 @@ export function OrganizerCreatePost({ onPostCreated, avatarUrl, organizerName }:
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-zinc-500 hover:bg-zinc-100 hover:text-[#5151eb] transition"
+                  className="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-zinc-500 transition hover:bg-zinc-100 hover:text-[#5151eb]"
                 >
                   <ImagePlus className="size-4" />
                   Photo
@@ -219,7 +219,7 @@ export function OrganizerCreatePost({ onPostCreated, avatarUrl, organizerName }:
                 <button
                   type="button"
                   onClick={() => setShowLinkInput(!showLinkInput)}
-                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition ${
+                  className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition ${
                     showLinkInput || link
                       ? 'bg-[#5151eb]/10 text-[#5151eb]'
                       : 'text-zinc-500 hover:bg-zinc-100 hover:text-[#5151eb]'
@@ -233,7 +233,7 @@ export function OrganizerCreatePost({ onPostCreated, avatarUrl, organizerName }:
               <button
                 type="submit"
                 disabled={posting || !content.trim()}
-                className="flex items-center gap-2 rounded-xl bg-[#5151eb] px-4 py-2 text-sm font-semibold text-white hover:bg-[#4040d0] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex cursor-pointer items-center gap-2 rounded-xl bg-[#5151eb] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#4040d0] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {posting ? (
                   <Loader2 className="size-4 animate-spin" />

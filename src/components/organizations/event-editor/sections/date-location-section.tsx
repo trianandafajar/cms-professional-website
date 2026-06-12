@@ -354,7 +354,7 @@ export default function DateLocationSection() {
                       key={`${item.lat}-${item.lon}-${idx}`}
                       type="button"
                       onClick={() => handleSelectLocation(item)}
-                      className="flex w-full items-start gap-2 border-b border-zinc-50 px-3 py-3 text-left transition last:border-b-0 hover:bg-indigo-50/50 sm:px-4"
+                      className="flex w-full cursor-pointer items-start gap-2 border-b border-zinc-50 px-3 py-3 text-left transition last:border-b-0 hover:bg-indigo-50/30 focus-visible:bg-indigo-50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#5151eb]/20 sm:px-4"
                     >
                       <MapPin size={14} className="mt-0.5 shrink-0 text-zinc-400" />
 

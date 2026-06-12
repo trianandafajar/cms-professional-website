@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { ExternalLink, Play, UserRound, X } from 'lucide-react'
 
@@ -28,6 +28,40 @@ type Props = {
 
 export function VideoSection({ highlights }: Props) {
   const [activeVideo, setActiveVideo] = useState<string | null>(null)
+  const ref = useRef<HTMLDivElement>(null)
+  const [grabbing, setGrabbing] = useState(false)
+  const drag = useRef({ x: 0, left: 0, moved: false, tracking: false })
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    const el = ref.current
+    if (!el) return
+    drag.current = { x: e.pageX, left: el.scrollLeft, moved: false, tracking: true }
+  }
+
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!drag.current.tracking || !ref.current) return
+    const dx = e.pageX - drag.current.x
+    if (Math.abs(dx) > 4) {
+      drag.current.moved = true
+      if (!grabbing) setGrabbing(true)
+    }
+    if (drag.current.moved) {
+      ref.current.scrollLeft = drag.current.left - dx
+    }
+  }
+
+  const stopDrag = () => {
+    drag.current.tracking = false
+    setGrabbing(false)
+  }
+
+  const onItemClick = (e: React.MouseEvent, action: () => void) => {
+    if (drag.current.moved) {
+      e.preventDefault()
+      return
+    }
+    action()
+  }
 
   const videos: VideoItem[] =
     highlights && highlights.length > 0
@@ -47,11 +81,18 @@ export function VideoSection({ highlights }: Props) {
 
   return (
     <>
-      <div className="destinations-scroll flex gap-4 overflow-x-auto scroll-smooth pb-3">
+      <div
+        ref={ref}
+        className={`drag-scroll flex gap-4 overflow-x-auto pb-3 select-none ${grabbing ? 'cursor-grabbing' : 'cursor-grab'}`}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={stopDrag}
+        onMouseLeave={stopDrag}
+      >
         {videos.map((video) => (
           <article
             key={video.postId ?? video.youtubeId}
-            className="min-w-65 shrink-0 pb-3 text-left sm:min-w-70"
+            className="w-65 shrink-0 pb-3 text-left"
           >
             <div className="group relative aspect-video overflow-hidden rounded-lg bg-zinc-200">
               <img
@@ -62,7 +103,7 @@ export function VideoSection({ highlights }: Props) {
               />
               <button
                 type="button"
-                onClick={() => setActiveVideo(video.youtubeId)}
+                onClick={(e) => onItemClick(e, () => setActiveVideo(video.youtubeId))}
                 className="absolute inset-0 z-10 flex cursor-pointer items-center justify-center bg-black/20 transition group-hover:bg-black/30"
                 aria-label={`Play ${video.title}`}
               >
@@ -76,6 +117,7 @@ export function VideoSection({ highlights }: Props) {
                   {video.postHref && (
                     <Link
                       href={video.postHref}
+                      onClick={(e) => { if (drag.current.moved) e.preventDefault() }}
                       className="inline-flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-[#5151eb] shadow-sm transition hover:bg-white"
                     >
                       <ExternalLink className="size-3" />
@@ -85,6 +127,7 @@ export function VideoSection({ highlights }: Props) {
                   {video.profileHref && (
                     <Link
                       href={video.profileHref}
+                      onClick={(e) => { if (drag.current.moved) e.preventDefault() }}
                       className="inline-flex max-w-40 items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-zinc-700 shadow-sm transition hover:bg-white hover:text-[#5151eb]"
                     >
                       <UserRound className="size-3 shrink-0" />

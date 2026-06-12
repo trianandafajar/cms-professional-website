@@ -102,7 +102,7 @@ export default function DashboardSummaryIsland({ organizerId }: { organizerId: s
     <div className="space-y-7">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-[#12192f]">
-          Welcome back, {firstName} 👋
+          Welcome back, {firstName} 
         </h1>
         <p className="mt-1 text-sm text-zinc-500">
           Here&apos;s a live snapshot of what&apos;s happening across your events.

@@ -674,10 +674,10 @@ export function OrganizationsShell({
                                   })
                                 }}
                                 data-search-index={searchResultIndexMap.get(`page-${item.href}`)}
-                                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                                className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
                                   isSearchResultActive(`page-${item.href}`)
                                     ? 'bg-indigo-50 ring-1 ring-[#5151eb]/20'
-                                    : 'hover:bg-zinc-50'
+                                    : 'hover:bg-indigo-50/30'
                                 }`}
                               >
                                 <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-indigo-50">
@@ -719,10 +719,10 @@ export function OrganizationsShell({
                                   })
                                 }}
                                 data-search-index={searchResultIndexMap.get(`event-${item.id}`)}
-                                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                                className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
                                   isSearchResultActive(`event-${item.id}`)
                                     ? 'bg-indigo-50 ring-1 ring-[#5151eb]/20'
-                                    : 'hover:bg-zinc-50'
+                                    : 'hover:bg-indigo-50/30'
                                 }`}
                               >
                                 <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-indigo-50">
@@ -772,10 +772,10 @@ export function OrganizationsShell({
                                   })
                                 }}
                                 data-search-index={searchResultIndexMap.get(`organizer-${item.id}`)}
-                                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                                className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
                                   isSearchResultActive(`organizer-${item.id}`)
                                     ? 'bg-indigo-50 ring-1 ring-[#5151eb]/20'
-                                    : 'hover:bg-zinc-50'
+                                    : 'hover:bg-indigo-50/30'
                                 }`}
                               >
                                 <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-indigo-50">
@@ -825,10 +825,10 @@ export function OrganizationsShell({
                                   })
                                 }}
                                 data-search-index={searchResultIndexMap.get(`order-${item.id}`)}
-                                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                                className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
                                   isSearchResultActive(`order-${item.id}`)
                                     ? 'bg-indigo-50 ring-1 ring-[#5151eb]/20'
-                                    : 'hover:bg-zinc-50'
+                                    : 'hover:bg-indigo-50/30'
                                 }`}
                               >
                                 <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-indigo-50">
@@ -909,10 +909,10 @@ export function OrganizationsShell({
                                   })
                                 }}
                                 data-search-index={searchResultIndexMap.get(`page-${item.href}`)}
-                                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                                className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
                                   isSearchResultActive(`page-${item.href}`)
                                     ? 'bg-indigo-50 ring-1 ring-[#5151eb]/20'
-                                    : 'hover:bg-zinc-50'
+                                    : 'hover:bg-indigo-50/30'
                                 }`}
                               >
                                 <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50">
@@ -966,10 +966,10 @@ export function OrganizationsShell({
                               })
                             }}
                             data-search-index={searchResultIndexMap.get(`${item.type}-${item.id}`)}
-                            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                            className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
                               isSearchResultActive(`${item.type}-${item.id}`)
                                 ? 'bg-indigo-50 ring-1 ring-[#5151eb]/20'
-                                : 'hover:bg-zinc-50'
+                                : 'hover:bg-indigo-50/30'
                             }`}
                           >
                             <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-indigo-50">

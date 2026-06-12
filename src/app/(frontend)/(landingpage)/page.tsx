@@ -10,6 +10,7 @@ import { VideoSection, type VideoHighlight } from '@/components/frontend/video-s
 import { extractYouTubeId } from '@/lib/youtube'
 import { FeaturedOrganizers } from '@/components/frontend/featured-organizers'
 import { buildEventWhere } from '@/lib/eventQueries'
+import { computeTopDestinations } from '@/lib/topDestinations'
 import type { Location, Category } from '@/payload-types'
 import config from '@/payload.config'
 
@@ -50,13 +51,15 @@ export default async function HomePage() {
     })
     .filter((id) => Number.isFinite(id))
 
-  // Fetch featured locations for "Top Destinations"
-  const { docs: featuredLocations } = await payload.find({
-    collection: 'locations',
-    where: { featured: { equals: true } },
+  // Fetch events for Top Destinations scoring (more events than homepage listing for accurate ranking)
+  const { docs: scoringEvents } = await payload.find({
+    collection: 'events',
+    where: buildEventWhere({ publishedOnly: true }),
     depth: 1,
-    limit: 12,
+    limit: 200,
+    sort: '-startDate',
   })
+  const topDestinations = computeTopDestinations(scoringEvents as any, 8)
 
   // Fetch all locations for "Popular Cities"
   const { docs: allLocations } = await payload.find({
@@ -267,7 +270,7 @@ export default async function HomePage() {
                 See all
               </a>
             </div>
-            <DestinationsScroll destinations={featuredLocations} />
+            <DestinationsScroll destinations={topDestinations} />
           </div>
         </section>
 
