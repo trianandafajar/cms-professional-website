@@ -32,5 +32,11 @@ export default async function SettingsPage() {
     redirect('/onboarding')
   }
 
-  return <SettingsClient initialUser={user as OrganizerSettingsUser} />
+  const fullUser = await payload.findByID({
+    collection: 'users',
+    id: user.id,
+    depth: 1,
+  })
+
+  return <SettingsClient initialUser={fullUser as OrganizerSettingsUser} />
 }

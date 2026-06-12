@@ -68,7 +68,14 @@ export default function SettingsClient({ initialUser }: { initialUser: Organizer
     setWebsite(source.website ?? '')
     setInstagram(source.instagram ?? '')
     setAvatarPreview(getAvatarUrl(source.avatar))
-    setBannerPreview(getAvatarUrl(source.banner))
+    
+    const newBannerUrl = getAvatarUrl(source.banner)
+    if (newBannerUrl || source.banner === null) {
+      setBannerPreview(newBannerUrl)
+    } else if (!bannerPreview && initialUser?.banner) {
+      setBannerPreview(getAvatarUrl(initialUser.banner))
+    }
+
     setBannerFile(null)
     setRemoveBanner(false)
   }, [initialUser, user])
@@ -164,8 +171,8 @@ export default function SettingsClient({ initialUser }: { initialUser: Organizer
           ...user,
           ...response.doc,
           ...(uploadedAvatar ? { avatar: uploadedAvatar } : {}),
+          ...(removeBanner && !uploadedBanner ? { banner: null } : {}),
           ...(uploadedBanner ? { banner: uploadedBanner } : {}),
-          ...(removeBanner ? { banner: null } : {}),
         } as any)
       }
 
@@ -175,6 +182,11 @@ export default function SettingsClient({ initialUser }: { initialUser: Organizer
       setAvatarFile(null)
       setBannerFile(null)
       setRemoveBanner(false)
+      if (uploadedBanner) {
+        setBannerPreview(getAvatarUrl(uploadedBanner))
+      } else if (removeBanner) {
+        setBannerPreview(null)
+      }
       setTimeout(() => setSuccess(false), 3000)
     } catch (submitError: any) {
       setError(submitError?.message || 'Failed to update profile')
