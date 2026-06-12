@@ -52,8 +52,16 @@ export function formatRelativeDate(value: string | null) {
   })
 }
 
+export function getPublicAppURL() {
+  if (typeof window !== 'undefined' && window.location.origin) {
+    return window.location.origin
+  }
+
+  return (process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000').replace(/\/$/, '')
+}
+
 export function formatPromotionLink(slug: string, code: string) {
-  return `https://eventbro.com/promotions/${slug}?code=${code}`
+  return `${getPublicAppURL()}/promotions/${slug}?code=${encodeURIComponent(code)}`
 }
 
 export function toDatetimeLocal(value: string | null | undefined) {
