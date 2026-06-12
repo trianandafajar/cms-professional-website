@@ -128,7 +128,7 @@ function SearchPageClient() {
         <div className="mx-auto max-w-[1200px] px-4 pt-4 pb-3 lg:px-8">
           {initialQuery && (
             <p className="mb-3 text-sm text-zinc-500">
-              Hasil pencarian untuk &ldquo;
+              Search results for &ldquo;
               <span className="font-medium text-zinc-800">{initialQuery}</span>&rdquo;
             </p>
           )}
@@ -162,9 +162,11 @@ function SearchPageClient() {
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <Search className="size-12 text-zinc-300" />
             <p className="mt-4 text-lg font-medium text-zinc-600">
-              Tidak ada hasil untuk &ldquo;{initialQuery}&rdquo;
+              No results found for &ldquo;{initialQuery}&rdquo;
             </p>
-            <p className="mt-1 text-sm text-zinc-400">Coba kata kunci lain atau periksa ejaan</p>
+            <p className="mt-1 text-sm text-zinc-400">
+              Try a different keyword or check the spelling
+            </p>
           </div>
         )}
 
@@ -172,10 +174,10 @@ function SearchPageClient() {
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <Search className="size-12 text-zinc-300" />
             <p className="mt-4 text-lg font-medium text-zinc-600">
-              Cari event, organizer, atau user
+              Search for events, organizers, or users
             </p>
             <p className="mt-1 text-sm text-zinc-400">
-              Ketik kata kunci di atas untuk mulai mencari
+              Type a keyword above to start searching
             </p>
           </div>
         )}
@@ -207,7 +209,7 @@ function SearchPageClient() {
                       disabled={loading}
                       className="rounded-lg bg-[#5151eb] px-6 py-2.5 text-sm font-medium text-white hover:bg-[#4040d0] disabled:opacity-50"
                     >
-                      {loading ? 'Loading...' : 'Muat lebih banyak'}
+                      {loading ? 'Loading...' : 'Load more'}
                     </button>
                   </div>
                 )}
@@ -241,7 +243,7 @@ function SearchPageClient() {
                         disabled={loading}
                         className="rounded-lg bg-[#5151eb] px-6 py-2.5 text-sm font-medium text-white hover:bg-[#4040d0] disabled:opacity-50"
                       >
-                        {loading ? 'Loading...' : 'Muat lebih banyak'}
+                        {loading ? 'Loading...' : 'Load more'}
                       </button>
                     </div>
                   )}

@@ -125,7 +125,7 @@ export default function MyProfilePage() {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full bg-[#5151eb] text-white shadow-md hover:bg-[#4040d0] transition"
+                className="absolute -bottom-1 -right-1 flex size-7 items-center justify-center rounded-full bg-[#5151eb] text-white shadow-md hover:bg-[#4040d0] transition cursor-pointer"
               >
                 <Camera className="size-3.5" />
               </button>

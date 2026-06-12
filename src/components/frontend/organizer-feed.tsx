@@ -422,6 +422,7 @@ function EditPostModal({
 
 export function OrganizerFeed({ organizerId, isOwner, avatarUrl, organizerName }: Props) {
   const searchParams = useSearchParams()
+  const user = useAuthStore((state) => state.user)
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [editingPost, setEditingPost] = useState<Post | null>(null)
@@ -479,7 +480,22 @@ export function OrganizerFeed({ organizerId, isOwner, avatarUrl, organizerName }
       setPosts((prev) =>
         prev.map((p) =>
           p.id === postId
-            ? { ...p, likesCount: result.likesCount, likedBy: result.liked ? [{ user: 1 }] : [] }
+            ? {
+                ...p,
+                likesCount: result.likesCount,
+                likedBy:
+                  result.liked && user?.id
+                    ? [...(p.likedBy?.filter((like) => {
+                        const likeUserId =
+                          typeof like.user === 'object' ? like.user.id : like.user
+                        return Number(likeUserId) !== Number(user.id)
+                      }) ?? []), { user: Number(user.id) }]
+                    : (p.likedBy?.filter((like) => {
+                        const likeUserId =
+                          typeof like.user === 'object' ? like.user.id : like.user
+                        return Number(likeUserId) !== Number(user?.id)
+                      }) ?? []),
+              }
             : p,
         ),
       )

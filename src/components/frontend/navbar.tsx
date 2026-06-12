@@ -862,7 +862,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
             <input
               className="h-10 w-full rounded-lg border border-zinc-200 bg-[#fdfdfd] pl-9 pr-4 text-sm outline-none"
               name="q"
-              placeholder="Cari event, organizer, user..."
+              placeholder="Search events, organizers, users..."
               type="search"
               autoComplete="off"
               autoCorrect="off"
@@ -1003,7 +1003,7 @@ export function FrontendNavbar({ user, userName }: NavbarProps) {
           <DialogHeader>
             <DialogTitle>Log out?</DialogTitle>
             <DialogDescription>
-              Kamu akan keluar dari akun ini. Pastikan semua perubahan sudah disimpan.
+              You are about to log out of this account. Make sure all changes are saved.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

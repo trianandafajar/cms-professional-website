@@ -112,18 +112,21 @@ export default async function MyLikesPage() {
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-zinc-200 bg-white py-16">
-          <div className="flex size-16 items-center justify-center rounded-full bg-rose-50">
-            <Heart className="size-7 text-rose-400" />
-          </div>
-          <h3 className="mt-4 text-base font-semibold text-zinc-900">No liked events yet</h3>
-          <p className="mt-1 text-sm text-zinc-500">
-            Tap the heart icon on events to save them here.
+          <Heart className="size-8 text-zinc-300" />
+
+          <h3 className="mt-5 text-base font-semibold text-zinc-900">
+            No liked events yet
+          </h3>
+
+          <p className="mt-2 max-w-sm text-center text-sm leading-6 text-zinc-500">
+            Events you save will appear here for quick access later.
           </p>
+
           <Link
             href="/"
-            className="mt-4 rounded-xl bg-[#5151eb] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#4040d0]"
+            className="mt-6 rounded-xl border border-zinc-200 bg-white px-5 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
           >
-            Browse Events
+            Browse events
           </Link>
         </div>
       )}

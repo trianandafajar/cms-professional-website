@@ -1,7 +1,8 @@
 import { headers as getHeaders } from 'next/headers.js'
 import { getPayload } from 'payload'
-import { MapPin, Calendar, Search } from 'lucide-react'
+import { MapPin, Calendar } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 
 import { FrontendNavbar } from '@/components/frontend/navbar'
 import { buildEventWhere, formatEventDate, formatEventTime } from '@/lib/eventQueries'
@@ -111,7 +112,10 @@ export default async function EventsPage() {
       <footer className="mt-16 bg-[#1d243a]">
         <div className="mx-auto max-w-[1400px] px-4 py-10 lg:px-8">
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-            <span className="text-xl font-extrabold text-[#5151eb]">eventbro</span>
+             <div className="flex items-center gap-3">
+              <Image src="/icon.png" alt="Eventbro" width={28} height={28} className="h-7 w-7 brightness-0 invert" />
+              <span className="text-xl font-extrabold text-white">eventbro</span>
+            </div>
             <div className="flex flex-wrap items-center gap-5 text-sm text-zinc-500">
               <Link className="hover:text-zinc-300" href="#">
                 About

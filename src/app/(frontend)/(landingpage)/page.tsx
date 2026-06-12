@@ -1,4 +1,5 @@
 import { headers as getHeaders } from 'next/headers.js'
+import Image from 'next/image'
 import { getPayload } from 'payload'
 
 import { FrontendNavbar } from '@/components/frontend/navbar'
@@ -431,7 +432,10 @@ export default async function HomePage() {
             </div>
           </div>
           <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-6 md:flex-row">
-            <span className="text-xl font-extrabold text-[#5151eb]">eventbro</span>
+            <div className="flex items-center gap-3">
+              <Image src="/icon.png" alt="Eventbro" width={28} height={28} className="h-7 w-7 brightness-0 invert" />
+              <span className="text-xl font-extrabold text-white">eventbro</span>
+            </div>
             <div className="flex flex-wrap items-center gap-5 text-sm text-zinc-500">
               <a className="cursor-pointer hover:text-zinc-300" href="#">
                 About
@@ -456,3 +460,5 @@ export default async function HomePage() {
     </div>
   )
 }
+
+

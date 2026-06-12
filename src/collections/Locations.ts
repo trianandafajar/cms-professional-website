@@ -25,7 +25,7 @@ export const Locations: CollectionConfig = {
       type: 'text',
       required: true,
       unique: true,
-      label: 'Location Name (e.g., Jawa Tengah, Jakarta)',
+      label: 'Location Name (e.g., Central Java, Jakarta)',
     },
     {
       name: 'code',
@@ -41,8 +41,8 @@ export const Locations: CollectionConfig = {
       type: 'select',
       label: 'Region',
       options: [
-        { label: 'Sumatera', value: 'sumatera' },
-        { label: 'Jawa', value: 'jawa' },
+        { label: 'Sumatra', value: 'sumatera' },
+        { label: 'Java', value: 'jawa' },
         { label: 'Bali & Nusa Tenggara', value: 'bali-nusra' },
         { label: 'Kalimantan', value: 'kalimantan' },
         { label: 'Sulawesi', value: 'sulawesi' },
