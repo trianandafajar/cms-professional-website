@@ -6,15 +6,33 @@ import Link from 'next/link'
 import { Calendar, CheckCircle2, Rss, MapPin, Clock, Heart, Share2, Plus } from 'lucide-react'
 import { OrganizerFeed } from './organizer-feed'
 import { LikeButton } from './like-button'
+import { getFallbackEventImageUrl, getSeedEventImageUrl } from '@/lib/eventImages'
+import { getEventPriceLabel } from '@/lib/eventPricing'
 import type { Event, Media, Location, Category } from '@/payload-types'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 function getMediaUrl(media: unknown): string | null {
+  if (typeof media === 'string') {
+    return media || null
+  }
+
   if (media && typeof media === 'object' && 'url' in media) {
     return (media as Media).url ?? null
   }
+
   return null
+}
+
+function getEventImageUrl(event: Event): string {
+  const coverImage = getMediaUrl(event.coverImage)
+  if (coverImage) return coverImage
+
+  const bannerImage = getMediaUrl(event.bannerImage)
+  if (bannerImage) return bannerImage
+
+  const key = event.slug || event.title || String(event.id)
+  return getSeedEventImageUrl(event.slug ?? '', 600, 380) ?? getFallbackEventImageUrl(key, 600, 380)
 }
 
 function getLocationName(location: unknown): string {
@@ -51,7 +69,7 @@ function formatTime(dateStr: string): string {
 // ─── Event Card ──────────────────────────────────────────────────────────────
 
 function EventCard({ event, isPast = false }: { event: Event; isPast?: boolean }) {
-  const coverUrl = getMediaUrl(event.coverImage)
+  const coverUrl = getEventImageUrl(event)
   const locationName = getLocationName(event.location)
   const categoryName = getCategoryName(event.category)
 
@@ -68,18 +86,12 @@ function EventCard({ event, isPast = false }: { event: Event; isPast?: boolean }
     >
       {/* Image */}
       <div className="relative aspect-video overflow-hidden bg-zinc-100">
-        {coverUrl ? (
-          <img
-            src={coverUrl}
-            alt={event.title}
-            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-            loading="lazy"
-          />
-        ) : (
-          <div className="h-full w-full bg-linear-to-br from-indigo-100 to-indigo-200 flex items-center justify-center">
-            <Calendar className="size-10 text-indigo-300" />
-          </div>
-        )}
+        <img
+          src={coverUrl}
+          alt={event.title}
+          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+          loading="lazy"
+        />
         {/* Badges */}
         <div className="absolute left-3 top-3 flex gap-2">
           {categoryName && (
@@ -140,7 +152,7 @@ function EventCard({ event, isPast = false }: { event: Event; isPast?: boolean }
         <div className="mt-auto flex items-center justify-between pt-4">
           <div>
             <p className="text-base font-bold text-[#12192f]">
-              {event.isFree ? 'Free' : (event.price ?? 'View details')}
+              {getEventPriceLabel(event, 'View details')}
             </p>
             <p className="text-xs text-zinc-400">
               {(event.interestedCount ?? 0).toLocaleString()} interested

@@ -63,18 +63,19 @@ export default async function HomePage() {
   })
   const topDestinations = computeTopDestinations(scoringEvents as any, 8)
 
-  // Fetch all locations for "Popular Cities"
+  // Fetch all locations for "Popular Cities" and hydrated Top Destinations images
   const { docs: allLocations } = await payload.find({
     collection: 'locations',
-    depth: 0,
+    depth: 1,
     limit: 24,
     sort: 'name',
   })
 
   // Pad with any remaining cities when events are sparse
   const topDestinationIds = new Set(topDestinations.map((l) => l.id))
+  const locationById = new Map((allLocations as any[]).map((location) => [location.id, location]))
   const destinationsToShow = [
-    ...topDestinations,
+    ...topDestinations.map((location) => locationById.get(location.id) ?? location),
     ...(allLocations as any[]).filter((l) => !topDestinationIds.has(l.id)),
   ].slice(0, 8)
 
@@ -100,7 +101,7 @@ export default async function HomePage() {
     featuredOrganizers = computeFeaturedOrganizers(
       allOrganizers as any,
       { followedOrganizerIds, likedEventOrganizerIds, locationId, events: scoringEvents as any },
-      8,
+      50,
     )
   } catch {
     featuredOrganizers = []

@@ -22,6 +22,7 @@ import { EventDetailDescription } from '@/components/frontend/event-detail-descr
 import { EventGallery } from '@/components/frontend/event-gallery'
 import { EventInterestStats } from '@/components/frontend/event-interest-stats'
 import { OrganizerFollowSummary } from '@/components/frontend/organizer-follow-summary'
+import { getFallbackEventImageUrl, getSeedEventImageUrl } from '@/lib/eventImages'
 import config from '@/payload.config'
 import type { Event, Media, User, Location, Category } from '@/payload-types'
 
@@ -56,6 +57,11 @@ function getPrimaryEventImage(event: Event): string | null {
 
   const firstGalleryImage = event.galleryImages?.[0]?.image
   return getMediaUrl(firstGalleryImage)
+}
+
+function getFallbackEventImage(event: Event): string {
+  const key = event.slug || event.title || String(event.id)
+  return getSeedEventImageUrl(event.slug ?? '', 1400, 520) ?? getFallbackEventImageUrl(key, 1400, 520)
 }
 
 function getOrganizerData(organizer: unknown) {
@@ -249,7 +255,7 @@ export default async function EventDetailPage({ params }: Props) {
     id: realEvent.id,
     title: realEvent.title,
     slug: realEvent.slug ?? slug,
-    coverImage: getPrimaryEventImage(realEvent),
+    coverImage: getPrimaryEventImage(realEvent) ?? getFallbackEventImage(realEvent),
     bannerImage: getMediaUrl(realEvent.bannerImage) ?? null,
     galleryImages: (realEvent.galleryImages ?? [])
       .map((g) => getMediaUrl(g.image))

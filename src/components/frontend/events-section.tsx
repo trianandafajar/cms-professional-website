@@ -3,6 +3,8 @@
 import { useMemo, useState } from 'react'
 import { EventCard } from './event-card'
 import { formatEventDate, formatEventTime, locationToSlug } from '@/lib/eventQueries'
+import { getFallbackEventImageUrl, getSeedEventImageUrl } from '@/lib/eventImages'
+import { getEventPriceLabel, hasFreeTicketOption } from '@/lib/eventPricing'
 import type { Event, Category, Location, Media, User } from '@/payload-types'
 
 // Resolved event shape after depth:1 query
@@ -28,36 +30,9 @@ function getEventImage(event: ResolvedEvent): string {
   if (event.coverImage && typeof event.coverImage === 'object' && event.coverImage.url) {
     return event.coverImage.url
   }
-  return 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=600&h=380&fit=crop&q=80'
-}
 
-function hasFreeTicket(event: ResolvedEvent): boolean {
-  if (event.isFree) {
-    return true
-  }
-
-  return (
-    event.ticketTypes?.some((ticket) => {
-      if (ticket?.isHidden) {
-        return false
-      }
-
-      const price = Number(ticket?.price ?? 0)
-      return Number.isFinite(price) && price <= 0
-    }) ?? false
-  )
-}
-
-function getEventPriceLabel(event: ResolvedEvent): string {
-  if (event.isFree) {
-    return 'Free'
-  }
-
-  if (hasFreeTicket(event)) {
-    return 'Free options'
-  }
-
-  return event.price ?? 'See details'
+  const key = event.slug || event.title || String(event.id)
+  return getSeedEventImageUrl(event.slug ?? '', 600, 380) ?? getFallbackEventImageUrl(key, 600, 380)
 }
 
 function getOrganizerName(event: ResolvedEvent): string {
@@ -167,7 +142,7 @@ export function EventsSection({ allEvents, forYouEvents, isLoggedIn, activeCity 
       case 'This weekend':
         return pool.filter((e) => isWeekend(e.startDate))
       case 'Free':
-        return pool.filter((e) => hasFreeTicket(e))
+        return pool.filter((e) => hasFreeTicketOption(e))
       default:
         return pool.filter(
           (e) =>

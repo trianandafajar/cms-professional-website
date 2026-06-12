@@ -8,6 +8,7 @@ import { FrontendNavbar } from '@/components/frontend/navbar'
 import { TicketSelector } from '@/components/frontend/ticket-selector'
 import { OrganizationsAuthSync } from '@/components/organizations/layouts/auth-sync'
 import config from '@/payload.config'
+import { getFallbackEventImageUrl, getSeedEventImageUrl } from '@/lib/eventImages'
 import { DEFAULT_CURRENCY, getActiveCheckoutProviders, normalizeFinanceSettings } from '@/lib/finance'
 import type { Event, Media, Location, Category } from '@/payload-types'
 import type { User as AuthUser } from '@/stores/authStore'
@@ -33,6 +34,10 @@ function getPrimaryEventImage(event: Event): string | null {
 
   const firstGalleryImage = event.galleryImages?.[0]?.image
   return getMediaUrl(firstGalleryImage)
+}
+
+function getFallbackEventImage(slug: string) {
+  return getSeedEventImageUrl(slug, 800, 400) ?? getFallbackEventImageUrl(slug, 800, 400)
 }
 
 function getLocationName(location: unknown): string {
@@ -136,8 +141,7 @@ const FALLBACK_EVENT = {
   id: 0,
   title: 'Event Not Found',
   slug: '',
-  coverImage:
-    'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=800&h=400&fit=crop&q=80',
+  coverImage: getFallbackEventImage('event-not-found'),
   startDate: new Date().toISOString(),
   endDate: null as string | null,
   venue: '',
@@ -208,7 +212,7 @@ export default async function EventTicketsPage({ params }: Props) {
     id: realEvent.id,
     title: realEvent.title,
     slug: realEvent.slug ?? slug,
-    coverImage: getPrimaryEventImage(realEvent) ?? FALLBACK_EVENT.coverImage,
+    coverImage: getPrimaryEventImage(realEvent) ?? getFallbackEventImage(realEvent.slug ?? slug),
     startDate: realEvent.startDate,
     endDate: realEvent.endDate ?? null,
     venue: realEvent.venue ?? '',

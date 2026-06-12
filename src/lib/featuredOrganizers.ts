@@ -22,7 +22,7 @@ const WEIGHTS = {
 } as const
 
 const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000
-const SHOW_ALL_THRESHOLD = 8
+const SHOW_ALL_THRESHOLD = 50
 
 export function computeFeaturedOrganizers(
   organizers: OrganizerItem[],

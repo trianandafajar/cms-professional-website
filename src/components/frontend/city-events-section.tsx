@@ -5,6 +5,8 @@ import type { MouseEvent } from 'react'
 import Link from 'next/link'
 import { Share2, MapPin, Clock } from 'lucide-react'
 import { formatEventDate, formatEventTime, locationToSlug } from '@/lib/eventQueries'
+import { getFallbackEventImageUrl, getSeedEventImageUrl } from '@/lib/eventImages'
+import { getEventPriceLabel } from '@/lib/eventPricing'
 import { LikeButton } from './like-button'
 import type { Event, Category, Location, Media, User } from '@/payload-types'
 
@@ -35,7 +37,9 @@ function getEventImage(event: ResolvedEvent): string {
   if (event.coverImage && typeof event.coverImage === 'object' && event.coverImage.url) {
     return event.coverImage.url
   }
-  return 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=600&h=380&fit=crop&q=80'
+
+  const key = event.slug || event.title || String(event.id)
+  return getSeedEventImageUrl(event.slug ?? '', 600, 380) ?? getFallbackEventImageUrl(key, 600, 380)
 }
 
 function getOrganizerName(event: ResolvedEvent): string {
@@ -69,38 +73,6 @@ function getCitySlug(event: ResolvedEvent): string {
     return locationToSlug((event.location as Location).name)
   }
   return 'all'
-}
-
-function formatTicketAmount(amount: number, currency = 'USD'): string {
-  if (amount <= 0) return 'Free'
-
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency.toUpperCase(),
-    maximumFractionDigits: 2,
-  }).format(amount)
-}
-
-function getEventPriceLabel(event: ResolvedEvent): string {
-  const ticketTypes = event.ticketTypes ?? []
-
-  if (ticketTypes.length === 0) {
-    return event.isFree ? 'Free' : (event.price ?? 'See details')
-  }
-
-  const prices = ticketTypes
-    .map((ticketType) => Number(ticketType.price ?? 0))
-    .filter((price) => Number.isFinite(price) && price >= 0)
-
-  if (prices.length === 0) return event.isFree ? 'Free' : 'See details'
-
-  const minPrice = Math.min(...prices)
-  const maxPrice = Math.max(...prices)
-  const currency = ticketTypes.find((ticketType) => ticketType.currency)?.currency ?? 'USD'
-
-  if (minPrice === maxPrice) return formatTicketAmount(minPrice, currency)
-
-  return `${formatTicketAmount(minPrice, currency)} - ${formatTicketAmount(maxPrice, currency)}`
 }
 
 export function CityEventsSection({ events, city, totalDocs }: Props) {

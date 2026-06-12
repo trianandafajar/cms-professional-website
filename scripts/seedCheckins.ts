@@ -115,7 +115,7 @@ async function seedCheckins() {
       })
 
       if (existingEvents.totalDocs === 0) {
-        console.log('   ⚠️  No published events in database. Run pnpm seed:all first.')
+        console.log('   ⚠️  No published events in database.')
         process.exit(1)
       }
 
@@ -143,7 +143,7 @@ async function seedCheckins() {
   })
 
   if (eventsResult.totalDocs === 0) {
-    console.log('⚠️  No published events found. Run pnpm seed:all first.')
+    console.log('⚠️  No published events found.')
     process.exit(1)
   }
 

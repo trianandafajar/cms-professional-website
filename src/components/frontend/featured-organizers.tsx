@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { FollowButton } from '@/components/frontend/follow-button'
 import type { Media, User } from '@/payload-types'
@@ -93,8 +93,51 @@ export function FeaturedOrganizers({
   followedOrganizerIds = [],
   currentUserId = null,
 }: Props) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [grabbing, setGrabbing] = useState(false)
+  const drag = useRef({ x: 0, left: 0, moved: false, tracking: false })
+
+  const onMouseDown = (e: React.MouseEvent) => {
+    const el = ref.current
+    if (!el) return
+    drag.current = { x: e.pageX, left: el.scrollLeft, moved: false, tracking: true }
+  }
+
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!drag.current.tracking || !ref.current) return
+    const dx = e.pageX - drag.current.x
+    if (Math.abs(dx) > 4) {
+      drag.current.moved = true
+      if (!grabbing) setGrabbing(true)
+    }
+    if (drag.current.moved) {
+      ref.current.scrollLeft = drag.current.left - dx
+    }
+  }
+
+  const stopDrag = () => {
+    drag.current.tracking = false
+    setGrabbing(false)
+  }
+
+  const preventClickAfterDrag = (e: React.MouseEvent) => {
+    if (!drag.current.moved) return
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
   return (
-    <div className="destinations-scroll flex gap-3 overflow-x-auto scroll-smooth pb-3">
+    <div
+      ref={ref}
+      className={`drag-scroll flex gap-3 overflow-x-auto scroll-smooth pb-3 select-none ${
+        grabbing ? 'cursor-grabbing' : 'cursor-grab'
+      }`}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={stopDrag}
+      onMouseLeave={stopDrag}
+      onClickCapture={preventClickAfterDrag}
+    >
       {organizers.length > 0 ? (
         organizers.map((org) => (
           <PayloadOrganizerCard
