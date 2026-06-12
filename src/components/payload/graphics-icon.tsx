@@ -1,5 +1,9 @@
-import { Home } from "lucide-react";
+import Image from 'next/image'
 
 export default function AdminGraphicsIcon() {
-    return <Home className="h-5 w-5" />
+  return (
+    <span className="payload-brand-icon" aria-hidden="true">
+      <Image src="/icon.png" alt="" width={20} height={20} />
+    </span>
+  )
 }

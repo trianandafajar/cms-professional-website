@@ -71,8 +71,19 @@ export default buildConfig({
   admin: {
     user: Users.slug,
     theme: 'light',
+    meta: {
+      titleSuffix: ' - Eventbro Admin',
+      defaultOGImageType: 'dynamic',
+      robots: 'noindex, nofollow',
+      icons: [
+        {
+          rel: 'icon',
+          type: 'image/png',
+          url: '/icon.png',
+        },
+      ],
+    },
     components: {
-      Nav: '/components/payload/admin-nav#AdminNav',
       views: {
         dashboard: {
           Component: '/components/payload/admin-dashboard#AdminDashboard',

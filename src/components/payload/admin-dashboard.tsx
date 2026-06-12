@@ -119,10 +119,11 @@ export async function AdminDashboard(props: AdminViewServerProps) {
   )
 
   const ticketStatusMap: CountMap = Object.fromEntries(
-    ticketStatuses.map((status, index) => [status, statusCounts[eventStatuses.length + index]?.totalDocs ?? 0]),
+    ticketStatuses.map((status, index) => [
+      status,
+      statusCounts[eventStatuses.length + index]?.totalDocs ?? 0,
+    ]),
   )
-
-  const providerStatusMap: CountMap = Object.fromEntries(providerStatuses.map((status) => [status, 0]))
 
   const providerBreakdown = new Map<string, CountMap>()
 
@@ -130,16 +131,18 @@ export async function AdminDashboard(props: AdminViewServerProps) {
     const provider = String(connection.provider ?? 'unknown')
     const status = String(connection.status ?? 'pending')
 
-    providerStatusMap[status] = (providerStatusMap[status] ?? 0) + 1
-
-    const current = providerBreakdown.get(provider) ?? Object.fromEntries(providerStatuses.map((value) => [value, 0]))
+    const current =
+      providerBreakdown.get(provider) ??
+      Object.fromEntries(providerStatuses.map((value) => [value, 0]))
     current[status] = (current[status] ?? 0) + 1
     providerBreakdown.set(provider, current)
   }
 
   const timelineBase = getMonthStart(new Date())
   const timelineMonths = Array.from({ length: 6 }, (_, index) => addMonths(timelineBase, index))
-  const timelineMap = Object.fromEntries(timelineMonths.map((date) => [toMonthKey(date), 0])) as CountMap
+  const timelineMap = Object.fromEntries(
+    timelineMonths.map((date) => [toMonthKey(date), 0]),
+  ) as CountMap
 
   for (const event of scheduledEvents.docs) {
     if (!event.startDate) continue
@@ -161,33 +164,34 @@ export async function AdminDashboard(props: AdminViewServerProps) {
   const ticketStatusMax = getMaxValue(Object.values(ticketStatusMap))
 
   return (
-    <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-8 px-8 py-8">
-      <section className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-2">
-          <p className="text-sm font-medium uppercase tracking-[0.22em] text-zinc-400">Admin overview</p>
-          <h1 className="text-4xl font-bold tracking-tight text-zinc-950">Platform dashboard</h1>
-          <p className="max-w-3xl text-base text-zinc-500">
-            Monitor platform growth, event activity, ticket flow, and payment connection health from one place.
+    <div className="admin-dashboard">
+      <section className="admin-dashboard__hero">
+        <div className="admin-dashboard__hero-copy">
+          <p className="admin-dashboard__eyebrow">Admin overview</p>
+          <h1 className="admin-dashboard__title">Platform dashboard</h1>
+          <p className="admin-dashboard__subtitle">
+            Monitor platform growth, event activity, ticket flow, and payment connection
+            health from one place.
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="admin-dashboard__hero-actions">
           <Link
             href="/admin/collections/events"
-            className="inline-flex items-center rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:border-indigo-200 hover:text-indigo-600"
+            className="admin-dashboard__button admin-dashboard__button--secondary"
           >
             Manage events
           </Link>
           <Link
             href="/admin/collections/tickets"
-            className="inline-flex items-center rounded-2xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+            className="admin-dashboard__button admin-dashboard__button--primary"
           >
             Review tickets
           </Link>
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="admin-dashboard__stats">
         {[
           {
             label: 'Total users',
@@ -210,61 +214,66 @@ export async function AdminDashboard(props: AdminViewServerProps) {
             helper: `${paymentConnections.totalDocs} payment connections`,
           },
         ].map((item) => (
-          <article
-            key={item.label}
-            className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-[0_12px_30px_-20px_rgba(15,23,42,0.18)]"
-          >
-            <p className="text-sm font-medium text-zinc-500">{item.label}</p>
-            <p className="mt-3 text-4xl font-bold tracking-tight text-zinc-950">{item.value.toLocaleString('en-US')}</p>
-            <p className="mt-2 text-sm text-zinc-500">{item.helper}</p>
+          <article key={item.label} className="admin-dashboard__stat-card">
+            <p className="admin-dashboard__stat-label">{item.label}</p>
+            <p className="admin-dashboard__stat-value">
+              {item.value.toLocaleString('en-US')}
+            </p>
+            <p className="admin-dashboard__stat-helper">{item.helper}</p>
           </article>
         ))}
       </section>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.6fr_1fr]">
-        <article className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-[0_12px_30px_-20px_rgba(15,23,42,0.18)]">
-          <div className="flex items-center justify-between gap-4">
+      <section className="admin-dashboard__grid admin-dashboard__grid--wide">
+        <article className="admin-dashboard__card">
+          <div className="admin-dashboard__card-head">
             <div>
-              <h2 className="text-xl font-semibold text-zinc-950">Upcoming event activity</h2>
-              <p className="mt-1 text-sm text-zinc-500">Scheduled events over the next six months.</p>
+              <h2 className="admin-dashboard__card-title">Upcoming event activity</h2>
+              <p className="admin-dashboard__card-subtitle">
+                Scheduled events over the next six months.
+              </p>
             </div>
-            <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600">
-              Live data
-            </span>
+            <span className="admin-dashboard__badge">Live data</span>
           </div>
 
-          <div className="mt-8 grid h-[320px] grid-cols-6 items-end gap-4">
+          <div className="admin-dashboard__timeline">
             {timelineData.map((item) => (
-              <div key={item.label} className="flex h-full flex-col items-center justify-end gap-3">
-                <div className="flex h-full w-full items-end justify-center rounded-2xl bg-zinc-50 p-3">
+              <div key={item.label} className="admin-dashboard__timeline-item">
+                <div className="admin-dashboard__timeline-track">
                   <div
-                    className="w-full rounded-2xl bg-gradient-to-t from-indigo-600 to-violet-400 transition-all"
+                    className="admin-dashboard__timeline-bar"
                     style={{ height: getBarWidth(item.value, timelineMax) }}
                   />
                 </div>
-                <div className="text-center">
-                  <p className="text-sm font-semibold text-zinc-900">{item.value}</p>
-                  <p className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-zinc-400">{item.label}</p>
+                <div className="admin-dashboard__timeline-meta">
+                  <p className="admin-dashboard__timeline-value">{item.value}</p>
+                  <p className="admin-dashboard__timeline-label">{item.label}</p>
                 </div>
               </div>
             ))}
           </div>
         </article>
 
-        <article className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-[0_12px_30px_-20px_rgba(15,23,42,0.18)]">
-          <h2 className="text-xl font-semibold text-zinc-950">Event status pipeline</h2>
-          <p className="mt-1 text-sm text-zinc-500">See how the event catalog is distributed right now.</p>
+        <article className="admin-dashboard__card">
+          <h2 className="admin-dashboard__card-title">Event status pipeline</h2>
+          <p className="admin-dashboard__card-subtitle">
+            See how the event catalog is distributed right now.
+          </p>
 
-          <div className="mt-8 space-y-5">
+          <div className="admin-dashboard__stack">
             {eventStatuses.map((status) => (
-              <div key={status} className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-zinc-700">{formatLabel(status)}</span>
-                  <span className="font-semibold text-zinc-950">{eventStatusMap[status].toLocaleString('en-US')}</span>
+              <div key={status} className="admin-dashboard__metric">
+                <div className="admin-dashboard__metric-head">
+                  <span className="admin-dashboard__metric-label">
+                    {formatLabel(status)}
+                  </span>
+                  <span className="admin-dashboard__metric-value">
+                    {eventStatusMap[status].toLocaleString('en-US')}
+                  </span>
                 </div>
-                <div className="h-3 rounded-full bg-zinc-100">
+                <div className="admin-dashboard__progress">
                   <div
-                    className="h-3 rounded-full bg-gradient-to-r from-indigo-600 to-violet-400"
+                    className="admin-dashboard__progress-bar admin-dashboard__progress-bar--gradient"
                     style={{ width: getBarWidth(eventStatusMap[status], eventStatusMax) }}
                   />
                 </div>
@@ -274,21 +283,27 @@ export async function AdminDashboard(props: AdminViewServerProps) {
         </article>
       </section>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.25fr_1fr]">
-        <article className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-[0_12px_30px_-20px_rgba(15,23,42,0.18)]">
-          <h2 className="text-xl font-semibold text-zinc-950">Ticket lifecycle</h2>
-          <p className="mt-1 text-sm text-zinc-500">Track movement from pending orders through check-in.</p>
+      <section className="admin-dashboard__grid admin-dashboard__grid--split">
+        <article className="admin-dashboard__card">
+          <h2 className="admin-dashboard__card-title">Ticket lifecycle</h2>
+          <p className="admin-dashboard__card-subtitle">
+            Track movement from pending orders through check-in.
+          </p>
 
-          <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="admin-dashboard__ticket-grid">
             {ticketStatuses.map((status) => (
-              <div key={status} className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-medium text-zinc-600">{formatLabel(status)}</span>
-                  <span className="text-lg font-bold text-zinc-950">{ticketStatusMap[status].toLocaleString('en-US')}</span>
+              <div key={status} className="admin-dashboard__ticket-card">
+                <div className="admin-dashboard__ticket-card-head">
+                  <span className="admin-dashboard__ticket-card-label">
+                    {formatLabel(status)}
+                  </span>
+                  <span className="admin-dashboard__ticket-card-value">
+                    {ticketStatusMap[status].toLocaleString('en-US')}
+                  </span>
                 </div>
-                <div className="mt-4 h-2.5 rounded-full bg-white">
+                <div className="admin-dashboard__progress admin-dashboard__progress--light">
                   <div
-                    className="h-2.5 rounded-full bg-zinc-900"
+                    className="admin-dashboard__progress-bar admin-dashboard__progress-bar--dark"
                     style={{ width: getBarWidth(ticketStatusMap[status], ticketStatusMax) }}
                   />
                 </div>
@@ -297,27 +312,31 @@ export async function AdminDashboard(props: AdminViewServerProps) {
           </div>
         </article>
 
-        <article className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-[0_12px_30px_-20px_rgba(15,23,42,0.18)]">
-          <h2 className="text-xl font-semibold text-zinc-950">Payment providers</h2>
-          <p className="mt-1 text-sm text-zinc-500">Organizer connection health by provider.</p>
+        <article className="admin-dashboard__card">
+          <h2 className="admin-dashboard__card-title">Payment providers</h2>
+          <p className="admin-dashboard__card-subtitle">
+            Organizer connection health by provider.
+          </p>
 
-          <div className="mt-8 space-y-4">
+          <div className="admin-dashboard__provider-list">
             {[...providerBreakdown.entries()].length > 0 ? (
               [...providerBreakdown.entries()].map(([provider, counts]) => (
-                <div key={provider} className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-base font-semibold text-zinc-950">{formatLabel(provider)}</h3>
-                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-zinc-600">
-                      {(Object.values(counts).reduce((sum, value) => sum + value, 0) || 0).toLocaleString('en-US')} connections
+                <div key={provider} className="admin-dashboard__provider-card">
+                  <div className="admin-dashboard__provider-head">
+                    <h3 className="admin-dashboard__provider-title">
+                      {formatLabel(provider)}
+                    </h3>
+                    <span className="admin-dashboard__provider-count">
+                      {(
+                        Object.values(counts).reduce((sum, value) => sum + value, 0) || 0
+                      ).toLocaleString('en-US')}{' '}
+                      connections
                     </span>
                   </div>
 
-                  <div className="mt-4 flex flex-wrap gap-2">
+                  <div className="admin-dashboard__provider-tags">
                     {providerStatuses.map((status) => (
-                      <span
-                        key={status}
-                        className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600"
-                      >
+                      <span key={status} className="admin-dashboard__provider-tag">
                         {formatLabel(status)}: {counts[status] ?? 0}
                       </span>
                     ))}
@@ -325,7 +344,7 @@ export async function AdminDashboard(props: AdminViewServerProps) {
                 </div>
               ))
             ) : (
-              <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-6 text-sm text-zinc-500">
+              <div className="admin-dashboard__empty">
                 No payment connections available yet.
               </div>
             )}
@@ -333,19 +352,21 @@ export async function AdminDashboard(props: AdminViewServerProps) {
         </article>
       </section>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <article className="rounded-3xl border border-zinc-200 bg-white shadow-[0_12px_30px_-20px_rgba(15,23,42,0.18)]">
-          <div className="flex items-center justify-between border-b border-zinc-100 px-6 py-5">
+      <section className="admin-dashboard__grid admin-dashboard__grid--equal">
+        <article className="admin-dashboard__card admin-dashboard__card--flush">
+          <div className="admin-dashboard__card-head admin-dashboard__card-head--bordered">
             <div>
-              <h2 className="text-xl font-semibold text-zinc-950">Recent ticket activity</h2>
-              <p className="mt-1 text-sm text-zinc-500">Latest buyer activity across the platform.</p>
+              <h2 className="admin-dashboard__card-title">Recent ticket activity</h2>
+              <p className="admin-dashboard__card-subtitle">
+                Latest buyer activity across the platform.
+              </p>
             </div>
-            <Link href="/admin/collections/tickets" className="text-sm font-semibold text-indigo-600 hover:text-indigo-500">
+            <Link href="/admin/collections/tickets" className="admin-dashboard__text-link">
               View all
             </Link>
           </div>
 
-          <div className="divide-y divide-zinc-100">
+          <div className="admin-dashboard__list">
             {recentTickets.docs.map((ticket) => {
               const eventTitle =
                 ticket.event && typeof ticket.event === 'object' && 'title' in ticket.event
@@ -353,16 +374,20 @@ export async function AdminDashboard(props: AdminViewServerProps) {
                   : 'Unknown event'
 
               return (
-                <div key={ticket.id} className="flex items-start justify-between gap-4 px-6 py-4">
-                  <div className="min-w-0">
-                    <p className="truncate text-base font-semibold text-zinc-950">{ticket.purchaserName}</p>
-                    <p className="mt-1 truncate text-sm text-zinc-500">
+                <div key={ticket.id} className="admin-dashboard__list-item">
+                  <div className="admin-dashboard__list-copy">
+                    <p className="admin-dashboard__list-title">{ticket.purchaserName}</p>
+                    <p className="admin-dashboard__list-subtitle">
                       {ticket.ticketType} · {eventTitle}
                     </p>
                   </div>
-                  <div className="shrink-0 text-right">
-                    <p className="text-sm font-semibold text-zinc-900">{formatLabel(String(ticket.status ?? 'pending'))}</p>
-                    <p className="mt-1 text-xs text-zinc-400">{new Date(ticket.createdAt).toLocaleString('en-US')}</p>
+                  <div className="admin-dashboard__list-meta">
+                    <p className="admin-dashboard__list-status">
+                      {formatLabel(String(ticket.status ?? 'pending'))}
+                    </p>
+                    <p className="admin-dashboard__list-date">
+                      {new Date(ticket.createdAt).toLocaleString('en-US')}
+                    </p>
                   </div>
                 </div>
               )
@@ -370,27 +395,31 @@ export async function AdminDashboard(props: AdminViewServerProps) {
           </div>
         </article>
 
-        <article className="rounded-3xl border border-zinc-200 bg-white shadow-[0_12px_30px_-20px_rgba(15,23,42,0.18)]">
-          <div className="flex items-center justify-between border-b border-zinc-100 px-6 py-5">
+        <article className="admin-dashboard__card admin-dashboard__card--flush">
+          <div className="admin-dashboard__card-head admin-dashboard__card-head--bordered">
             <div>
-              <h2 className="text-xl font-semibold text-zinc-950">Latest events</h2>
-              <p className="mt-1 text-sm text-zinc-500">Recently created events and their current state.</p>
+              <h2 className="admin-dashboard__card-title">Latest events</h2>
+              <p className="admin-dashboard__card-subtitle">
+                Recently created events and their current state.
+              </p>
             </div>
-            <Link href="/admin/collections/events" className="text-sm font-semibold text-indigo-600 hover:text-indigo-500">
+            <Link href="/admin/collections/events" className="admin-dashboard__text-link">
               View all
             </Link>
           </div>
 
-          <div className="divide-y divide-zinc-100">
+          <div className="admin-dashboard__list">
             {recentEvents.docs.map((event) => (
-              <div key={event.id} className="flex items-start justify-between gap-4 px-6 py-4">
-                <div className="min-w-0">
-                  <p className="truncate text-base font-semibold text-zinc-950">{event.title}</p>
-                  <p className="mt-1 truncate text-sm text-zinc-500">
-                    {event.startDate ? new Date(event.startDate).toLocaleString('en-US') : 'No schedule yet'}
+              <div key={event.id} className="admin-dashboard__list-item">
+                <div className="admin-dashboard__list-copy">
+                  <p className="admin-dashboard__list-title">{event.title}</p>
+                  <p className="admin-dashboard__list-subtitle">
+                    {event.startDate
+                      ? new Date(event.startDate).toLocaleString('en-US')
+                      : 'No schedule yet'}
                   </p>
                 </div>
-                <div className="shrink-0 rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-700">
+                <div className="admin-dashboard__pill">
                   {formatLabel(String(event.status ?? 'draft'))}
                 </div>
               </div>

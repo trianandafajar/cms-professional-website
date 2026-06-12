@@ -23,8 +23,8 @@ const serverFunction: ServerFunctionClient = async function (args) {
 }
 
 export const metadata = {
-  description: 'Eventbro - Discover and manage events with a cleaner ticketing experience.',
-  title: 'Eventbro',
+  description: 'Eventbro Admin - manage platform operations, content, and ticketing workflows.',
+  title: 'Eventbro Admin',
   icons: {
     icon: [{ url: '/icon.png', type: 'image/png' }],
     shortcut: '/icon.png',
