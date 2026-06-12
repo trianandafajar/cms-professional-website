@@ -260,6 +260,9 @@ export default function TicketDesignerPage() {
 
   const activeDesign = designs.find((d) => d.id === activeDesignId) ?? null
   const config = activeDesign?.config ?? defaultConfig
+  const isBottomQr =
+    config.qrPosition === 'bottom-left' || config.qrPosition === 'bottom-right'
+  const isLeftQr = config.qrPosition === 'left' || config.qrPosition === 'bottom-left'
 
   const showSaveMessage = (message: string) => {
     if (saveMessageTimeoutRef.current) {
@@ -593,7 +596,7 @@ export default function TicketDesignerPage() {
             </div>
             <div className="flex flex-wrap gap-1.5">
               {designs.length === 0 ? (
-                <p className="text-xs text-zinc-400">Belum ada preset tersimpan.</p>
+                <p className="text-xs text-zinc-400">No saved presets yet.</p>
               ) : (
                 designs.map((design) => (
                   <div key={design.id} className="group relative">
@@ -1059,9 +1062,9 @@ export default function TicketDesignerPage() {
                 <div className="rounded-full bg-indigo-50 p-4 text-[#5151eb]">
                   <Sliders size={24} />
                 </div>
-                <h2 className="mt-4 text-xl font-semibold text-zinc-900">Belum ada preset</h2>
+                <h2 className="mt-4 text-xl font-semibold text-zinc-900">No preset yet</h2>
                 <p className="mt-2 text-sm text-zinc-500">
-                  Tambahkan design baru untuk mulai membuat preset ticket.
+                  Add a new design to start creating ticket presets.
                 </p>
                 <button
                   onClick={addDesign}
@@ -1077,10 +1080,7 @@ export default function TicketDesignerPage() {
                 style={{
                   ...getTicketBackground(),
                   width: `${config.width}px`,
-                  height:
-                    config.orientation === 'vertical'
-                      ? `${config.height + 200}px`
-                      : `${config.height}px`,
+                  height: `${config.height}px`,
                   borderRadius: `${config.borderRadius}px`,
                   padding: `${config.padding}px`,
                 }}
@@ -1098,11 +1098,15 @@ export default function TicketDesignerPage() {
               )}
 
               <div
-                className={`relative flex h-full ${config.orientation === 'vertical' ? 'flex-col' : 'flex-row items-stretch'} gap-6`}
+                className={`relative flex h-full ${
+                  config.orientation === 'vertical' ? 'flex-col' : 'flex-row items-stretch'
+                } gap-6`}
               >
                 {/* Info */}
                 <div
-                  className={`flex flex-1 flex-col justify-between ${config.qrPosition === 'left' ? 'order-2' : 'order-1'}`}
+                  className={`flex flex-1 flex-col justify-between ${
+                    isLeftQr ? 'order-2' : 'order-1'
+                  }`}
                 >
                   <div>
                     <div
@@ -1200,7 +1204,7 @@ export default function TicketDesignerPage() {
                 {config.showDivider &&
                   (config.orientation === 'horizontal' ? (
                     <div
-                      className={`flex items-center ${config.qrPosition === 'left' ? 'order-3' : 'order-2'}`}
+                      className={`flex items-center ${isLeftQr ? 'order-3' : 'order-2'}`}
                     >
                       <div
                         className="h-full w-px"
@@ -1216,7 +1220,11 @@ export default function TicketDesignerPage() {
 
                 {/* QR */}
                 <div
-                  className={`flex flex-col items-center justify-center gap-3 ${config.orientation === 'horizontal' ? 'w-48' : 'w-full'} ${config.qrPosition === 'left' ? 'order-1' : 'order-3'}`}
+                  className={`flex flex-col gap-3 ${
+                    config.orientation === 'horizontal' ? 'w-48' : 'w-full'
+                  } ${isLeftQr ? 'order-1' : 'order-3'} items-center text-center ${
+                    isBottomQr ? 'justify-end' : 'justify-center'
+                  }`}
                 >
                   <div
                     style={{ borderRadius: `${config.qrBorderRadius}px` }}
@@ -1233,7 +1241,7 @@ export default function TicketDesignerPage() {
                   </div>
                   <p
                     style={{ color: config.labelColor }}
-                    className="text-center text-[10px] font-medium"
+                    className="text-[10px] font-medium"
                   >
                     Scan for check-in
                   </p>

@@ -66,8 +66,11 @@ export default function TicketPreviewCard({
   qrValue = 'https://eventbro.id/checkin/TKT-PREVIEW-001',
 }: TicketPreviewProps) {
   const bgStyle = getTicketBackground(config)
+  const isBottomQr =
+    config.qrPosition === 'bottom-left' || config.qrPosition === 'bottom-right'
+  const isLeftQr = config.qrPosition === 'left' || config.qrPosition === 'bottom-left'
   const w = config.width * scale
-  const h = (config.orientation === 'vertical' ? config.height + 200 : config.height) * scale
+  const h = config.height * scale
 
   return (
     <div
@@ -101,12 +104,16 @@ export default function TicketPreviewCard({
       )}
 
       <div
-        className={`relative flex h-full ${config.orientation === 'vertical' ? 'flex-col' : 'flex-row items-stretch'}`}
+        className={`relative flex h-full ${
+          config.orientation === 'vertical' ? 'flex-col' : 'flex-row items-stretch'
+        }`}
         style={{ gap: `${6 * scale * 4}px` }}
       >
         {/* Info */}
         <div
-          className={`flex flex-1 flex-col justify-between ${config.qrPosition === 'left' ? 'order-2' : 'order-1'}`}
+          className={`flex flex-1 flex-col justify-between ${
+            isLeftQr ? 'order-2' : 'order-1'
+          }`}
         >
           <div>
             <div
@@ -187,7 +194,7 @@ export default function TicketPreviewCard({
         {config.showDivider &&
           (config.orientation === 'horizontal' ? (
             <div
-              className={`flex items-center ${config.qrPosition === 'left' ? 'order-3' : 'order-2'}`}
+              className={`flex items-center ${isLeftQr ? 'order-3' : 'order-2'}`}
             >
               <div
                 className="h-full w-px"
@@ -203,8 +210,14 @@ export default function TicketPreviewCard({
 
         {/* QR */}
         <div
-          className={`flex flex-col items-center justify-center ${config.orientation === 'horizontal' ? '' : 'w-full'} ${config.qrPosition === 'left' ? 'order-1' : 'order-3'}`}
-          style={{ width: config.orientation === 'horizontal' ? `${48 * scale * 4}px` : undefined }}
+          className={`flex flex-col ${
+            config.orientation === 'horizontal' ? '' : 'w-full'
+          } ${isLeftQr ? 'order-1' : 'order-3'} items-center text-center ${
+            isBottomQr ? 'justify-end' : 'justify-center'
+          }`}
+          style={{
+            width: config.orientation === 'horizontal' ? `${48 * scale * 4}px` : undefined,
+          }}
           aria-label={status}
         >
           <div
@@ -229,7 +242,7 @@ export default function TicketPreviewCard({
               fontSize: `${Math.max(7, 10 * scale)}px`,
               marginTop: `${8 * scale}px`,
             }}
-            className="text-center font-medium"
+            className="font-medium"
           >
             Scan for check-in
           </p>
