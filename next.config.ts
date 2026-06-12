@@ -24,6 +24,11 @@ const nextConfig: NextConfig = {
         port: '3000',
         pathname: '/api/media/file/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'eventbro.trianandafajar.com',
+        pathname: '/api/media/file/**',
+      },
     ],
   },
   webpack: (webpackConfig) => {
