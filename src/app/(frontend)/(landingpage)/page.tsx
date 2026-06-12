@@ -11,6 +11,7 @@ import { extractYouTubeId } from '@/lib/youtube'
 import { FeaturedOrganizers } from '@/components/frontend/featured-organizers'
 import { buildEventWhere } from '@/lib/eventQueries'
 import { computeTopDestinations } from '@/lib/topDestinations'
+import { buildLikedEventOrganizerIds, computeFeaturedOrganizers } from '@/lib/featuredOrganizers'
 import type { Location, Category } from '@/payload-types'
 import config from '@/payload.config'
 
@@ -69,16 +70,21 @@ export default async function HomePage() {
     sort: 'name',
   })
 
-  // Fetch featured organizers for homepage section. Keep the homepage usable
-  // while local databases are catching up to newer user relationship migrations.
+  // Pad with any remaining cities when events are sparse
+  const topDestinationIds = new Set(topDestinations.map((l) => l.id))
+  const destinationsToShow = [
+    ...topDestinations,
+    ...(allLocations as any[]).filter((l) => !topDestinationIds.has(l.id)),
+  ].slice(0, 8)
+
+  // Fetch organizers for homepage section with relevance scoring
   let featuredOrganizers: Parameters<typeof FeaturedOrganizers>[0]['organizers'] = []
   try {
-    const { docs } = await payload.find({
+    const { docs: allOrganizers } = await payload.find({
       collection: 'users',
       where: { isOrganizer: { equals: true } },
       depth: 1,
-      limit: 6,
-      sort: '-followersCount',
+      limit: 50,
       select: {
         name: true,
         bio: true,
@@ -86,13 +92,15 @@ export default async function HomePage() {
         followersCount: true,
         instagram: true,
         website: true,
+        createdAt: true,
       },
     })
-    featuredOrganizers = docs.sort((left, right) => {
-      const leftFollowed = followedOrganizerIds.includes(left.id) ? 1 : 0
-      const rightFollowed = followedOrganizerIds.includes(right.id) ? 1 : 0
-      return rightFollowed - leftFollowed || (right.followersCount ?? 0) - (left.followersCount ?? 0)
-    })
+    const likedEventOrganizerIds = buildLikedEventOrganizerIds(user, scoringEvents as any)
+    featuredOrganizers = computeFeaturedOrganizers(
+      allOrganizers as any,
+      { followedOrganizerIds, likedEventOrganizerIds, locationId, events: scoringEvents as any },
+      8,
+    )
   } catch {
     featuredOrganizers = []
   }
@@ -270,7 +278,7 @@ export default async function HomePage() {
                 See all
               </a>
             </div>
-            <DestinationsScroll destinations={topDestinations} />
+            <DestinationsScroll destinations={destinationsToShow} />
           </div>
         </section>
 

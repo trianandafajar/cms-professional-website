@@ -128,7 +128,7 @@ function TicketTypeCard({
               <button
                 type="button"
                 onClick={() => setExpanded((v) => !v)}
-                className="mt-2 flex items-center gap-1 text-xs font-semibold text-[#5151eb] hover:underline"
+                className="mt-2 flex cursor-pointer items-center gap-1 text-xs font-semibold text-[#5151eb] hover:underline"
               >
                 {expanded ? (
                   <ChevronUp className="size-3.5" />
@@ -164,7 +164,7 @@ function TicketTypeCard({
                   onClick={onRemove}
                   disabled={quantity === 0}
                   aria-label="Remove ticket"
-                  className="flex size-9 items-center justify-center rounded-full border border-zinc-200 text-zinc-500 transition hover:border-[#5151eb] hover:text-[#5151eb] disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="flex size-9 cursor-pointer items-center justify-center rounded-full border border-zinc-200 text-zinc-500 transition hover:border-[#5151eb] hover:text-[#5151eb] disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   <Minus className="size-4" />
                 </button>
@@ -176,7 +176,7 @@ function TicketTypeCard({
                   onClick={onAdd}
                   disabled={quantity >= ticket.maxPerOrder || quantity >= ticket.available}
                   aria-label="Add ticket"
-                  className="flex size-9 items-center justify-center rounded-full bg-[#5151eb] text-white transition hover:bg-[#4040d0] disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="flex size-9 cursor-pointer items-center justify-center rounded-full bg-[#5151eb] text-white transition hover:bg-[#4040d0] disabled:cursor-not-allowed disabled:opacity-30"
                 >
                   <Plus className="size-4" />
                 </button>
@@ -260,7 +260,7 @@ function OrderSummary({
       <button
         type="button"
         onClick={onCheckout}
-        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#5151eb] py-3.5 text-sm font-bold text-white transition hover:bg-[#4040d0] active:scale-[0.98]"
+        className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#5151eb] py-3.5 text-sm font-bold text-white transition hover:bg-[#4040d0] active:scale-[0.98]"
       >
         <Ticket className="size-4" />
         {isFree || total === 0
@@ -533,7 +533,7 @@ function CheckoutForm({
                   disabled={!stripeAvailable}
                   className={`rounded-xl border px-4 py-3 text-left transition ${
                     stripeAvailable
-                      ? 'border-[#5151eb] bg-[#5151eb]/5'
+                      ? 'cursor-pointer border-[#5151eb] bg-[#5151eb]/5'
                       : 'cursor-not-allowed border-zinc-200 bg-zinc-50 opacity-60'
                   }`}
                 >
@@ -624,14 +624,14 @@ function CheckoutForm({
         <button
           type="button"
           onClick={onBack}
-          className="flex-1 rounded-xl border border-zinc-200 py-3 text-sm font-semibold text-zinc-600 transition hover:border-zinc-300 hover:bg-zinc-50"
+          className="flex-1 cursor-pointer rounded-xl border border-zinc-200 py-3 text-sm font-semibold text-zinc-600 transition hover:border-zinc-300 hover:bg-zinc-50"
         >
           ← Back to tickets
         </button>
         <button
           type="submit"
           disabled={loading || finalizingSession || (!isFree && total > 0 && !stripeAvailable)}
-          className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#5151eb] py-3 text-sm font-bold text-white transition hover:bg-[#4040d0] disabled:opacity-70"
+          className="flex-1 flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#5151eb] py-3 text-sm font-bold text-white transition hover:bg-[#4040d0] disabled:cursor-not-allowed disabled:opacity-70"
         >
           {loading || finalizingSession ? (
             <>
