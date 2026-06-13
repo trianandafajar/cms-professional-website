@@ -39,6 +39,11 @@ export const useLikesStore = create<LikesState>()(
           )
           set({ likedEventIds: new Set(ids), isHydrated: true })
         } catch (err) {
+          if (err instanceof Error && err.message === 'Unauthorized') {
+            set({ likedEventIds: new Set<number>(), isHydrated: true })
+            return
+          }
+
           console.error('Failed to fetch likes:', err)
           set({ isHydrated: true })
         }
@@ -149,6 +154,15 @@ export const useLikesStore = create<LikesState>()(
           state.isHydrated = true
         }
       },
+      skipHydration: true,
     },
   ),
 )
+
+export function bootstrapLikesStore() {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  void useLikesStore.persist.rehydrate()
+}

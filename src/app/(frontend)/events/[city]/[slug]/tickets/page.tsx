@@ -269,7 +269,7 @@ export default async function EventTicketsPage({ params }: Props) {
 
   const cityName = ev.locationName || slugToDisplayName(city)
   const eventDetailHref = `/events/${city}/${slug}`
-  const hydratedUser = currentUser
+  const hydratedUser = currentUser?.id
     ? ({
         id: String(currentUser.id),
         email: currentUser.email,

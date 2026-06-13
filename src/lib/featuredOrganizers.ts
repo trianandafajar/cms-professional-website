@@ -89,7 +89,7 @@ export function buildLikedEventOrganizerIds(
 
   const likedIds = new Set(
     (user.likedEvents as Array<number | { id: number }>)
-      .map((e) => (typeof e === 'object' ? e.id : e)),
+      .map((e) => (e && typeof e === 'object' ? e.id : e)),
   )
 
   const ids = new Set<number>()

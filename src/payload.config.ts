@@ -1,6 +1,7 @@
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { resendAdapter } from '@payloadcms/email-resend'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { s3Storage } from '@payloadcms/storage-s3'
 import path from 'path'
 import { buildConfig } from 'payload'
 import { en } from 'payload/i18n/en'
@@ -59,9 +60,23 @@ import { isUserOnboarded, onboardingRequiredResponse } from './lib/onboarding'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
+const hasSupabaseS3Config = Boolean(
+  process.env.SUPABASE_S3_BUCKET &&
+    process.env.SUPABASE_S3_ENDPOINT &&
+    process.env.SUPABASE_S3_REGION &&
+    process.env.SUPABASE_S3_ACCESS_KEY_ID &&
+    process.env.SUPABASE_S3_SECRET_ACCESS_KEY,
+)
+const serverURL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'
+
+function getPayloadMediaURL({ filename }: { filename?: string | null }) {
+  if (!filename) return ''
+
+  return `${serverURL}/api/media/file/${encodeURIComponent(filename)}`
+}
 
 export default buildConfig({
-  serverURL: process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000',
+  serverURL,
   i18n: {
     fallbackLanguage: 'en',
     supportedLanguages: {
@@ -133,7 +148,26 @@ export default buildConfig({
     },
   }),
   sharp,
-  plugins: [],
+  plugins: [
+    s3Storage({
+      enabled: hasSupabaseS3Config,
+      collections: {
+        media: {
+          generateFileURL: getPayloadMediaURL,
+        } as any,
+      },
+      bucket: process.env.SUPABASE_S3_BUCKET || '',
+      config: {
+        endpoint: process.env.SUPABASE_S3_ENDPOINT,
+        region: process.env.SUPABASE_S3_REGION,
+        forcePathStyle: true,
+        credentials: {
+          accessKeyId: process.env.SUPABASE_S3_ACCESS_KEY_ID || '',
+          secretAccessKey: process.env.SUPABASE_S3_SECRET_ACCESS_KEY || '',
+        },
+      },
+    }),
+  ],
   endpoints: [
     checkinValidateEndpoint,
     checkinConfirmEndpoint,

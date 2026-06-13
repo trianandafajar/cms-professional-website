@@ -10,7 +10,7 @@ export default async function OrganizersMePage() {
   const payload = await getPayload({ config: payloadConfig })
   const { user } = await payload.auth({ headers })
 
-  if (!user) {
+  if (!user?.id) {
     redirect('/auth/signin')
   }
 

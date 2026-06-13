@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Heart, Share2, Ticket, Calendar, MapPin, Clock, Check } from 'lucide-react'
 import { useAuthGate } from '@/hooks/useAuthGate'
+import { useAuthStore } from '@/stores/authStore'
 import { useLikesStore } from '@/stores/likesStore'
 
 type Props = {
@@ -64,6 +65,8 @@ export function EventDetailActions({
   const [isTogglingInterested, setIsTogglingInterested] = useState(false)
   const [copied, setCopied] = useState(false)
   const router = useRouter()
+  const user = useAuthStore((state) => state.user)
+  const authHasHydrated = useAuthStore((state) => state._hasHydrated)
   const { gate, requireOnboardingComplete } = useAuthGate()
 
   useEffect(() => {
@@ -71,10 +74,10 @@ export function EventDetailActions({
   }, [eventId, interestedCount, setStoreInterestedCount])
 
   useEffect(() => {
-    if (!likesHydrated) {
+    if (authHasHydrated && user && !likesHydrated) {
       void fetchLikes()
     }
-  }, [fetchLikes, likesHydrated])
+  }, [authHasHydrated, fetchLikes, likesHydrated, user])
 
   useEffect(() => {
     setInterested(isInterestedFromStore)

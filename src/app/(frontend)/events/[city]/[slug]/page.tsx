@@ -67,6 +67,8 @@ function getFallbackEventImage(event: Event): string {
 function getOrganizerData(organizer: unknown) {
   if (!organizer || typeof organizer !== 'object') return null
   const o = organizer as User
+  if (!o.id || !o.name) return null
+
   return {
     id: o.id,
     name: o.name,
@@ -324,7 +326,9 @@ export default async function EventDetailPage({ params }: Props) {
 
       for (const eventDoc of docs as Event[]) {
         const organizer = eventDoc.organizer
-        if (!organizer || typeof organizer !== 'object') continue
+        if (!organizer || typeof organizer !== 'object' || !organizer.id || !organizer.name) {
+          continue
+        }
 
         const existing = relatedOrganizers.get(organizer.id)
         relatedOrganizers.set(organizer.id, {

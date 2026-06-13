@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useLikesStore } from '@/stores/likesStore'
+import { bootstrapLikesStore, useLikesStore } from '@/stores/likesStore'
 
 type Props = {
   isLoggedIn: boolean
@@ -14,6 +14,10 @@ type Props = {
 export function LikesProvider({ isLoggedIn }: Props) {
   const fetchLikes = useLikesStore((s) => s.fetchLikes)
   const clear = useLikesStore((s) => s.clear)
+
+  useEffect(() => {
+    bootstrapLikesStore()
+  }, [])
 
   useEffect(() => {
     if (isLoggedIn) {

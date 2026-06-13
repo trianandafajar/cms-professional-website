@@ -148,6 +148,8 @@ export default async function CityEventsPage({ params, searchParams }: Props) {
   for (const event of cityEventsForOrganizers as Event[]) {
     if (!event.organizer || typeof event.organizer !== 'object') continue
     const organizer = event.organizer as User
+    if (!organizer.id || !organizer.name) continue
+
     const existing = organizerMap.get(Number(organizer.id))
     organizerMap.set(Number(organizer.id), {
       id: organizer.id,

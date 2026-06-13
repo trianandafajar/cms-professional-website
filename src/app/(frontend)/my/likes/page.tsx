@@ -27,7 +27,7 @@ export default async function MyLikesPage() {
   const payload = await getPayload({ config: payloadConfig })
   const { user } = await payload.auth({ headers })
 
-  if (!user) {
+  if (!user?.id) {
     redirect('/auth/signin')
   }
 

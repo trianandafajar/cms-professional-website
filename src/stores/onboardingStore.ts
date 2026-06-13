@@ -50,6 +50,15 @@ export const useOnboardingStore = create<OnboardingState>()(
     }),
     {
       name: 'onboarding-storage',
+      skipHydration: true,
     }
   )
 );
+
+export function bootstrapOnboardingStore() {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  void useOnboardingStore.persist.rehydrate()
+}

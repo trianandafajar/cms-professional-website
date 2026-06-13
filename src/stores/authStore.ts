@@ -165,9 +165,7 @@ export const useAuthStore = create<AuthState>()(
         authExpiresAt: state.authExpiresAt,
       }),
       onRehydrateStorage: () => {
-        console.log('[AuthStore] onRehydrateStorage called')
         return () => {
-          console.log('[AuthStore] Rehydration callback executed')
           const current = useAuthStore.getState()
           if (!current.authExpiresAt && current.user) {
             useAuthStore.setState({ user: null, authExpiresAt: null })
@@ -181,15 +179,17 @@ export const useAuthStore = create<AuthState>()(
           useAuthStore.setState({ _hasHydrated: true })
         }
       },
+      skipHydration: true,
     },
   ),
 )
 
-// Client-side hydration check (for Next.js SSR)
-if (typeof window !== 'undefined') {
-  // Force hydration check after store creation
+export function bootstrapAuthStore() {
+  if (typeof window === 'undefined') {
+    return () => {}
+  }
+
   const unsub = useAuthStore.persist.onFinishHydration(() => {
-    console.log('[AuthStore] onFinishHydration triggered')
     const current = useAuthStore.getState()
     if (!current.authExpiresAt && current.user) {
       useAuthStore.setState({ user: null, authExpiresAt: null })
@@ -204,11 +204,16 @@ if (typeof window !== 'undefined') {
     unsub()
   })
 
-  // Fallback: if hydration hasn't completed in 2s, force it
-  setTimeout(() => {
+  void useAuthStore.persist.rehydrate()
+
+  const fallbackTimer = setTimeout(() => {
     if (!useAuthStore.getState()._hasHydrated) {
-      console.warn('[AuthStore] Fallback: forcing _hasHydrated=true after 2s')
       useAuthStore.setState({ _hasHydrated: true })
     }
   }, 2000)
+
+  return () => {
+    unsub()
+    clearTimeout(fallbackTimer)
+  }
 }

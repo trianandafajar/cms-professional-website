@@ -5,6 +5,7 @@ import { Inter } from 'next/font/google'
 import { headers as getHeaders } from 'next/headers.js'
 import { getPayload } from 'payload'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { AuthProvider } from '@/components/providers/auth-provider'
 import { LikesProvider } from '@/components/providers/likes-provider'
 import config from '@/payload.config'
 
@@ -41,6 +42,7 @@ export default async function RootLayout(props: { children: React.ReactNode }) {
     <html lang="en" className={inter.variable}>
       <body className={inter.className}>
         <TooltipProvider>
+          <AuthProvider />
           <LikesProvider isLoggedIn={isLoggedIn} />
           <main>{children}</main>
         </TooltipProvider>

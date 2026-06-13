@@ -33,7 +33,7 @@ export default async function HomePage() {
   const payload = await getPayload({ config: payloadConfig })
   const { user } = await payload.auth({ headers })
   const preferredCategoryIds = ((user?.preferredCategories as (Category | number)[] | null | undefined) ?? [])
-    .map((category) => (typeof category === 'object' ? category.id : category))
+    .map((category) => (category && typeof category === 'object' ? category.id : category))
     .filter((id): id is number => typeof id === 'number')
   const locationId =
     user?.defaultLocation != null
@@ -194,7 +194,7 @@ export default async function HomePage() {
         youtubeId: extractYouTubeId(p.link!)!,
         title: p.linkTitle || p.content.slice(0, 80),
         postId: p.id,
-        authorId: typeof p.author === 'object' ? p.author.id : p.author,
+        authorId: p.author && typeof p.author === 'object' ? p.author.id : p.author,
         authorName:
           typeof p.author === 'object' ? (p.author as { name?: string }).name ?? 'Organizer' : 'Organizer',
       }))

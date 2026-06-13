@@ -10,7 +10,7 @@ export default async function OrdersPage() {
   const payload = await getPayload({ config: await config })
   const { user } = await payload.auth({ headers })
 
-  if (!user) {
+  if (!user?.id) {
     redirect('/auth/signin')
   }
 
