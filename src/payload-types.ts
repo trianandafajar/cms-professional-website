@@ -512,7 +512,7 @@ export interface TicketDesignPreset {
 export interface Notification {
   id: number;
   recipient: number | User;
-  type: 'order' | 'checkin' | 'finance' | 'comment' | 'system';
+  type: 'order' | 'checkin' | 'finance' | 'comment' | 'like' | 'system';
   title: string;
   message: string;
   link?: string | null;

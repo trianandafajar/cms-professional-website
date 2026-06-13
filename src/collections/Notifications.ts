@@ -161,6 +161,7 @@ export const Notifications: CollectionConfig = {
         { label: 'Check-in', value: 'checkin' },
         { label: 'Finance', value: 'finance' },
         { label: 'Comment', value: 'comment' },
+        { label: 'Like', value: 'like' },
         { label: 'System', value: 'system' },
       ],
       label: 'Type',

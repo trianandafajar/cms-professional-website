@@ -78,6 +78,38 @@ function getPayloadMediaURL({ filename }: { filename?: string | null }) {
   )}`
 }
 
+function getRelationshipId(value: unknown): string | number | null {
+  if (!value) return null
+  if (typeof value === 'number' || typeof value === 'string') return value
+  if (typeof value === 'object' && 'id' in value) {
+    return (value as { id?: string | number | null }).id ?? null
+  }
+  return null
+}
+
+function getNumericRelationshipId(value: unknown): number | null {
+  const id = getRelationshipId(value)
+  if (id === null) return null
+  const numericId = Number(id)
+  return Number.isFinite(numericId) ? numericId : null
+}
+
+function getLocationSlug(value: unknown) {
+  if (!value || typeof value !== 'object' || !('name' in value)) return 'all'
+  const name = String((value as { name?: string | null }).name ?? '')
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+}
+
+function getUserDisplayName(user: unknown) {
+  if (!user || typeof user !== 'object') return 'Someone'
+  const source = user as { name?: string | null; email?: string | null }
+  return source.name || source.email || 'Someone'
+}
+
 export default buildConfig({
   serverURL,
   i18n: {
@@ -216,7 +248,7 @@ export default buildConfig({
         const event = await payload.findByID({
           collection: 'events',
           id: eventId,
-          depth: 0,
+          depth: 1,
         })
 
         if (!event) {
@@ -275,6 +307,27 @@ export default buildConfig({
           },
           overrideAccess: true,
         })
+
+        const organizerId = getNumericRelationshipId(event.organizer)
+        if (!isLiked && organizerId && String(organizerId) !== String(user.id)) {
+          await payload.create({
+            collection: 'notifications',
+            data: {
+              recipient: Number(organizerId),
+              type: 'like',
+              title: 'New event like',
+              message: `${getUserDisplayName(currentUser)} liked your event "${event.title}".`,
+              link: `/events/${getLocationSlug(event.location)}/${event.slug}`,
+              metadata: {
+                eventId,
+                eventTitle: event.title,
+                likerId: user.id,
+                organizerId,
+              },
+            },
+            overrideAccess: true,
+          })
+        }
 
         return Response.json({
           liked: !isLiked,

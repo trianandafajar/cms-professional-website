@@ -194,6 +194,7 @@ const quickLinks: QuickLink[] = [
 
 const profileMenu = [
   { label: 'My Profile', href: '/organizations/settings', icon: UserIcon, organizerOnly: true },
+  { label: 'My Profile', href: '/my/profile', icon: UserIcon, attendeeOnly: true },
   { label: 'Dashboard', href: '/organizations/dashboard', icon: LayoutDashboard, organizerOnly: true },
   { label: 'My Events', href: '/organizations/events', icon: Calendar, organizerOnly: true },
   { label: 'My Tickets', href: '/my/tickets', icon: Ticket, attendeeOnly: true },

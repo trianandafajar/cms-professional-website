@@ -53,7 +53,7 @@ export function MyShell({ children, user: initialUser }: { children: React.React
     { icon: Ticket, href: '/my/tickets', label: 'My Tickets' },
     { icon: Receipt, href: '/my/orders', label: 'My Orders' },
     { icon: Heart, href: '/my/likes', label: 'Liked Events' },
-    { icon: UserIcon, href: '/my/profile', label: 'Profile' },
+    { icon: UserIcon, href: '/my/profile', label: 'My Profile' },
   ]
   const sidebarItems = needsOnboarding
     ? [{ icon: ClipboardCheck, href: '/onboarding', label: 'Complete onboarding' }]

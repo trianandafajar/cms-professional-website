@@ -1,5 +1,27 @@
 import type { CollectionConfig } from 'payload'
 
+function getRelationshipId(value: unknown): string | number | null {
+  if (!value) return null
+  if (typeof value === 'number' || typeof value === 'string') return value
+  if (typeof value === 'object' && 'id' in value) {
+    return (value as { id?: string | number | null }).id ?? null
+  }
+  return null
+}
+
+function getNumericRelationshipId(value: unknown): number | null {
+  const id = getRelationshipId(value)
+  if (id === null) return null
+  const numericId = Number(id)
+  return Number.isFinite(numericId) ? numericId : null
+}
+
+function getUserDisplayName(user: unknown) {
+  if (!user || typeof user !== 'object') return 'Someone'
+  const source = user as { name?: string | null; email?: string | null }
+  return source.name || source.email || 'Someone'
+}
+
 export const Posts: CollectionConfig = {
   slug: 'posts',
   admin: {
@@ -181,6 +203,26 @@ export const Posts: CollectionConfig = {
             likesCount: newCount,
           },
         })
+
+        const authorId = getNumericRelationshipId(post.author)
+        if (!isLiked && authorId && String(authorId) !== String(user.id)) {
+          await payload.create({
+            collection: 'notifications',
+            data: {
+              recipient: authorId,
+              type: 'like',
+              title: 'New post like',
+              message: `${getUserDisplayName(user)} liked your post.`,
+              link: `/organizers/${authorId}?tab=feed&post=${postId}`,
+              metadata: {
+                postId,
+                postAuthorId: authorId,
+                likerId: user.id,
+              },
+            },
+            overrideAccess: true,
+          })
+        }
 
         return Response.json({
           liked: !isLiked,

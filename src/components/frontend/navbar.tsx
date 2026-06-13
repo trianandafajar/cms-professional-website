@@ -154,6 +154,12 @@ const profileMenu = [
     organizerOnly: true,
   },
   {
+    label: 'My Profile',
+    href: '/my/profile',
+    icon: UserIcon,
+    attendeeOnly: true,
+  },
+  {
     label: 'Dashboard',
     href: '/organizations/dashboard',
     icon: LayoutDashboard,
