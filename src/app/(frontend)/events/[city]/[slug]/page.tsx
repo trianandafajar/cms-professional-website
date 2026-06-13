@@ -514,7 +514,7 @@ export default async function EventDetailPage({ params }: Props) {
                   <p className="text-sm font-bold text-[#12192f]">{formatFullDate(ev.startDate)}</p>
                   <p className="text-sm text-zinc-500">
                     {formatTime(ev.startDate)}
-                    {ev.endDate && ` â€“ ${formatTime(ev.endDate)}`}
+                    {ev.endDate && ` - ${formatTime(ev.endDate)}`}
                   </p>
                 </div>
               </div>
