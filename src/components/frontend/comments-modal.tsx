@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { apiClient } from '@/lib/apiClient'
 import { useAuthGate } from '@/hooks/useAuthGate'
 import { useAuthStore } from '@/stores/authStore'
+import { normalizeUrlString } from '@/lib/normalize-url'
 import type { Media, User } from '@/payload-types'
 
 interface Comment {
@@ -27,7 +28,7 @@ interface CommentsResponse {
 
 function getMediaUrl(media: unknown): string | null {
   if (media && typeof media === 'object' && 'url' in media) {
-    return (media as Media).url ?? null
+    return normalizeUrlString((media as Media).url)
   }
   return null
 }

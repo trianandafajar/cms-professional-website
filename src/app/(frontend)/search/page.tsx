@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Search, CalendarDays, MapPin, Crown, Loader2 } from 'lucide-react'
 import { FrontendNavbar } from '@/components/frontend/navbar'
 import { apiClient } from '@/lib/apiClient'
+import { normalizeUrlString } from '@/lib/normalize-url'
 import type { Event, User, Media } from '@/payload-types'
 
 type SearchTab = 'events' | 'organizers'
@@ -26,7 +27,7 @@ interface SearchResults {
 
 function getMediaUrl(media: unknown): string | null {
   if (media && typeof media === 'object' && 'url' in media) {
-    return (media as Media).url ?? null
+    return normalizeUrlString((media as Media).url)
   }
   return null
 }

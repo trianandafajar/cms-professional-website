@@ -8,17 +8,18 @@ import { OrganizerFeed } from './organizer-feed'
 import { LikeButton } from './like-button'
 import { getFallbackEventImageUrl, getSeedEventImageUrl } from '@/lib/eventImages'
 import { getEventPriceLabel } from '@/lib/eventPricing'
+import { normalizeUrlString } from '@/lib/normalize-url'
 import type { Event, Media, Location, Category } from '@/payload-types'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 function getMediaUrl(media: unknown): string | null {
   if (typeof media === 'string') {
-    return media || null
+    return normalizeUrlString(media)
   }
 
   if (media && typeof media === 'object' && 'url' in media) {
-    return (media as Media).url ?? null
+    return normalizeUrlString((media as Media).url)
   }
 
   return null

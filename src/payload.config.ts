@@ -7,6 +7,7 @@ import { buildConfig } from 'payload'
 import { en } from 'payload/i18n/en'
 import { fileURLToPath } from 'url'
 import sharp from 'sharp'
+import { normalizeUrlString } from './lib/normalize-url'
 
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
@@ -67,12 +68,14 @@ const hasSupabaseS3Config = Boolean(
     process.env.SUPABASE_S3_ACCESS_KEY_ID &&
     process.env.SUPABASE_S3_SECRET_ACCESS_KEY,
 )
-const serverURL = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'
+const serverURL = normalizeUrlString(process.env.NEXT_PUBLIC_SERVER_URL) || 'http://localhost:3000'
 
 function getPayloadMediaURL({ filename }: { filename?: string | null }) {
   if (!filename) return ''
 
-  return `${serverURL}/api/media/file/${encodeURIComponent(filename)}`
+  return `${serverURL}/api/media/file/${encodeURIComponent(
+    String(filename).replace(/[\r\n\t]+/g, '').trim(),
+  )}`
 }
 
 export default buildConfig({

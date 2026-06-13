@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react'
 import { apiClient } from '@/lib/apiClient'
+import { normalizeUrlString } from '@/lib/normalize-url'
 import { extractYouTubeId } from '@/lib/youtube'
 import { OrganizerCreatePost } from './organizer-create-post'
 import { CommentsModal } from './comments-modal'
@@ -45,7 +46,7 @@ type Props = {
 
 function getMediaUrl(media: unknown): string | null {
   if (media && typeof media === 'object' && 'url' in media) {
-    return (media as Media).url ?? null
+    return normalizeUrlString((media as Media).url)
   }
   return null
 }

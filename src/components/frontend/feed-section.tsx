@@ -17,6 +17,7 @@ import {
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { apiClient } from '@/lib/apiClient'
+import { normalizeUrlString } from '@/lib/normalize-url'
 import { extractYouTubeId } from '@/lib/youtube'
 import { useAuthGate } from '@/hooks/useAuthGate'
 import { useAuthStore } from '@/stores/authStore'
@@ -47,7 +48,7 @@ interface PostsResponse {
 
 function getMediaUrl(media: unknown): string | null {
   if (media && typeof media === 'object' && 'url' in media) {
-    return (media as Media).url ?? null
+    return normalizeUrlString((media as Media).url)
   }
   return null
 }
