@@ -1,8 +1,9 @@
 import type { Endpoint } from 'payload'
+import { normalizeUrlString } from '@/lib/normalize-url'
 import { getStripeClient, syncStripeConnectionStatus } from './finance'
 
 function getServerURL() {
-  return process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'
+  return normalizeUrlString(process.env.NEXT_PUBLIC_SERVER_URL) || 'http://localhost:3000'
 }
 
 export const financeConnectStripeReturnEndpoint: Endpoint = {

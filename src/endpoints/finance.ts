@@ -14,10 +14,11 @@ import {
   type PaymentConnectionSummary,
   type PaymentProvider,
 } from '@/lib/finance'
+import { normalizeUrlString } from '@/lib/normalize-url'
 import { isUserOnboarded, onboardingRequiredResponse } from '@/lib/onboarding'
 
 function getServerURL() {
-  return process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'
+  return normalizeUrlString(process.env.NEXT_PUBLIC_SERVER_URL) || 'http://localhost:3000'
 }
 
 function isCheckoutDebugEnabled() {
