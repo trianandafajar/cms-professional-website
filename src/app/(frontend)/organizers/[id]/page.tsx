@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 
 import { FrontendNavbar } from '@/components/frontend/navbar'
+import { FrontendFooter } from '@/components/frontend/footer'
 import { OrganizerTabs } from '@/components/frontend/organizer-tabs'
 import { FollowButton } from '@/components/frontend/follow-button'
 import { OrganizerOwnerActions } from '@/components/frontend/organizer-owner-actions'
@@ -26,7 +27,6 @@ import {
 import { isUserOnboarded } from '@/lib/onboarding'
 import config from '@/payload.config'
 import type { Media, Event } from '@/payload-types'
-import Image from 'next/image'
 
 type Props = {
   params: Promise<{ id: string }>
@@ -407,18 +407,7 @@ function DummyOrganizerPage({
         <div className="pb-16" />
       </div>
 
-      {/* Footer */}
-      <footer className="bg-[#1d243a]">
-        <div className="mx-auto max-w-[1400px] px-4 py-10 lg:px-8">
-          <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-          <div className="flex items-center gap-3">
-              <Image src="/icon.png" alt="Eventbro" width={28} height={28} className="h-7 w-7 brightness-0 invert" />
-              <span className="text-xl font-extrabold text-white">eventbro</span>
-            </div>
-            <p className="text-sm text-zinc-500">© 2026 Eventbro</p>
-          </div>
-        </div>
-      </footer>
+      <FrontendFooter />
     </div>
   )
 }
@@ -675,17 +664,7 @@ export default async function OrganizerProfilePage({ params, searchParams }: Pro
         </div>
       </div>
 
-      <footer className="bg-[#1d243a]">
-        <div className="mx-auto max-w-[1400px] px-4 py-10 lg:px-8">
-          <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-            <div className="flex items-center gap-3">
-              <Image src="/icon.png" alt="Eventbro" width={28} height={28} className="h-7 w-7 brightness-0 invert" />
-              <span className="text-xl font-extrabold text-white">eventbro</span>
-            </div>
-            <p className="text-sm text-zinc-500">© 2026 Eventbro</p>
-          </div>
-        </div>
-      </footer>
+      <FrontendFooter />
     </div>
   )
 }

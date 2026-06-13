@@ -16,13 +16,13 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 
+import { FrontendFooter } from '@/components/frontend/footer'
 import { FrontendNavbar } from '@/components/frontend/navbar'
 import { CityEventsSection } from '@/components/frontend/city-events-section'
 import { OrganizerSuggestions } from '@/components/frontend/organizer-suggestions'
 import { buildEventWhere } from '@/lib/eventQueries'
 import type { Category, Event, Location, User } from '@/payload-types'
 import config from '@/payload.config'
-import Image from 'next/image'
 
 type Props = {
   params: Promise<{ city: string }>
@@ -427,32 +427,7 @@ export default async function CityEventsPage({ params, searchParams }: Props) {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="mt-16 bg-[#1d243a]">
-        <div className="mx-auto max-w-[1400px] px-4 py-10 lg:px-8">
-          <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-            <div className="flex items-center gap-3">
-              <Image src="/icon.png" alt="Eventbro" width={28} height={28} className="h-7 w-7 brightness-0 invert" />
-              <span className="text-xl font-extrabold text-white">eventbro</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-5 text-sm text-zinc-500">
-              <Link className="hover:text-zinc-300" href="#">
-                About
-              </Link>
-              <Link className="hover:text-zinc-300" href="#">
-                Help
-              </Link>
-              <Link className="hover:text-zinc-300" href="#">
-                Terms
-              </Link>
-              <Link className="hover:text-zinc-300" href="#">
-                Privacy
-              </Link>
-            </div>
-            <p className="text-sm text-zinc-500">© 2026 Eventbro</p>
-          </div>
-        </div>
-      </footer>
+      <FrontendFooter className="mt-16" />
     </div>
   )
 }

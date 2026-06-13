@@ -49,7 +49,7 @@ export default function NotFound() {
         <button
           type="button"
           onClick={() => router.back()}
-          className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50"
+          className="flex cursor-pointer items-center gap-2 rounded-xl border border-zinc-200 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50"
         >
           <ArrowLeft className="size-4" />
           Go Back

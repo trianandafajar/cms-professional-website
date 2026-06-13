@@ -23,6 +23,7 @@ const serverFunction: ServerFunctionClient = async function (args) {
 }
 
 export const metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'),
   description: 'Eventbro Admin - manage platform operations, content, and ticketing workflows.',
   title: 'Eventbro Admin',
   icons: {

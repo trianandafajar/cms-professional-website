@@ -1,7 +1,7 @@
 import { headers as getHeaders } from 'next/headers.js'
-import Image from 'next/image'
 import { getPayload } from 'payload'
 
+import { FrontendFooter } from '@/components/frontend/footer'
 import { FrontendNavbar } from '@/components/frontend/navbar'
 import { HeroSlider } from '@/components/frontend/hero-slider'
 import { DestinationsScroll } from '@/components/frontend/destinations-scroll'
@@ -318,146 +318,7 @@ export default async function HomePage() {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-[#1d243a]">
-        <div className="mx-auto max-w-[1400px] px-4 py-12 lg:px-8">
-          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-400">
-                Use Eventbro
-              </h3>
-              <ul className="mt-4 space-y-3">
-                <li>
-                  <a
-                    className="cursor-pointer text-base text-zinc-300 hover:text-white"
-                    href="/organizations/events/draft?onboard=1"
-                  >
-                    Create Events
-                  </a>
-                </li>
-                <li>
-                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
-                    Find Events
-                  </a>
-                </li>
-                <li>
-                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
-                    Find My Tickets
-                  </a>
-                </li>
-                <li>
-                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
-                    Pricing
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-400">
-                Plan Events
-              </h3>
-              <ul className="mt-4 space-y-3">
-                <li>
-                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
-                    Sell Tickets Online
-                  </a>
-                </li>
-                <li>
-                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
-                    Event Management
-                  </a>
-                </li>
-                <li>
-                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
-                    Virtual Events
-                  </a>
-                </li>
-                <li>
-                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
-                    QR Codes for Events
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-400">
-                Find Events
-              </h3>
-              <ul className="mt-4 space-y-3">
-                <li>
-                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
-                    Music Events
-                  </a>
-                </li>
-                <li>
-                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
-                    Food & Drink
-                  </a>
-                </li>
-                <li>
-                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
-                    Business
-                  </a>
-                </li>
-                <li>
-                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
-                    Performing Arts
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-400">Connect</h3>
-              <ul className="mt-4 space-y-3">
-                <li>
-                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
-                    Contact Support
-                  </a>
-                </li>
-                <li>
-                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
-                    Twitter / X
-                  </a>
-                </li>
-                <li>
-                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
-                    Instagram
-                  </a>
-                </li>
-                <li>
-                  <a className="cursor-pointer text-base text-zinc-300 hover:text-white" href="#">
-                    LinkedIn
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </div>
-          <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-6 md:flex-row">
-            <div className="flex items-center gap-3">
-              <Image src="/icon.png" alt="Eventbro" width={28} height={28} className="h-7 w-7 brightness-0 invert" />
-              <span className="text-xl font-extrabold text-white">eventbro</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-5 text-sm text-zinc-500">
-              <a className="cursor-pointer hover:text-zinc-300" href="#">
-                About
-              </a>
-              <a className="cursor-pointer hover:text-zinc-300" href="#">
-                Blog
-              </a>
-              <a className="cursor-pointer hover:text-zinc-300" href="#">
-                Help
-              </a>
-              <a className="cursor-pointer hover:text-zinc-300" href="#">
-                Terms
-              </a>
-              <a className="cursor-pointer hover:text-zinc-300" href="#">
-                Privacy
-              </a>
-            </div>
-            <p className="text-sm text-zinc-500">© 2026 Eventbro</p>
-          </div>
-        </div>
-      </footer>
+      <FrontendFooter full />
     </div>
   )
 }

@@ -14,13 +14,38 @@ const inter = Inter({
   variable: '--font-inter',
 })
 
+const siteURL = new URL(process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000')
+const siteDescription = 'Eventbro - Discover and manage events with a cleaner ticketing experience.'
+
 export const metadata = {
-  description: 'Eventbro - Discover and manage events with a cleaner ticketing experience.',
+  metadataBase: siteURL,
+  description: siteDescription,
   title: 'Eventbro',
   icons: {
     icon: [{ url: '/icon.png', type: 'image/png' }],
     shortcut: '/icon.png',
     apple: '/icon.png',
+  },
+  openGraph: {
+    title: 'Eventbro',
+    description: siteDescription,
+    siteName: 'Eventbro',
+    type: 'website',
+    url: '/',
+    images: [
+      {
+        url: '/icon.png',
+        width: 238,
+        height: 238,
+        alt: 'Eventbro',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Eventbro',
+    description: siteDescription,
+    images: ['/icon.png'],
   },
 }
 

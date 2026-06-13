@@ -1,4 +1,4 @@
-﻿import { headers as getHeaders } from 'next/headers.js'
+import { headers as getHeaders } from 'next/headers.js'
 import { getPayload } from 'payload'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -13,8 +13,8 @@ import {
   ExternalLink,
   Flag,
 } from 'lucide-react'
-import Image from 'next/image'
 
+import { FrontendFooter } from '@/components/frontend/footer'
 import { FrontendNavbar } from '@/components/frontend/navbar'
 import { OrganizerSuggestions } from '@/components/frontend/organizer-suggestions'
 import { EventDetailActions } from '@/components/frontend/event-detail-actions'
@@ -692,32 +692,7 @@ export default async function EventDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {/* â”€â”€ Footer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <footer className="mt-8 bg-[#1d243a]">
-        <div className="mx-auto max-w-[1400px] px-4 py-10 lg:px-8">
-          <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-             <div className="flex items-center gap-3">
-              <Image src="/icon.png" alt="Eventbro" width={28} height={28} className="h-7 w-7 brightness-0 invert" />
-              <span className="text-xl font-extrabold text-white">eventbro</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-5 text-sm text-zinc-500">
-              <Link className="hover:text-zinc-300" href="#">
-                About
-              </Link>
-              <Link className="hover:text-zinc-300" href="#">
-                Help
-              </Link>
-              <Link className="hover:text-zinc-300" href="#">
-                Terms
-              </Link>
-              <Link className="hover:text-zinc-300" href="#">
-                Privacy
-              </Link>
-            </div>
-            <p className="text-sm text-zinc-500">Â© 2026 Eventbro</p>
-          </div>
-        </div>
-      </footer>
+      <FrontendFooter className="mt-8" />
     </div>
   )
 }
