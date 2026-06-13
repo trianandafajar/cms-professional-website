@@ -27,8 +27,11 @@ export const metadata = {
   description: 'Eventbro Admin - manage platform operations, content, and ticketing workflows.',
   title: 'Eventbro Admin',
   icons: {
-    icon: [{ url: '/icon.png', type: 'image/png' }],
-    shortcut: '/icon.png',
+    icon: [
+      { url: '/favicon.ico', type: 'image/x-icon' },
+      { url: '/icon.png', type: 'image/png', sizes: '238x238' },
+    ],
+    shortcut: '/favicon.ico',
     apple: '/icon.png',
   },
 }

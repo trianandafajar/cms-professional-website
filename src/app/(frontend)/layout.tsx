@@ -22,8 +22,11 @@ export const metadata = {
   description: siteDescription,
   title: 'Eventbro',
   icons: {
-    icon: [{ url: '/icon.png', type: 'image/png' }],
-    shortcut: '/icon.png',
+    icon: [
+      { url: '/favicon.ico', type: 'image/x-icon' },
+      { url: '/icon.png', type: 'image/png', sizes: '238x238' },
+    ],
+    shortcut: '/favicon.ico',
     apple: '/icon.png',
   },
   openGraph: {
