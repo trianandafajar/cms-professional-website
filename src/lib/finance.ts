@@ -112,9 +112,13 @@ export function getConnectedProviders(connections: PaymentConnectionSummary[]) {
 }
 
 export function getActiveCheckoutProviders(connections: PaymentConnectionSummary[]) {
-  return getConnectedProviders(connections).filter(
-    (provider): provider is Extract<PaymentProvider, 'stripe'> => provider === 'stripe',
-  )
+  const providers: PaymentProvider[] = ['paypal']
+
+  if (getConnectedProviders(connections).includes('stripe')) {
+    providers.unshift('stripe')
+  }
+
+  return providers
 }
 
 export function getDefaultCheckoutProvider(
@@ -135,7 +139,7 @@ export function getDefaultCheckoutProvider(
 }
 
 export function buildPaymentProviderLabel(provider: PaymentProvider) {
-  return provider === 'stripe' ? 'Stripe' : 'PayPal (Upcoming)'
+  return provider === 'stripe' ? 'Stripe' : 'PayPal'
 }
 
 export function createAuthState(provider: PaymentProvider) {

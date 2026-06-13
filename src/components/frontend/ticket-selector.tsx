@@ -297,6 +297,8 @@ function CheckoutForm({
   currentUser: CheckoutUser
   financeSettings: FinanceSettingsSummary
   paymentProviders: PaymentProvider[]
+  paypalClientId: string
+  paypalBuyerCountry: string
   checkoutReturnPath: string
   onBack: () => void
   onSuccess: (orderId: string, email: string) => void
@@ -313,9 +315,35 @@ function CheckoutForm({
   const taxAmount = isFree || subtotal === 0 ? 0 : totals.taxAmount
   const total = isFree || subtotal === 0 ? subtotal : totals.total
   const totalTickets = cart.reduce((sum, item) => sum + item.quantity, 0)
+  const [selectedProvider, setSelectedProvider] = useState<PaymentProvider>(
+    paymentProviders[0] ?? 'stripe',
+  )
   const stripeAvailable = paymentProviders.includes('stripe')
+  const paypalAvailable = paymentProviders.includes('paypal')
   const [finalizingSession, setFinalizingSession] = useState(false)
   const [checkoutNotice, setCheckoutNotice] = useState<string | null>(null)
+  const latestPayPalPayloadRef = useRef({
+    name,
+    email,
+    phone,
+    cart,
+  })
+
+  useEffect(() => {
+    latestPayPalPayloadRef.current = {
+      name,
+      email,
+      phone,
+      cart,
+    }
+  }, [cart, email, name, phone])
+
+  useEffect(() => {
+    if (paymentProviders.length === 0) return
+    if (!paymentProviders.includes(selectedProvider)) {
+      setSelectedProvider(paymentProviders[0] ?? 'stripe')
+    }
+  }, [paymentProviders, selectedProvider])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -323,6 +351,34 @@ function CheckoutForm({
     const searchParams = new URLSearchParams(window.location.search)
     const checkoutStatus = searchParams.get('checkout')
     const sessionId = searchParams.get('session_id')
+    const checkoutProvider = searchParams.get('provider') ?? 'stripe'
+    const paypalOrderId = searchParams.get('paypal_order_id') ?? searchParams.get('token')
+    const checkoutOrderId = searchParams.get('order_id')
+
+    if (checkoutStatus === 'cancelled' && checkoutProvider === 'paypal' && checkoutOrderId) {
+      let cancelled = false
+
+      async function cancelPayPalOrder() {
+        try {
+          await apiClient.post('/api/finance/checkout/cancel', {
+            provider: 'paypal',
+            orderId: checkoutOrderId,
+          })
+        } catch {
+          // ignore cancel sync errors
+        } finally {
+          if (!cancelled) {
+            setCheckoutNotice('PayPal checkout was cancelled.')
+          }
+        }
+      }
+
+      cancelPayPalOrder()
+
+      return () => {
+        cancelled = true
+      }
+    }
 
     if (checkoutStatus === 'cancelled' && sessionId) {
       let cancelled = false
@@ -336,12 +392,52 @@ function CheckoutForm({
           // ignore cancel sync errors; the user already cancelled in Stripe
         } finally {
           if (!cancelled) {
-            setCheckoutNotice('Stripe checkout was cancelled.')
+            setCheckoutNotice('Checkout was cancelled.')
           }
         }
       }
 
       cancelSession()
+
+      return () => {
+        cancelled = true
+      }
+    }
+
+    if (checkoutStatus === 'success' && checkoutProvider === 'paypal' && paypalOrderId && checkoutOrderId) {
+      let cancelled = false
+
+      async function finalizePayPalOrder() {
+        setFinalizingSession(true)
+        setErrors({})
+
+        try {
+          const response = await apiClient.post<{
+            success: boolean
+            orderId: string
+            buyerEmail?: string
+            tickets?: Array<{ id: number; order: string; status: string }>
+          }>('/api/finance/checkout/complete', {
+            provider: 'paypal',
+            paypalOrderId,
+            orderId: checkoutOrderId,
+          })
+
+          if (cancelled) return
+
+          setCheckoutNotice(null)
+          onSuccess(response.orderId, response.buyerEmail ?? currentUser?.email ?? '')
+        } catch (err: any) {
+          if (cancelled) return
+          setCheckoutNotice(err.message || 'Payment completed, but we could not finalize the order.')
+        } finally {
+          if (!cancelled) {
+            setFinalizingSession(false)
+          }
+        }
+      }
+
+      finalizePayPalOrder()
 
       return () => {
         cancelled = true
@@ -395,8 +491,8 @@ function CheckoutForm({
     if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       errs.email = 'Valid email is required'
     if (!phone.trim()) errs.phone = 'Phone number is required'
-    if (!isFree && total > 0 && !stripeAvailable) {
-      errs.provider = 'Stripe is not available for this event'
+    if (!isFree && total > 0 && !paymentProviders.includes(selectedProvider)) {
+      errs.provider = 'Selected payment provider is not available for this event'
     }
     return errs
   }
@@ -421,7 +517,8 @@ function CheckoutForm({
           eventId,
           eventSlug,
           buyer: { name, email, phone },
-          provider: 'stripe',
+          provider: selectedProvider,
+          paypalMode: selectedProvider === 'paypal' ? 'redirect' : undefined,
           returnPath: checkoutReturnPath,
           cart: cart.map((item) => ({
             ticketTypeId: item.ticketType.id,
@@ -531,9 +628,12 @@ function CheckoutForm({
                 <button
                   type="button"
                   disabled={!stripeAvailable}
+                  onClick={() => stripeAvailable && setSelectedProvider('stripe')}
                   className={`rounded-xl border px-4 py-3 text-left transition ${
                     stripeAvailable
-                      ? 'cursor-pointer border-[#5151eb] bg-[#5151eb]/5'
+                      ? selectedProvider === 'stripe'
+                        ? 'cursor-pointer border-[#5151eb] bg-[#5151eb]/5'
+                        : 'cursor-pointer border-zinc-200 hover:border-zinc-300'
                       : 'cursor-not-allowed border-zinc-200 bg-zinc-50 opacity-60'
                   }`}
                 >
@@ -543,21 +643,27 @@ function CheckoutForm({
                   </p>
                 </button>
 
-                <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 opacity-80">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-zinc-900">PayPal</p>
-                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
-                      Coming soon
-                    </span>
-                  </div>
+                <button
+                  type="button"
+                  disabled={!paypalAvailable}
+                  onClick={() => paypalAvailable && setSelectedProvider('paypal')}
+                  className={`rounded-xl border px-4 py-3 text-left transition ${
+                    paypalAvailable
+                      ? selectedProvider === 'paypal'
+                        ? 'cursor-pointer border-[#5151eb] bg-[#5151eb]/5'
+                        : 'cursor-pointer border-zinc-200 hover:border-zinc-300'
+                      : 'cursor-not-allowed border-zinc-200 bg-zinc-50 opacity-60'
+                  }`}
+                >
+                  <p className="text-sm font-semibold text-zinc-900">PayPal</p>
                   <p className="mt-0.5 text-xs text-zinc-500">
-                    Wallet and alternative checkout
+                    Secure PayPal popup checkout
                   </p>
-                </div>
+                </button>
               </div>
-              {!stripeAvailable && (
+              {!paymentProviders.includes(selectedProvider) && (
                 <p className="mt-1 text-xs text-amber-600">
-                  Stripe has not been connected by the organizer yet.
+                  This payment provider has not been connected by the organizer yet.
                 </p>
               )}
               {errors.provider && <p className="mt-1 text-xs text-red-500">{errors.provider}</p>}
@@ -630,7 +736,11 @@ function CheckoutForm({
         </button>
         <button
           type="submit"
-          disabled={loading || finalizingSession || (!isFree && total > 0 && !stripeAvailable)}
+          disabled={
+            loading ||
+            finalizingSession ||
+            (!isFree && total > 0 && !paymentProviders.includes(selectedProvider))
+          }
           className="flex-1 flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#5151eb] py-3 text-sm font-bold text-white transition hover:bg-[#4040d0] disabled:cursor-not-allowed disabled:opacity-70"
         >
           {loading || finalizingSession ? (
@@ -713,6 +823,8 @@ export function TicketSelector({
   currentUser,
   financeSettings,
   paymentProviders,
+  paypalClientId,
+  paypalBuyerCountry,
 }: Props) {
   const [cart, setCart] = useState<CartItem[]>([])
   const [step, setStep] = useState<'select' | 'checkout' | 'success'>('select')
@@ -875,6 +987,8 @@ export function TicketSelector({
         currentUser={currentUser}
         financeSettings={financeSettings}
         paymentProviders={paymentProviders}
+        paypalClientId={paypalClientId}
+        paypalBuyerCountry={paypalBuyerCountry}
         checkoutReturnPath={checkoutReturnPath}
         onBack={() => setStep('select')}
         onSuccess={(orderId, email) => {

@@ -1,4 +1,5 @@
 import type { Endpoint } from 'payload'
+import { getStripeClient, syncStripeConnectionStatus } from './finance'
 
 function getServerURL() {
   return process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'
@@ -37,16 +38,21 @@ export const financeConnectStripeReturnEndpoint: Endpoint = {
       )
     }
 
-    await payload.update({
-      collection: 'payment-connections',
-      id: connection.id,
-      data: {
-        status: 'connected',
-        connectedAt: new Date().toISOString(),
-      },
-      depth: 0,
-      overrideAccess: true,
+    const stripe = getStripeClient()
+    const account = await stripe.accounts.retrieve(accountId).catch(() => null)
+    const syncedConnection = await syncStripeConnectionStatus(payload, {
+      ...connection,
+      externalAccountId: accountId,
+      ...(account?.email ? { accountEmail: account.email } : {}),
+      ...(account?.country ? { country: account.country } : {}),
     })
+
+    if (syncedConnection?.status !== 'connected') {
+      return Response.redirect(
+        `${getServerURL()}/organizations/finance/settings?error=stripe_onboarding_incomplete`,
+        302,
+      )
+    }
 
     return Response.redirect(
       `${getServerURL()}/organizations/finance/settings?connected=stripe`,

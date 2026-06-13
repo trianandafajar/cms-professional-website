@@ -117,7 +117,13 @@ function getPayPalApiBaseUrl() {
   return configuredBaseUrl
 }
 
-function getStripeClient() {
+function getPayPalLegalCountryCode() {
+  return String(process.env.PAYPAL_LEGAL_COUNTRY_CODE || 'ID')
+    .trim()
+    .toUpperCase()
+}
+
+export function getStripeClient() {
   const secretKey = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_CONNECT_SECRET_KEY
   if (!secretKey) {
     throw new Error('Stripe secret key is missing')
@@ -132,8 +138,155 @@ async function getStripeAccount(stripe: Stripe, accountId: string) {
   return stripe.accounts.retrieve(accountId)
 }
 
+function getStripeConnectionStatusFromAccount(
+  account: Stripe.Account | null | undefined,
+): 'pending' | 'connected' | 'disabled' {
+  if (!account) {
+    return 'pending'
+  }
+
+  const requirements = account.requirements as
+    | {
+        disabled_reason?: string | null
+        currently_due?: string[]
+        eventually_due?: string[]
+        past_due?: string[]
+      }
+    | undefined
+
+  if (account.charges_enabled && account.payouts_enabled) {
+    return 'connected'
+  }
+
+  const disabledReason = String(requirements?.disabled_reason ?? '')
+  if (
+    disabledReason &&
+    disabledReason !== 'requirements.past_due' &&
+    disabledReason !== 'requirements.pending_verification'
+  ) {
+    return 'disabled'
+  }
+
+  return 'pending'
+}
+
+export async function syncStripeConnectionStatus(payload: any, connection: any) {
+  if (!connection || connection.provider !== 'stripe' || !connection.externalAccountId) {
+    return connection
+  }
+
+  const stripe = getStripeClient()
+  const account = await getStripeAccount(stripe, String(connection.externalAccountId)).catch(() => null)
+  const nextStatus = getStripeConnectionStatusFromAccount(account)
+
+  const nextData = {
+    status: nextStatus,
+    connectedAt:
+      nextStatus === 'connected'
+        ? connection.connectedAt ?? new Date().toISOString()
+        : null,
+    accountEmail: account?.email ?? connection.accountEmail ?? null,
+    country: account?.country ?? connection.country ?? null,
+    metadata: {
+      ...safePlainObject(connection.metadata),
+      chargesEnabled: Boolean(account?.charges_enabled),
+      payoutsEnabled: Boolean(account?.payouts_enabled),
+      requirements: account?.requirements ?? null,
+      detailsSubmitted: Boolean(account?.details_submitted),
+    },
+  }
+
+  const hasChanged =
+    connection.status !== nextStatus ||
+    (nextData.connectedAt ?? null) !== (connection.connectedAt ?? null) ||
+    (nextData.accountEmail ?? null) !== (connection.accountEmail ?? null) ||
+    (nextData.country ?? null) !== (connection.country ?? null)
+
+  if (!hasChanged) {
+    return {
+      ...connection,
+      ...nextData,
+    }
+  }
+
+  return payload.update({
+    collection: 'payment-connections',
+    id: connection.id,
+    data: nextData,
+    depth: 0,
+    overrideAccess: true,
+  })
+}
+
+async function syncPayPalConnectionStatus(payload: any, connection: any) {
+  if (!connection || connection.provider !== 'paypal') {
+    return connection
+  }
+
+  const metadata = safePlainObject(connection.metadata)
+  const metadataMerchantId =
+    typeof metadata.merchantId === 'string' && metadata.merchantId.trim()
+      ? metadata.merchantId.trim()
+      : null
+  const externalAccountId =
+    typeof connection.externalAccountId === 'string' && connection.externalAccountId.trim()
+      ? connection.externalAccountId.trim()
+      : null
+  const hasFakeExternalId = Boolean(externalAccountId?.startsWith('paypal-'))
+  const merchantId = metadataMerchantId ?? (hasFakeExternalId ? null : externalAccountId)
+
+  const nextStatus =
+    metadata.errorCode === 'paypal_partner_not_enabled'
+      ? 'disabled'
+      : merchantId
+        ? 'connected'
+        : 'pending'
+
+  const nextData = {
+    status: nextStatus,
+    externalAccountId: merchantId,
+    connectedAt: nextStatus === 'connected' ? connection.connectedAt ?? new Date().toISOString() : null,
+  }
+
+  const hasChanged =
+    connection.status !== nextStatus ||
+    (connection.externalAccountId ?? null) !== (nextData.externalAccountId ?? null) ||
+    (connection.connectedAt ?? null) !== (nextData.connectedAt ?? null)
+
+  if (!hasChanged) {
+    return {
+      ...connection,
+      ...nextData,
+    }
+  }
+
+  return payload.update({
+    collection: 'payment-connections',
+    id: connection.id,
+    data: nextData,
+    depth: 0,
+    overrideAccess: true,
+  })
+}
+
 async function getConnectedStripeAccountId(payload: any, organizerId: string) {
-  const connection = await findConnection(payload, organizerId, 'stripe')
+  const existingConnection = await findConnection(payload, organizerId, 'stripe')
+  const connection = existingConnection
+    ? await syncStripeConnectionStatus(payload, existingConnection)
+    : null
+
+  if (!connection || connection.status !== 'connected' || !connection.externalAccountId) {
+    return null
+  }
+
+  return String(connection.externalAccountId)
+}
+
+async function getConnectedPayPalMerchantId(payload: any, organizerId: string) {
+  const existingConnection = await findConnection(payload, organizerId, 'paypal')
+  const connection = existingConnection
+    ? await syncPayPalConnectionStatus(payload, existingConnection)
+    : null
 
   if (!connection || connection.status !== 'connected' || !connection.externalAccountId) {
     return null
@@ -372,15 +525,216 @@ async function getPayPalAccessToken() {
   return data.access_token as string
 }
 
+function formatPayPalAmount(amount: number) {
+  return Math.max(0, Number.isFinite(amount) ? Number(amount) : 0).toFixed(2)
+}
+
+async function getPayPalOrder(accessToken: string, paypalOrderId: string) {
+  const baseUrl = getPayPalApiBaseUrl()
+  const response = await fetch(
+    `${baseUrl}/v2/checkout/orders/${encodeURIComponent(paypalOrderId)}`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch PayPal order (${response.status})`)
+  }
+
+  return response.json()
+}
+
+async function capturePayPalOrder(accessToken: string, paypalOrderId: string) {
+  const baseUrl = getPayPalApiBaseUrl()
+  const response = await fetch(
+    `${baseUrl}/v2/checkout/orders/${encodeURIComponent(paypalOrderId)}/capture`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+    },
+  )
+
+  if (!response.ok) {
+    const responseText = await response.text()
+    throw new Error(responseText || `Failed to capture PayPal order (${response.status})`)
+  }
+
+  return response.json()
+}
+
+async function createPayPalCheckoutOrder({
+  accessToken,
+  merchantId,
+  orderId,
+  event,
+  buyer,
+  items,
+  totals,
+  returnPath,
+  payload,
+  mode = 'redirect',
+}: {
+  accessToken: string
+  merchantId?: string | null
+  orderId: string
+  event: any
+  buyer: { name: string; email: string; phone?: string | null }
+  items: Array<{
+    ticketTypeId: string
+    ticketName: string
+    quantity: number
+    unitPrice: number
+    currency: string
+  }>
+  totals: { subtotal: number; serviceFee: number; taxAmount: number; total: number }
+  returnPath: string
+  payload: any
+  mode?: 'redirect' | 'inline'
+}) {
+  const baseUrl = getPayPalApiBaseUrl()
+  const currencyCode = String(items[0]?.currency ?? DEFAULT_CURRENCY).toUpperCase()
+  const purchaseItems = items.map((item) => ({
+    name: item.ticketName,
+    quantity: String(item.quantity),
+    unit_amount: {
+      currency_code: currencyCode,
+      value: formatPayPalAmount(item.unitPrice),
+    },
+    category: 'DIGITAL_GOODS',
+  }))
+
+  if (totals.serviceFee > 0) {
+    purchaseItems.push({
+      name: 'Service Fee',
+      quantity: '1',
+      unit_amount: {
+        currency_code: currencyCode,
+        value: formatPayPalAmount(totals.serviceFee),
+      },
+      category: 'DIGITAL_GOODS',
+    })
+  }
+
+  if (totals.taxAmount > 0) {
+    purchaseItems.push({
+      name: 'Tax',
+      quantity: '1',
+      unit_amount: {
+        currency_code: currencyCode,
+        value: formatPayPalAmount(totals.taxAmount),
+      },
+      category: 'DIGITAL_GOODS',
+    })
+  }
+
+  const body = {
+    intent: 'CAPTURE',
+    purchase_units: [
+      {
+        reference_id: String(event.id),
+        invoice_id: orderId,
+        custom_id: orderId,
+        description: String(event.title ?? 'Event order'),
+        ...(merchantId
+          ? {
+              payee: {
+                merchant_id: merchantId,
+              },
+            }
+          : {}),
+        amount: {
+          currency_code: currencyCode,
+          value: formatPayPalAmount(totals.total),
+          breakdown: {
+            item_total: {
+              currency_code: currencyCode,
+              value: formatPayPalAmount(totals.total),
+            },
+          },
+        },
+        items: purchaseItems,
+      },
+    ],
+    payer: {
+      email_address: String(buyer.email),
+    },
+    ...(mode === 'redirect'
+      ? {
+          payment_source: {
+            paypal: {
+              experience_context: {
+                brand_name: 'Eventbro',
+                user_action: 'PAY_NOW',
+                shipping_preference: 'NO_SHIPPING',
+                return_url: `${getServerURL()}${returnPath}?checkout=success&provider=paypal&order_id=${encodeURIComponent(orderId)}`,
+                cancel_url: `${getServerURL()}${returnPath}?checkout=cancelled&provider=paypal&order_id=${encodeURIComponent(orderId)}`,
+              },
+            },
+          },
+        }
+      : {}),
+  }
+
+  const response = await fetch(`${baseUrl}/v2/checkout/orders`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  })
+
+  if (!response.ok) {
+    const responseText = await response.text()
+    payload.logger.error({
+      msg: 'PayPal checkout order creation failed',
+      orderId,
+      merchantId,
+      requestBody: body,
+      responseStatus: response.status,
+      responseBody: responseText,
+    })
+    throw new Error(responseText || `Failed to create PayPal checkout order (${response.status})`)
+  }
+
+  const data = await response.json()
+  payload.logger.info({
+    msg: 'PayPal checkout order created',
+    orderId,
+    merchantId,
+    paypalOrderId: data.id ?? null,
+    mode,
+  })
+
+  return {
+    paypalOrderId: String(data.id),
+    checkoutUrl:
+      (data.links || []).find((link: any) => link.rel === 'payer-action')?.href ??
+      (data.links || []).find((link: any) => link.rel === 'approve')?.href ??
+      null,
+  }
+}
+
 async function createPayPalReferral({
   accessToken,
   state,
+  payload,
 }: {
   accessToken: string
   state: string
+  payload: any
 }) {
   const baseUrl = getPayPalApiBaseUrl()
   const returnUrl = `${getServerURL()}/api/finance/connect/paypal/callback?state=${encodeURIComponent(state)}`
+  const legalCountryCode = getPayPalLegalCountryCode()
 
   const body = {
     operations: [
@@ -405,7 +759,7 @@ async function createPayPalReferral({
         granted: true,
       },
     ],
-    legal_country_code: 'US',
+    legal_country_code: legalCountryCode,
     tracking_id: state,
     return_url: returnUrl,
   }
@@ -436,10 +790,24 @@ async function createPayPalReferral({
     ) as Error & { status?: number; details?: unknown }
     error.status = response.status
     error.details = responseBody
+    payload.logger.error({
+      msg: 'PayPal partner referral creation failed',
+      status: response.status,
+      legalCountryCode,
+      state,
+      requestBody: body,
+      responseBody,
+    })
     throw error
   }
 
   const data = await response.json()
+  payload.logger.info({
+    msg: 'PayPal partner referral created',
+    legalCountryCode,
+    state,
+    partnerReferralId: (data.links || []).find((link: any) => link.rel === 'self')?.href ?? null,
+  })
   const actionUrl = (data.links || []).find((link: any) => link.rel === 'action_url')?.href
   const selfUrl = (data.links || []).find((link: any) => link.rel === 'self')?.href
   const partnerReferralId = selfUrl ? (selfUrl.split('/').pop() ?? null) : null
@@ -522,7 +890,19 @@ async function findFinanceConnections(payload: any, organizerId: string) {
     overrideAccess: true,
   })
 
-  return docs
+  return Promise.all(
+    docs.map(async (doc: any) => {
+      if (doc?.provider === 'stripe') {
+        return syncStripeConnectionStatus(payload, doc)
+      }
+
+      if (doc?.provider === 'paypal') {
+        return syncPayPalConnectionStatus(payload, doc)
+      }
+
+      return doc
+    }),
+  )
 }
 
 async function findEventByIdOrSlug(payload: any, eventId: string | number | undefined) {
@@ -879,6 +1259,7 @@ export const financeCheckoutCreateEndpoint: Endpoint = {
     const eventId = body?.eventId
     const eventSlug = String(body?.eventSlug ?? '')
     const provider = body?.provider as PaymentProvider | undefined
+    const paypalMode = body?.paypalMode === 'inline' ? 'inline' : 'redirect'
     const buyer = body?.buyer ?? {}
     const cart = Array.isArray(body?.cart) ? body.cart : []
     const returnPath = String(body?.returnPath ?? '')
@@ -928,11 +1309,12 @@ export const financeCheckoutCreateEndpoint: Endpoint = {
     const settings = serializeSettings(settingsDoc)
     const providerSummaries = connections.map(serializeConnection)
     const supportedProviders = getActiveCheckoutProviders(providerSummaries)
-    const stripeAvailable = supportedProviders.includes('stripe')
+    const selectedProvider =
+      provider ??
+      getDefaultCheckoutProvider(providerSummaries, settings.defaultProvider) ??
+      supportedProviders[0] ??
+      null
     const debugCheckout = isCheckoutDebugEnabled()
-    if (provider && provider !== 'stripe') {
-      return Response.json({ error: 'PayPal is coming soon' }, { status: 400 })
-    }
 
     const now = new Date()
     const eventTicketTypes = dedupeTicketsById(
@@ -1033,7 +1415,61 @@ export const financeCheckoutCreateEndpoint: Endpoint = {
       })
     }
 
-    if (!stripeAvailable) {
+    if (!selectedProvider) {
+      return Response.json({ error: 'No payment provider is connected for this organizer' }, { status: 400 })
+    }
+
+    if (selectedProvider === 'paypal') {
+      if (!returnPath.startsWith('/')) {
+        return Response.json({ error: 'returnPath is required' }, { status: 400 })
+      }
+
+      const merchantId = await getConnectedPayPalMerchantId(payload, organizerId)
+      const accessToken = await getPayPalAccessToken()
+      const paypalOrder = await createPayPalCheckoutOrder({
+        accessToken,
+        merchantId,
+        orderId,
+        event,
+        buyer: {
+          name: String(buyer.name),
+          email: String(buyer.email),
+          phone: buyer.phone ? String(buyer.phone) : null,
+        },
+        items: normalizedItems,
+        totals,
+        returnPath,
+        payload,
+        mode: paypalMode,
+      })
+
+      await createTicketsForOrder({
+        payload,
+        event,
+        buyer: {
+          name: String(buyer.name),
+          email: String(buyer.email),
+          phone: buyer.phone ? String(buyer.phone) : null,
+        },
+        items: normalizedItems,
+        totals,
+        orderId,
+        paymentProvider: 'paypal',
+        status: 'pending',
+      })
+
+      return Response.json({
+        success: true,
+        orderId,
+        provider: 'paypal',
+        checkoutUrl: paypalMode === 'redirect' ? paypalOrder.checkoutUrl : null,
+        paypalOrderId: paypalOrder.paypalOrderId,
+        sessionId: paypalOrder.paypalOrderId,
+        totals,
+      })
+    }
+
+    if (!supportedProviders.includes('stripe')) {
       return Response.json({ error: 'Stripe is not connected for this organizer' }, { status: 400 })
     }
 
@@ -1258,6 +1694,98 @@ export const financeCheckoutCompleteEndpoint: Endpoint = {
     const { payload } = req
     const body = await (req.json as () => Promise<any>)()
     const sessionId = String(body?.sessionId ?? '')
+    const provider = String(body?.provider ?? 'stripe')
+    const requestedOrderId = String(body?.orderId ?? '')
+
+    if (provider === 'paypal') {
+      const paypalOrderId = String(body?.paypalOrderId ?? body?.sessionId ?? '')
+
+      if (!paypalOrderId || !requestedOrderId) {
+        return Response.json({ error: 'paypalOrderId and orderId are required' }, { status: 400 })
+      }
+
+      const accessToken = await getPayPalAccessToken()
+      const orderDetails = await getPayPalOrder(accessToken, paypalOrderId)
+      const currentStatus = String(orderDetails?.status ?? '')
+      const finalOrder =
+        currentStatus === 'COMPLETED'
+          ? orderDetails
+          : await capturePayPalOrder(accessToken, paypalOrderId)
+
+      if (String(finalOrder?.status ?? '') !== 'COMPLETED') {
+        return Response.json({ error: 'PayPal payment has not been completed' }, { status: 400 })
+      }
+
+      const referenceId = String(finalOrder?.purchase_units?.[0]?.reference_id ?? '')
+      const event = referenceId ? await findEventByIdOrSlug(payload, referenceId) : null
+      if (!event) {
+        return Response.json({ error: 'Event not found' }, { status: 404 })
+      }
+
+      const { docs: existingTickets } = await payload.find({
+        collection: 'tickets',
+        where: {
+          order: { equals: requestedOrderId },
+        },
+        limit: 100,
+        depth: 0,
+        overrideAccess: true,
+      })
+
+      if (existingTickets.length === 0) {
+        return Response.json({ error: 'Pending PayPal order tickets were not found' }, { status: 404 })
+      }
+
+      const ticketsAlreadyCompleted = existingTickets.every(
+        (ticket: any) => ticket.status === 'completed' || ticket.status === 'checked_in',
+      )
+
+      if (!ticketsAlreadyCompleted) {
+        const completedAt = new Date().toISOString()
+
+        await Promise.all(
+          existingTickets.map((ticket: any) =>
+            payload.update({
+              collection: 'tickets',
+              id: ticket.id,
+              data: {
+                status: 'completed',
+                paymentProvider: 'paypal',
+                paidAt: completedAt,
+              },
+              depth: 0,
+              overrideAccess: true,
+            }),
+          ),
+        )
+
+        const buyer = {
+          name: String(existingTickets[0].purchaserName ?? 'Attendee'),
+          email: String(existingTickets[0].purchaserEmail ?? ''),
+        }
+
+        queueOrderNotification(payload, event, requestedOrderId, buyer, existingTickets.length, 'paypal')
+        await sendOrderLifecycleEmail({
+          payload,
+          event,
+          buyer,
+          orderId: requestedOrderId,
+          templateKey: 'checkout_completed',
+        })
+      }
+
+      return Response.json({
+        success: true,
+        orderId: requestedOrderId,
+        buyerEmail: String(existingTickets[0].purchaserEmail ?? ''),
+        tickets: existingTickets.map((doc: any) => ({
+          id: doc.id,
+          order: doc.order,
+          status: ticketsAlreadyCompleted ? doc.status : 'completed',
+        })),
+        alreadyProcessed: ticketsAlreadyCompleted,
+      })
+    }
 
     if (!sessionId) {
       return Response.json({ error: 'sessionId is required' }, { status: 400 })
@@ -1421,6 +1949,94 @@ export const financeCheckoutCancelEndpoint: Endpoint = {
     const { payload } = req
     const body = await (req.json as () => Promise<any>)()
     const sessionId = String(body?.sessionId ?? '')
+    const provider = String(body?.provider ?? 'stripe')
+    const requestedOrderId = String(body?.orderId ?? '')
+
+    if (provider === 'paypal') {
+      if (!requestedOrderId) {
+        return Response.json({ error: 'orderId is required' }, { status: 400 })
+      }
+
+      const { docs } = await payload.find({
+        collection: 'tickets',
+        where: {
+          order: { equals: requestedOrderId },
+        },
+        limit: 100,
+        depth: 0,
+        overrideAccess: true,
+      })
+
+      if (docs.length === 0) {
+        return Response.json({ success: true, updated: 0, orderId: requestedOrderId })
+      }
+
+      const alreadyCancelled = docs.every(
+        (ticket: any) => ticket.status === 'cancelled' || ticket.status === 'refunded',
+      )
+
+      if (alreadyCancelled) {
+        return Response.json({
+          success: true,
+          updated: 0,
+          status: 'cancelled',
+          orderId: requestedOrderId,
+        })
+      }
+
+      const eventId = String(
+        typeof docs[0]?.event === 'object' ? docs[0].event?.id ?? '' : docs[0]?.event ?? '',
+      )
+      const event = eventId ? await findEventByIdOrSlug(payload, eventId) : null
+
+      if (event) {
+        const rollbackMap = new Map<string, number>()
+
+        for (const ticket of docs) {
+          const ticketTypeName = String(ticket.ticketType ?? '')
+          rollbackMap.set(ticketTypeName, (rollbackMap.get(ticketTypeName) ?? 0) + 1)
+        }
+
+        await updateEventTicketSoldCounts(
+          payload,
+          event,
+          Array.from(rollbackMap.entries()).flatMap(([ticketTypeName, quantity]) => {
+            const matchedType = (event.ticketTypes ?? []).find(
+              (ticketType: any) => String(ticketType.name ?? '') === ticketTypeName,
+            )
+
+            return matchedType
+              ? [{ ticketTypeId: String(matchedType.id), quantity: quantity * -1 }]
+              : []
+          }),
+        )
+      }
+
+      for (const ticket of docs) {
+        if (ticket.status === 'completed' || ticket.status === 'checked_in') {
+          continue
+        }
+
+        await payload.update({
+          collection: 'tickets',
+          id: ticket.id,
+          data: {
+            status: 'cancelled',
+            paymentProvider: 'paypal',
+            paidAt: undefined,
+          },
+          depth: 0,
+          overrideAccess: true,
+        })
+      }
+
+      return Response.json({
+        success: true,
+        updated: docs.length,
+        status: 'cancelled',
+        orderId: requestedOrderId,
+      })
+    }
 
     if (!sessionId) {
       return Response.json({ error: 'sessionId is required' }, { status: 400 })
@@ -1583,10 +2199,6 @@ export const financeConnectStartEndpoint: Endpoint = {
       return Response.json({ error: 'Invalid provider' }, { status: 400 })
     }
 
-    if (provider === 'paypal') {
-      return Response.json({ error: 'PayPal is an upcoming checkout option' }, { status: 400 })
-    }
-
     const pending = await upsertPendingConnection(payload, user, provider)
     const serverURL = getServerURL()
 
@@ -1657,6 +2269,7 @@ export const financeConnectStartEndpoint: Endpoint = {
       const { actionUrl, partnerReferralId } = await createPayPalReferral({
         accessToken,
         state: String(pending.authState),
+        payload,
       })
 
       await payload.update({
@@ -1867,10 +2480,9 @@ export const financeConnectPayPalCallbackEndpoint: Endpoint = {
       collection: 'payment-connections',
       id: connection.id,
       data: {
-        status: 'connected',
-        externalAccountId:
-          merchantId ?? connection.externalAccountId ?? `paypal-${String(connection.id)}`,
-        connectedAt: new Date().toISOString(),
+        status: merchantId ? 'connected' : 'pending',
+        externalAccountId: merchantId ?? null,
+        connectedAt: merchantId ? new Date().toISOString() : null,
         metadata: {
           ...safePlainObject(connection.metadata),
           returnState: state,
@@ -1880,6 +2492,13 @@ export const financeConnectPayPalCallbackEndpoint: Endpoint = {
       depth: 0,
       overrideAccess: true,
     })
+
+    if (!merchantId) {
+      return Response.redirect(
+        `${getServerURL()}/organizations/finance/settings?error=paypal_onboarding_incomplete`,
+        302,
+      )
+    }
 
     return Response.redirect(
       `${getServerURL()}/organizations/finance/settings?connected=paypal`,

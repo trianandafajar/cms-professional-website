@@ -21,11 +21,13 @@ const PROVIDER_META: Record<
   },
   paypal: {
     name: 'PayPal',
-    description: 'Upcoming checkout option. Stripe is the active payment path for now.',
+    description: 'Wallet and alternative checkout flow for PayPal buyers.',
     accent: 'text-blue-600',
     icon: Landmark,
   },
 }
+
+const ORGANIZER_PAYMENT_PROVIDERS: PaymentProvider[] = ['stripe']
 
 export default function PaymentAccountsPage() {
   const searchParams = useSearchParams()
@@ -56,10 +58,14 @@ export default function PaymentAccountsPage() {
 
   const routeError = searchParams.get('error')
   const routeErrorMessage =
-    routeError === 'paypal_partner_not_enabled'
-      ? 'PayPal is an upcoming checkout option and is not active yet.'
+    routeError === 'stripe_onboarding_incomplete'
+      ? 'Stripe onboarding is not complete yet. Finish the remaining Stripe requirements before this account can be used for checkout.'
+      : routeError === 'paypal_onboarding_incomplete'
+        ? 'PayPal onboarding is not complete yet. Finish the remaining PayPal steps before this account is marked as connected.'
+      : routeError === 'paypal_partner_not_enabled'
+      ? 'PayPal partner access is not enabled for this environment yet.'
       : routeError === 'paypal_onboarding_failed'
-        ? 'PayPal is not active yet.'
+        ? 'PayPal onboarding could not be started.'
         : null
 
   function handleConnect(provider: PaymentProvider) {
@@ -80,10 +86,10 @@ export default function PaymentAccountsPage() {
     <div className="space-y-6 sm:space-y-8">
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">
-          Payment Settings
+          Payout Settings
         </h2>
         <p className="mt-1 max-w-2xl text-sm text-zinc-500">
-          Manage your payout providers here. Tax and finance rules are handled directly by Stripe.
+          Manage organizer payout accounts here. Stripe is used for direct organizer payouts.
         </p>
       </div>
 
@@ -135,7 +141,7 @@ export default function PaymentAccountsPage() {
                 <h3 className="text-base font-semibold text-zinc-900">Provider status</h3>
               </div>
               <p className="mt-1 text-sm text-zinc-500">
-                Connect your payout providers here. Checkout only shows supported providers.
+                Connect Stripe for organizer payouts. PayPal stays available on the buyer checkout as a platform payment option.
               </p>
             </div>
             <Button
@@ -155,13 +161,11 @@ export default function PaymentAccountsPage() {
           </div>
 
           <div className="mt-5 space-y-3">
-            {(Object.keys(PROVIDER_META) as PaymentProvider[]).map((provider) => {
+            {ORGANIZER_PAYMENT_PROVIDERS.map((provider) => {
               const connection = connectionMap.get(provider) ?? null
               const meta = PROVIDER_META[provider]
               const Icon = meta.icon
               const isConnected = connection?.status === 'connected'
-              const isUpcoming = provider === 'paypal'
-
               return (
                 <div
                   key={provider}
@@ -177,29 +181,23 @@ export default function PaymentAccountsPage() {
                           <p className="font-semibold text-zinc-900">{meta.name}</p>
                           <span
                             className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                              isUpcoming
-                                ? 'bg-amber-50 text-amber-700'
-                                : isConnected
+                              isConnected
                                   ? 'bg-emerald-50 text-emerald-700'
+                                  : connection?.status === 'disabled'
+                                    ? 'bg-rose-50 text-rose-700'
                                   : connection
                                     ? 'bg-zinc-100 text-zinc-500'
                                     : 'bg-zinc-100 text-zinc-500'
                             }`}
                           >
-                            {isUpcoming
-                              ? 'Upcoming'
-                              : isConnected
-                                ? 'Connected'
-                                : connection
-                                  ? connection.status
-                                  : 'Not connected'}
+                            {isConnected ? 'Connected' : connection ? connection.status : 'Not connected'}
                           </span>
                         </div>
                         <p className="mt-1 text-sm text-zinc-500">{meta.description}</p>
-                        {!isUpcoming && connection?.accountEmail && (
+                        {connection?.accountEmail && (
                           <p className="mt-2 text-xs text-zinc-400">{connection.accountEmail}</p>
                         )}
-                        {!isUpcoming && defaultCheckoutProvider === provider && (
+                        {defaultCheckoutProvider === provider && (
                           <p className="mt-2 text-xs font-semibold text-[#5151eb]">
                             Default checkout provider
                           </p>
@@ -208,35 +206,29 @@ export default function PaymentAccountsPage() {
                     </div>
 
                     <div className="flex shrink-0 flex-col gap-2 sm:items-end">
-                      {isUpcoming ? (
-                        <span className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
-                          Upcoming
-                        </span>
-                      ) : (
-                        <>
+                      <>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="rounded-lg bg-[#5151eb] text-white hover:bg-[#3d3dcc]"
+                          onClick={() => handleConnect(provider)}
+                        >
+                          {isConnected ? 'Reconnect' : 'Connect'}
+                        </Button>
+
+                        {isConnected && (
                           <Button
                             type="button"
                             size="sm"
-                            className="rounded-lg bg-[#5151eb] text-white hover:bg-[#3d3dcc]"
-                            onClick={() => handleConnect(provider)}
+                            variant="ghost"
+                            className="rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-600"
+                            onClick={() => handleDisconnect(provider)}
                           >
-                            {isConnected ? 'Reconnect' : 'Connect'}
+                            <Trash2 className="mr-1.5 size-4" />
+                            Disconnect
                           </Button>
-
-                          {isConnected && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              className="rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-600"
-                              onClick={() => handleDisconnect(provider)}
-                            >
-                              <Trash2 className="mr-1.5 size-4" />
-                              Disconnect
-                            </Button>
-                          )}
-                        </>
-                      )}
+                        )}
+                      </>
                     </div>
                   </div>
                 </div>
