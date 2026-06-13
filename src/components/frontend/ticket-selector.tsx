@@ -297,8 +297,6 @@ function CheckoutForm({
   currentUser: CheckoutUser
   financeSettings: FinanceSettingsSummary
   paymentProviders: PaymentProvider[]
-  paypalClientId: string
-  paypalBuyerCountry: string
   checkoutReturnPath: string
   onBack: () => void
   onSuccess: (orderId: string, email: string) => void
@@ -823,8 +821,6 @@ export function TicketSelector({
   currentUser,
   financeSettings,
   paymentProviders,
-  paypalClientId,
-  paypalBuyerCountry,
 }: Props) {
   const [cart, setCart] = useState<CartItem[]>([])
   const [step, setStep] = useState<'select' | 'checkout' | 'success'>('select')
@@ -987,8 +983,6 @@ export function TicketSelector({
         currentUser={currentUser}
         financeSettings={financeSettings}
         paymentProviders={paymentProviders}
-        paypalClientId={paypalClientId}
-        paypalBuyerCountry={paypalBuyerCountry}
         checkoutReturnPath={checkoutReturnPath}
         onBack={() => setStep('select')}
         onSuccess={(orderId, email) => {
