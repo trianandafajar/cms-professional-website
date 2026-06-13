@@ -38,6 +38,14 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from '@/components/ui/drawer'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import NotificationDrawer from '@/components/organizations/layouts/notification'
@@ -232,6 +240,7 @@ export function OrganizationsShell({
   const router = useRouter()
   const logout = useAuthStore((state) => state.logout)
   const [loggingOut, setLoggingOut] = useState(false)
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [searchInput, setSearchInput] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
@@ -1111,7 +1120,7 @@ export function OrganizationsShell({
 
                   <button
                     type="button"
-                    onClick={handleLogout}
+                    onClick={() => setLogoutConfirmOpen(true)}
                     disabled={loggingOut}
                     className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-rose-600 transition hover:bg-rose-50 disabled:opacity-60"
                   >
@@ -1124,6 +1133,39 @@ export function OrganizationsShell({
           </div>
         </div>
       </header>
+
+      <Dialog open={logoutConfirmOpen} onOpenChange={setLogoutConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Log out?</DialogTitle>
+            <DialogDescription>
+              You are about to log out of this account. Make sure all changes are saved.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="cursor-pointer"
+              onClick={() => setLogoutConfirmOpen(false)}
+              disabled={loggingOut}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="cursor-pointer bg-rose-600 text-white hover:bg-rose-700"
+              onClick={async () => {
+                setLogoutConfirmOpen(false)
+                await handleLogout()
+              }}
+              disabled={loggingOut}
+            >
+              {loggingOut ? 'Logging out…' : 'Log out'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex flex-1 overflow-hidden">
         <aside className="sticky top-0 hidden h-[calc(100vh-63px)] w-16 flex-col items-center justify-between border-r border-zinc-100 bg-white py-3 lg:flex">

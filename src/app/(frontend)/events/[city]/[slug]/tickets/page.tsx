@@ -2,7 +2,7 @@ import { headers as getHeaders } from 'next/headers.js'
 import { getPayload } from 'payload'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, ChevronRight, Clock, MapPin, Calendar } from 'lucide-react'
+import { ArrowLeft, ChevronRight, Clock, MapPin, Calendar, AlertCircle } from 'lucide-react'
 
 import { FrontendNavbar } from '@/components/frontend/navbar'
 import { TicketSelector } from '@/components/frontend/ticket-selector'
@@ -268,6 +268,9 @@ export default async function EventTicketsPage({ params }: Props) {
     notFound()
   }
 
+  const isOrganizer = Boolean(currentUser?.isOrganizer)
+
+
   const cityName = ev.locationName || slugToDisplayName(city)
   const eventDetailHref = `/events/${city}/${slug}`
   const hydratedUser = currentUser?.id
@@ -381,6 +384,7 @@ export default async function EventTicketsPage({ params }: Props) {
                   }
                   financeSettings={financeSettings}
                   paymentProviders={supportedProviders}
+                  isOrganizer={isOrganizer}
                 />
               ) : (
                 <div className="rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-sm">

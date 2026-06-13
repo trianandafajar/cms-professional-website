@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
-import { Heart, Share2, Ticket, Calendar, MapPin, Clock, Check } from 'lucide-react'
+import { Heart, Share2, Ticket, Calendar, MapPin, Clock, Check, AlertCircle } from 'lucide-react'
 import { useAuthGate } from '@/hooks/useAuthGate'
 import { useAuthStore } from '@/stores/authStore'
 import { useLikesStore } from '@/stores/likesStore'
@@ -40,6 +41,38 @@ function formatTime(dateStr: string): string {
   })
 }
 
+// ─── Modal Dialog ─────────────────────────────────────────────────────────────
+
+function OrganizerAlertModal({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [])
+
+  return createPortal(
+    <div className="fixed inset-0 h-screen w-screen z-[99999] flex items-center justify-center p-4 bg-black/50 overflow-hidden">
+      <div className="relative w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl border border-zinc-100">
+        <div className="flex size-16 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 mx-auto">
+          <AlertCircle className="size-8" />
+        </div>
+        <h3 className="mt-6 text-xl font-bold text-[#12192f]">Organizer restriction</h3>
+        <p className="mt-3 text-sm text-zinc-500">
+          Organizers cannot purchase or register for tickets. Please log in with a regular attendee account to continue.
+        </p>
+        <button
+          onClick={onClose}
+          className="mt-8 block w-full rounded-xl bg-[#5151eb] py-3.5 text-sm font-bold text-white transition hover:bg-[#4040d0] cursor-pointer"
+        >
+          Close
+        </button>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
 export function EventDetailActions({
   eventId,
   eventTitle,
@@ -64,6 +97,7 @@ export function EventDetailActions({
   const [interested, setInterested] = useState(false)
   const [isTogglingInterested, setIsTogglingInterested] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [showOrganizerModal, setShowOrganizerModal] = useState(false)
   const router = useRouter()
   const user = useAuthStore((state) => state.user)
   const authHasHydrated = useAuthStore((state) => state._hasHydrated)
@@ -95,6 +129,11 @@ export function EventDetailActions({
   }
 
   function handleGetTickets() {
+    if (user?.isOrganizer) {
+      setShowOrganizerModal(true)
+      return
+    }
+    
     const ticketsPath = `/events/${citySlug}/${eventSlug}/tickets`
     if (requireOnboardingComplete(ticketsPath)) {
       return
@@ -115,7 +154,9 @@ export function EventDetailActions({
   }
 
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+    <>
+      {showOrganizerModal && <OrganizerAlertModal onClose={() => setShowOrganizerModal(false)} />}
+      <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
       {/* Price header */}
       <div className="border-b border-zinc-100 px-5 py-4">
         <div className="flex items-baseline justify-between">
@@ -203,10 +244,10 @@ export function EventDetailActions({
         </div>
       </div>
 
-      {/* No-fee note */}
       <div className="border-t border-zinc-100 px-5 py-3 text-center">
         <p className="text-xs text-zinc-400">Fees are shown before checkout</p>
       </div>
     </div>
+    </>
   )
 }

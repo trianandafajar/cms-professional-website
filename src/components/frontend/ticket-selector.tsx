@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Minus,
   Plus,
@@ -49,7 +50,41 @@ type Props = {
   currentUser: CheckoutUser
   financeSettings: FinanceSettingsSummary
   paymentProviders: PaymentProvider[]
+  isOrganizer?: boolean
 }
+
+// ─── Modal Dialog ─────────────────────────────────────────────────────────────
+
+function OrganizerAlertModal({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [])
+
+  return createPortal(
+    <div className="fixed inset-0 h-screen w-screen z-[99999] flex items-center justify-center p-4 bg-black/50 overflow-hidden">
+      <div className="relative w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl border border-zinc-100">
+        <div className="flex size-16 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 mx-auto">
+          <AlertCircle className="size-8" />
+        </div>
+        <h3 className="mt-6 text-xl font-bold text-[#12192f]">Organizer restriction</h3>
+        <p className="mt-3 text-sm text-zinc-500">
+          Organizers cannot purchase or register for tickets. Please log in with a regular attendee account to continue.
+        </p>
+        <button
+          onClick={onClose}
+          className="mt-8 block w-full rounded-xl bg-[#5151eb] py-3.5 text-sm font-bold text-white transition hover:bg-[#4040d0] cursor-pointer"
+        >
+          Close
+        </button>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -821,6 +856,7 @@ export function TicketSelector({
   currentUser,
   financeSettings,
   paymentProviders,
+  isOrganizer = false,
 }: Props) {
   const [cart, setCart] = useState<CartItem[]>([])
   const [step, setStep] = useState<'select' | 'checkout' | 'success'>('select')
@@ -828,10 +864,15 @@ export function TicketSelector({
   const [checkoutOrderId, setCheckoutOrderId] = useState<string | null>(null)
   const [checkoutNotice, setCheckoutNotice] = useState<string | null>(null)
   const [restoringSession, setRestoringSession] = useState(false)
+  const [showOrganizerModal, setShowOrganizerModal] = useState(false)
   const finalizedSessionRef = useRef<string | null>(null)
   const { gate } = useAuthGate()
 
   function addTicket(ticket: TicketType) {
+    if (isOrganizer) {
+      setShowOrganizerModal(true)
+      return
+    }
     setCart((prev) => {
       const existing = prev.find((i) => i.ticketType.id === ticket.id)
       if (existing) {
@@ -996,6 +1037,8 @@ export function TicketSelector({
 
   return (
     <div>
+      {showOrganizerModal && <OrganizerAlertModal onClose={() => setShowOrganizerModal(false)} />}
+      
       {/* Ticket type list */}
       <div className="space-y-4">
         {ticketTypes.map((ticket, index) => (

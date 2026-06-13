@@ -57,7 +57,15 @@ export default function SignInPage() {
 
       if (redirect) {
         sessionStorage.removeItem('postLoginRedirect')
-        router.push(decodeURIComponent(redirect))
+        const decodedRedirect = decodeURIComponent(redirect)
+        
+        if (user.isOrganizer && decodedRedirect.includes('/tickets')) {
+          const eventDetailPath = decodedRedirect.replace(/\/tickets$/, '')
+          router.push(eventDetailPath)
+          return
+        }
+        
+        router.push(decodedRedirect)
         return
       }
 
