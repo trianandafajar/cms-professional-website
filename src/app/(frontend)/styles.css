@@ -131,6 +131,7 @@
 .drag-scroll {
   scrollbar-width: none;
   -ms-overflow-style: none;
+  touch-action: pan-y;
 }
 .drag-scroll::-webkit-scrollbar {
   display: none;

@@ -63,6 +63,8 @@ export interface EventFilterOptions {
   preferredCategoryIds?: number[]
   /** Only return published events */
   publishedOnly?: boolean
+  /** Include past events when no explicit date filter is active */
+  includePast?: boolean
 }
 
 /**
@@ -76,8 +78,10 @@ export function buildEventWhere(opts: EventFilterOptions): Where {
     conditions.push({ status: { equals: 'published' } })
   }
 
-  // Only show upcoming events (startDate >= now)
-  conditions.push({ startDate: { greater_than_equal: new Date().toISOString() } })
+  if (!opts.includePast) {
+    // Default behavior keeps discovery surfaces focused on upcoming events.
+    conditions.push({ startDate: { greater_than_equal: new Date().toISOString() } })
+  }
 
   if (opts.locationId) {
     conditions.push({ location: { equals: opts.locationId } })

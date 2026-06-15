@@ -77,7 +77,21 @@ function isWeekend(isoDate: string): boolean {
   return day === 0 || day === 6
 }
 
+function sortUpcomingEvents(events: ResolvedEvent[]) {
+  return [...events].sort((left, right) => {
+    const leftTime = new Date(left.startDate).getTime()
+    const rightTime = new Date(right.startDate).getTime()
+
+    if (leftTime !== rightTime) {
+      return leftTime - rightTime
+    }
+
+    return Number(right.interestedCount ?? 0) - Number(left.interestedCount ?? 0)
+  })
+}
+
 export function EventsSection({ allEvents, forYouEvents, isLoggedIn, activeCity }: Props) {
+  const MAX_VISIBLE_EVENTS = 40
   const cityFilteredAllEvents = useMemo(
     () =>
       allEvents.filter((event) => {
@@ -134,24 +148,27 @@ export function EventsSection({ allEvents, forYouEvents, isLoggedIn, activeCity 
 
     switch (activeTab) {
       case 'All':
-        return cityFilteredAllEvents
+        return sortUpcomingEvents(cityFilteredAllEvents)
       case 'For you':
-        return pool
+        return sortUpcomingEvents(pool)
       case 'Today':
-        return pool.filter((e) => isToday(e.startDate))
+        return sortUpcomingEvents(pool.filter((e) => isToday(e.startDate)))
       case 'This weekend':
-        return pool.filter((e) => isWeekend(e.startDate))
+        return sortUpcomingEvents(pool.filter((e) => isWeekend(e.startDate)))
       case 'Free':
-        return pool.filter((e) => hasFreeTicketOption(e))
+        return sortUpcomingEvents(pool.filter((e) => hasFreeTicketOption(e)))
       default:
-        return pool.filter(
-          (e) =>
-            typeof e.category === 'object' &&
-            e.category !== null &&
-            String((e.category as Category).name ?? '').trim() === activeTab,
+        return sortUpcomingEvents(
+          pool.filter(
+            (e) =>
+              typeof e.category === 'object' &&
+              e.category !== null &&
+              String((e.category as Category).name ?? '').trim() === activeTab,
+          ),
         )
     }
   })()
+  const visibleEvents = filteredEvents.slice(0, MAX_VISIBLE_EVENTS)
 
   return (
     <>
@@ -175,8 +192,8 @@ export function EventsSection({ allEvents, forYouEvents, isLoggedIn, activeCity 
 
       {/* Event Cards */}
       <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {filteredEvents.length > 0 ? (
-          filteredEvents.map((event) => (
+        {visibleEvents.length > 0 ? (
+          visibleEvents.map((event) => (
             <EventCard
               key={event.id}
               eventId={event.id}

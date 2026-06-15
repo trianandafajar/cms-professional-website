@@ -1,7 +1,7 @@
 'use client'
 
-import { useRef, useState } from 'react'
 import type { Location, Media } from '@/payload-types'
+import { useDragScroll } from '@/components/frontend/use-drag-scroll'
 
 type DestinationItem = Pick<Location, 'id' | 'name' | 'code'> & {
   coverImage?: (number | null) | Media
@@ -49,59 +49,34 @@ function nameToSlug(name: string): string {
 }
 
 export function DestinationsScroll({ destinations }: DestinationsScrollProps) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [grabbing, setGrabbing] = useState(false)
-  const drag = useRef({ x: 0, left: 0, moved: false, tracking: false })
-
-  const onMouseDown = (e: React.MouseEvent) => {
-    const el = ref.current
-    if (!el) return
-    drag.current = { x: e.pageX, left: el.scrollLeft, moved: false, tracking: true }
-  }
-
-  const onMouseMove = (e: React.MouseEvent) => {
-    if (!drag.current.tracking || !ref.current) return
-    const dx = e.pageX - drag.current.x
-    if (Math.abs(dx) > 4) {
-      drag.current.moved = true
-      if (!grabbing) setGrabbing(true)
-    }
-    if (drag.current.moved) {
-      ref.current.scrollLeft = drag.current.left - dx
-    }
-  }
-
-  const stopDrag = () => {
-    drag.current.tracking = false
-    setGrabbing(false)
-  }
-
-  const onLinkClick = (e: React.MouseEvent) => {
-    if (drag.current.moved) e.preventDefault()
-  }
+  const { ref, grabbing, onPointerDown, onPointerMove, onPointerUp, onPointerCancel, onDragStart, onClickCapture } =
+    useDragScroll()
 
   return (
     <div
       ref={ref}
-      className={`drag-scroll flex gap-3 overflow-x-auto pb-3 select-none ${
+      className={`drag-scroll flex gap-3 overflow-x-auto pb-3 select-none touch-pan-y [-webkit-tap-highlight-color:transparent] ${
         grabbing ? 'cursor-grabbing' : 'cursor-grab'
       }`}
-      onMouseDown={onMouseDown}
-      onMouseMove={onMouseMove}
-      onMouseUp={stopDrag}
-      onMouseLeave={stopDrag}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
+      onDragStart={onDragStart}
+      onClickCapture={onClickCapture}
     >
       {destinations.slice(0, 8).map((dest) => (
         <a
           key={dest.id}
           href={`/events/${nameToSlug(dest.name)}`}
-          onClick={onLinkClick}
           className="group relative w-55 shrink-0 overflow-hidden rounded-2xl sm:w-65 lg:w-70"
+          draggable={false}
         >
           <div className="aspect-3/2 overflow-hidden">
             <img
               src={getImageUrl(dest.name, dest.coverImage)}
               alt={dest.name}
+              draggable={false}
               className="h-full w-full object-cover transition duration-500 group-hover:scale-110"
               loading="lazy"
             />

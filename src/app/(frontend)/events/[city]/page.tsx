@@ -97,6 +97,7 @@ export default async function CityEventsPage({ params, searchParams }: Props) {
   const activeCategory = (resolvedSearch.category as string) || 'All'
   const activeDate = (resolvedSearch.date as string) || ''
   const activePrice = (resolvedSearch.price as string) || ''
+  const includePastEvents = !activeDate
 
   // Resolve the location document that matches this city slug
   const { docs: matchedLocations } = await payload.find({
@@ -132,6 +133,7 @@ export default async function CityEventsPage({ params, searchParams }: Props) {
           where: buildEventWhere({
             publishedOnly: true,
             locationId,
+            includePast: includePastEvents,
           }),
           depth: 1,
           limit: 100,
@@ -176,6 +178,7 @@ export default async function CityEventsPage({ params, searchParams }: Props) {
           where: buildEventWhere({
             publishedOnly: true,
             locationId,
+            includePast: includePastEvents,
             categoryName: activeCategory !== 'All' ? activeCategory : null,
             dateFilter: activeDate || null,
             priceFilter: null,
@@ -228,7 +231,7 @@ export default async function CityEventsPage({ params, searchParams }: Props) {
             <div className="flex items-center gap-2 text-indigo-200">
               <Calendar className="size-4" />
               <span className="text-sm font-medium">
-                {totalDocs} upcoming event{totalDocs !== 1 ? 's' : ''}
+                {totalDocs} event{totalDocs !== 1 ? 's' : ''}
               </span>
             </div>
             <div className="flex items-center gap-2 text-indigo-200">

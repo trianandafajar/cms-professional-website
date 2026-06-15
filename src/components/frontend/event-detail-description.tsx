@@ -46,21 +46,42 @@ const eventDescriptionClass =
   '[&_hr]:my-5 [&_hr]:border-zinc-200'
 
 function normalizeHtmlContent(content: string): string {
-  const trimmed = content.trim()
+  let normalized = content.trim()
 
   if (
-    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+    (normalized.startsWith('"') && normalized.endsWith('"')) ||
+    (normalized.startsWith("'") && normalized.endsWith("'"))
   ) {
     try {
-      const parsed = JSON.parse(trimmed)
-      if (typeof parsed === 'string') return parsed
+      const parsed = JSON.parse(normalized)
+      if (typeof parsed === 'string') normalized = parsed
     } catch {
-      return trimmed.slice(1, -1)
+      normalized = normalized.slice(1, -1)
     }
   }
 
-  return trimmed
+  const shouldDecodeEscapedHtml =
+    /&lt;\s*\/?\s*(h[1-6]|p|div|span|ul|ol|li|table|thead|tbody|tr|td|th|strong|em|a|br|blockquote)\b/i.test(
+      normalized,
+    )
+
+  if (shouldDecodeEscapedHtml) {
+    const decodeEntityMap: Record<string, string> = {
+      '&amp;': '&',
+      '&lt;': '<',
+      '&gt;': '>',
+      '&quot;': '"',
+      '&#39;': "'",
+      '&nbsp;': ' ',
+    }
+
+    normalized = normalized.replace(
+      /&amp;|&lt;|&gt;|&quot;|&#39;|&nbsp;/g,
+      (entity) => decodeEntityMap[entity] ?? entity,
+    )
+  }
+
+  return normalized
 }
 
 function wrapTablesWithScroll(html: string): string {

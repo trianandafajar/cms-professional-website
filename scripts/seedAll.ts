@@ -5,6 +5,7 @@ import os from 'os'
 import path from 'path'
 
 import { getPayload } from 'payload'
+import sharp from 'sharp'
 
 import config from '../src/payload.config'
 import { getSeedEventImageUrl } from '../src/lib/eventImages'
@@ -252,7 +253,7 @@ const categories: SeedCategory[] = [
 // Kalimantan: 3 EO
 // Sulawesi: 3 EO
 // Maluku-Papua: 3 EO
-// Total: 20 EO, 40 events
+// Total template dasar: 20 EO, 40 events
 
 const EVENT_IMAGE_IDS_BY_CATEGORY: Record<string, string[]> = {
   Arts: [
@@ -322,15 +323,16 @@ const EVENT_IMAGE_IDS_BY_CATEGORY: Record<string, string[]> = {
   ],
 }
 
-function getEventImageUrl(event: EOSeed['events'][number], eventIndex: number) {
+function getEventImageSources(event: EOSeed['events'][number], eventIndex: number) {
   const categoryImageIds =
     EVENT_IMAGE_IDS_BY_CATEGORY[event.category] ?? EVENT_IMAGE_IDS_BY_CATEGORY.Community
   const fallbackImageId = categoryImageIds[eventIndex % categoryImageIds.length]
 
-  return (
-    getSeedEventImageUrl(event.slug, 1200, 800) ??
-    `https://images.unsplash.com/photo-${fallbackImageId}?auto=format&fit=crop&w=1200&h=800&q=80`
-  )
+  return [
+    getSeedEventImageUrl(event.slug, 1600, 900),
+    `https://picsum.photos/seed/${encodeURIComponent(event.slug)}/1600/900`,
+    `https://images.unsplash.com/photo-${fallbackImageId}?auto=format&fit=crop&w=1600&h=900&q=80`,
+  ].filter(Boolean) as string[]
 }
 
 const LOCATION_PRICE_OFFSETS: Record<string, number> = {
@@ -471,7 +473,7 @@ function escapeHtml(value: string) {
     .replace(/'/g, '&#39;')
 }
 
-const eos: EOSeed[] = [
+const baseEos: EOSeed[] = [
   // ─── SUMATERA ─────────────────────────────────────────────────────────────
   {
     name: 'Sumatera Vibe Works',
@@ -780,13 +782,216 @@ const eos: EOSeed[] = [
 
 ]
 
-async function downloadImage(url: string, name: string) {
+type EventSeriesVariant = {
+  dayOffset: number
+  slugSuffix: string
+  titleSuffix: string
+  summaryPrefix: string
+  descriptionSuffix: string
+  tags: string[]
+  capacityMultiplier: number
+  quantityMultiplier: number
+}
+
+const EVENT_SERIES_VARIANTS: EventSeriesVariant[] = [
+  {
+    dayOffset: -320,
+    slugSuffix: 'legacy-edition',
+    titleSuffix: 'Legacy Edition',
+    summaryPrefix: 'Past edition: ',
+    descriptionSuffix:
+      'This earlier edition was staged as a high-engagement program and now remains part of the organizer archive.',
+    tags: ['past', 'legacy'],
+    capacityMultiplier: 0.8,
+    quantityMultiplier: 0.75,
+  },
+  {
+    dayOffset: -140,
+    slugSuffix: 'community-session',
+    titleSuffix: 'Community Session',
+    summaryPrefix: 'Past community session: ',
+    descriptionSuffix:
+      'This community-focused session extended the original concept with a more intimate audience format.',
+    tags: ['past', 'community-session'],
+    capacityMultiplier: 0.9,
+    quantityMultiplier: 0.85,
+  },
+  {
+    dayOffset: 55,
+    slugSuffix: 'city-series',
+    titleSuffix: 'City Series',
+    summaryPrefix: 'Upcoming city series: ',
+    descriptionSuffix:
+      'The upcoming city series format expands the experience with refreshed programming for a broader audience.',
+    tags: ['upcoming', 'city-series'],
+    capacityMultiplier: 1.05,
+    quantityMultiplier: 1,
+  },
+  {
+    dayOffset: 185,
+    slugSuffix: 'spotlight-edition',
+    titleSuffix: 'Spotlight Edition',
+    summaryPrefix: 'Upcoming spotlight edition: ',
+    descriptionSuffix:
+      'This spotlight edition is planned as a larger-scale follow-up with added visibility and premium attendee flow.',
+    tags: ['upcoming', 'spotlight'],
+    capacityMultiplier: 1.15,
+    quantityMultiplier: 1.1,
+  },
+  {
+    dayOffset: -40,
+    slugSuffix: 'local-pulse',
+    titleSuffix: 'Local Pulse',
+    summaryPrefix: 'Recent local pulse edition: ',
+    descriptionSuffix:
+      'This recent edition focused on a tighter local audience with stronger community participation and repeat attendance.',
+    tags: ['past', 'local-pulse'],
+    capacityMultiplier: 0.95,
+    quantityMultiplier: 0.92,
+  },
+  {
+    dayOffset: 285,
+    slugSuffix: 'season-finale',
+    titleSuffix: 'Season Finale',
+    summaryPrefix: 'Upcoming season finale: ',
+    descriptionSuffix:
+      'The season finale format closes the annual program cycle with an expanded lineup and stronger production scale.',
+    tags: ['upcoming', 'season-finale'],
+    capacityMultiplier: 1.22,
+    quantityMultiplier: 1.14,
+  },
+  {
+    dayOffset: 375,
+    slugSuffix: 'next-wave',
+    titleSuffix: 'Next Wave',
+    summaryPrefix: 'Upcoming next wave edition: ',
+    descriptionSuffix:
+      'This next wave edition extends the EO roadmap into the following cycle with a refreshed audience mix and programming.',
+    tags: ['upcoming', 'next-wave'],
+    capacityMultiplier: 1.28,
+    quantityMultiplier: 1.18,
+  },
+]
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date)
+  next.setUTCDate(next.getUTCDate() + days)
+  return next
+}
+
+function clampQuantity(quantity: number) {
+  return Math.max(10, Math.round(quantity))
+}
+
+function clampCapacity(capacity: number) {
+  return Math.max(30, Math.round(capacity))
+}
+
+function uniqTags(tags: string[]) {
+  return [...new Set(tags.map((tag) => tag.trim()).filter(Boolean))]
+}
+
+function buildDerivedEvent(
+  event: EOSeed['events'][number],
+  variant: EventSeriesVariant,
+  eoIndex: number,
+  baseEventIndex: number,
+) {
+  const baseStartDate = new Date(event.startDate)
+  const baseEndDate = new Date(event.endDate)
+  const durationMs = Math.max(60 * 60 * 1000, baseEndDate.getTime() - baseStartDate.getTime())
+  const scheduleOffset = variant.dayOffset + eoIndex * 2 + baseEventIndex * 9
+  const startDate = addDays(baseStartDate, scheduleOffset)
+  const endDate = new Date(startDate.getTime() + durationMs)
+
+  return {
+    ...event,
+    title: `${event.title} ${variant.titleSuffix}`,
+    slug: `${event.slug}-${variant.slugSuffix}`,
+    summary: `${variant.summaryPrefix}${event.summary}`,
+    description: `${event.description} ${variant.descriptionSuffix}`,
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+    capacity: clampCapacity(event.capacity * variant.capacityMultiplier),
+    tags: uniqTags([...event.tags, ...variant.tags]),
+    ticketTypes: event.ticketTypes.map((ticket) => ({
+      ...ticket,
+      quantity: clampQuantity(ticket.quantity * variant.quantityMultiplier),
+    })),
+  }
+}
+
+const eoCountByLocation = baseEos.reduce<Record<string, number>>((acc, eo) => {
+  acc[eo.location] = (acc[eo.location] ?? 0) + 1
+  return acc
+}, {})
+
+function expandEOEvents(eo: EOSeed, eoIndex: number) {
+  const eoCountInLocation = eoCountByLocation[eo.location] ?? 1
+  const targetEventsForLocation = 15
+  const targetEventsForEO = Math.max(
+    eo.events.length,
+    Math.ceil(targetEventsForLocation / eoCountInLocation),
+  )
+  const variantsNeededPerBaseEvent = Math.max(
+    0,
+    Math.ceil(targetEventsForEO / eo.events.length) - 1,
+  )
+  const selectedVariants = EVENT_SERIES_VARIANTS.slice(0, variantsNeededPerBaseEvent)
+
+  return eo.events.flatMap((event, baseEventIndex) => [
+    event,
+    ...selectedVariants.map((variant) =>
+      buildDerivedEvent(event, variant, eoIndex, baseEventIndex),
+    ),
+  ])
+}
+
+const eos: EOSeed[] = baseEos.map((eo, eoIndex) => ({
+  ...eo,
+  events: expandEOEvents(eo, eoIndex),
+}))
+
+function hashString(value: string) {
+  return [...value].reduce((acc, char) => (acc * 31 + char.charCodeAt(0)) % 360, 17)
+}
+
+function wrapText(value: string, maxChars: number) {
+  const words = value.split(/\s+/).filter(Boolean)
+  const lines: string[] = []
+  let current = ''
+
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word
+    if (candidate.length <= maxChars) {
+      current = candidate
+      continue
+    }
+
+    if (current) lines.push(current)
+    current = word
+  }
+
+  if (current) lines.push(current)
+  return lines.slice(0, 3)
+}
+
+async function downloadImageBuffer(url: string) {
   const response = await fetch(url)
   if (!response.ok) throw new Error(`Failed to download ${url}`)
-  const buffer = Buffer.from(await response.arrayBuffer())
-  const filePath = path.join(os.tmpdir(), `eventbro-${name}.jpg`)
+  return Buffer.from(await response.arrayBuffer())
+}
+
+async function writeTempFile(name: string, buffer: Buffer, extension = 'jpg') {
+  const sanitized = name.replace(/[^a-z0-9-]/gi, '-').toLowerCase()
+  const filePath = path.join(os.tmpdir(), `eventbro-${sanitized}.${extension}`)
   await fs.writeFile(filePath, buffer)
   return filePath
+}
+
+async function downloadImage(url: string, name: string) {
+  const buffer = await downloadImageBuffer(url)
+  return writeTempFile(name, buffer)
 }
 
 async function downloadFirstAvailableImage(sources: string[], name: string) {
@@ -803,10 +1008,117 @@ async function downloadFirstAvailableImage(sources: string[], name: string) {
   throw lastError ?? new Error(`No image source configured for ${name}`)
 }
 
+async function downloadFirstAvailableBuffer(sources: string[]) {
+  let lastError: unknown
+
+  for (const source of sources) {
+    try {
+      return await downloadImageBuffer(source)
+    } catch (error) {
+      lastError = error
+    }
+  }
+
+  throw lastError ?? new Error('No image source available')
+}
+
+async function renderEventSeedImage(
+  event: EOSeed['events'][number],
+  locationName: string,
+  imageSources: string[],
+) {
+  const hue = hashString(event.slug)
+  const accent = `hsl(${hue} 85% 58%)`
+  const accentSoft = `hsla(${hue} 90% 65% / 0.24)`
+  const titleLines = wrapText(event.title, 28)
+  const metaLine = `${locationName.toUpperCase()} - ${event.category.toUpperCase()}`
+  const dateLine = new Date(event.startDate).toLocaleDateString('en-US', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
+
+  let baseImage: Buffer
+
+  try {
+    baseImage = await downloadFirstAvailableBuffer(imageSources)
+  } catch {
+    baseImage = await sharp({
+      create: {
+        width: 1600,
+        height: 900,
+        channels: 3,
+        background: { r: 18, g: 24, b: 38 },
+      },
+    })
+      .jpeg({ quality: 92 })
+      .toBuffer()
+  }
+
+  const overlaySvg = `
+    <svg width="1600" height="900" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="rgba(9,12,22,0.18)" />
+          <stop offset="100%" stop-color="rgba(9,12,22,0.82)" />
+        </linearGradient>
+      </defs>
+      <rect width="1600" height="900" fill="url(#shade)" />
+      <rect x="72" y="88" width="170" height="12" rx="6" fill="${accent}" />
+      <rect x="72" y="118" width="420" height="38" rx="19" fill="${accentSoft}" />
+      <text x="102" y="143" fill="#F8FAFC" font-size="24" font-family="Arial, sans-serif" font-weight="700">${escapeHtml(metaLine)}</text>
+      ${titleLines
+        .map(
+          (line, index) =>
+            `<text x="72" y="${242 + index * 92}" fill="#FFFFFF" font-size="74" font-family="Arial, sans-serif" font-weight="800">${escapeHtml(line)}</text>`,
+        )
+        .join('')}
+      <rect x="72" y="724" width="420" height="84" rx="28" fill="rgba(255,255,255,0.12)" />
+      <text x="108" y="775" fill="#F8FAFC" font-size="34" font-family="Arial, sans-serif" font-weight="700">${escapeHtml(dateLine)}</text>
+      <circle cx="1480" cy="124" r="56" fill="${accentSoft}" />
+      <circle cx="1416" cy="780" r="86" fill="rgba(255,255,255,0.08)" />
+    </svg>
+  `
+
+  return sharp(baseImage)
+    .resize(1600, 900, { fit: 'cover' })
+    .composite([{ input: Buffer.from(overlaySvg), top: 0, left: 0 }])
+    .jpeg({ quality: 90 })
+    .toBuffer()
+}
+
 async function ensureOne(payload: any, collection: string, where: any, data: any) {
   const existing = await payload.find({ collection, where, limit: 1 })
   if (existing.docs[0]) return existing.docs[0]
   return payload.create({ collection, data })
+}
+
+async function upsertMedia(payload: any, filePath: string, alt: string) {
+  const filename = path.basename(filePath)
+  const existing = await payload.find({
+    collection: 'media',
+    where: { filename: { equals: filename } },
+    limit: 1,
+    overrideAccess: true,
+  })
+
+  if (existing.docs[0]) {
+    return payload.update({
+      collection: 'media',
+      id: existing.docs[0].id,
+      data: { alt },
+      filePath,
+      overrideAccess: true,
+    })
+  }
+
+  return payload.create({
+    collection: 'media',
+    data: { alt },
+    filePath,
+    overrideAccess: true,
+  })
 }
 
 async function seed() {
@@ -872,18 +1184,8 @@ async function seed() {
     const avatarPath = await downloadImage(avatarUrl, `${eo.email}-avatar`)
     const bannerPath = await downloadImage(bannerUrl, `${eo.email}-banner`)
 
-    const avatar = await payload.create({
-      collection: 'media',
-      data: { alt: `${eo.name} avatar` },
-      filePath: avatarPath,
-      overrideAccess: true,
-    })
-    const banner = await payload.create({
-      collection: 'media',
-      data: { alt: `${eo.name} banner` },
-      filePath: bannerPath,
-      overrideAccess: true,
-    })
+    const avatar = await upsertMedia(payload, avatarPath, `${eo.name} avatar`)
+    const banner = await upsertMedia(payload, bannerPath, `${eo.name} banner`)
 
     const locationId = locationMap.get(eo.location) ?? null
     const userData = {
@@ -924,14 +1226,13 @@ async function seed() {
         limit: 1,
       })
 
-      const eventImageUrl = getEventImageUrl(event, imageSequence)
-      const eventImagePath = await downloadImage(eventImageUrl, `${event.slug}-cover`)
-      const eventImage = await payload.create({
-        collection: 'media',
-        data: { alt: `${event.title} cover` },
-        filePath: eventImagePath,
-        overrideAccess: true,
-      })
+      const eventImageBuffer = await renderEventSeedImage(
+        event,
+        eo.location,
+        getEventImageSources(event, imageSequence),
+      )
+      const eventImagePath = await writeTempFile(`seed-event-${event.slug}`, eventImageBuffer)
+      const eventImage = await upsertMedia(payload, eventImagePath, `${event.title} cover`)
       const ticketTypes = buildUsdTicketTypes(event, eo.location, imageSequence)
 
       const eventData = {

@@ -78,7 +78,7 @@ function getCitySlug(event: ResolvedEvent): string {
 export function CityEventsSection({ events, city, totalDocs }: Props) {
   const [sort, setSort] = useState('recommended')
   const [page, setPage] = useState(1)
-  const PAGE_SIZE = 9
+  const PAGE_SIZE = 24
 
   // Client-side sort (server already filtered by city + date + category + price)
   const sorted = [...events].sort((a, b) => {

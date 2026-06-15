@@ -107,12 +107,13 @@ export default async function HomePage() {
     featuredOrganizers = []
   }
 
-  // Fetch upcoming published events for the homepage listing
+  // Fetch a broader pool of upcoming published events so city filtering on the landing page
+  // still has enough candidates for each location.
   const { docs: allEvents } = await payload.find({
     collection: 'events',
     where: buildEventWhere({ publishedOnly: true }),
     depth: 1,
-    limit: 48,
+    limit: 200,
     sort: '-interestedCount',
   })
 
@@ -164,7 +165,7 @@ export default async function HomePage() {
           locationId: preferredCategoryIds.length === 0 ? locationId : undefined,
         }),
         depth: 1,
-        limit: 48,
+        limit: 200,
         sort: '-interestedCount',
       })
       forYouEvents = docs

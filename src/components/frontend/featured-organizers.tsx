@@ -1,9 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 
 import { FollowButton } from '@/components/frontend/follow-button'
+import { useDragScroll } from '@/components/frontend/use-drag-scroll'
 import type { Media, User } from '@/payload-types'
 
 type OrganizerItem = Pick<
@@ -93,50 +94,21 @@ export function FeaturedOrganizers({
   followedOrganizerIds = [],
   currentUserId = null,
 }: Props) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [grabbing, setGrabbing] = useState(false)
-  const drag = useRef({ x: 0, left: 0, moved: false, tracking: false })
-
-  const onMouseDown = (e: React.MouseEvent) => {
-    const el = ref.current
-    if (!el) return
-    drag.current = { x: e.pageX, left: el.scrollLeft, moved: false, tracking: true }
-  }
-
-  const onMouseMove = (e: React.MouseEvent) => {
-    if (!drag.current.tracking || !ref.current) return
-    const dx = e.pageX - drag.current.x
-    if (Math.abs(dx) > 4) {
-      drag.current.moved = true
-      if (!grabbing) setGrabbing(true)
-    }
-    if (drag.current.moved) {
-      ref.current.scrollLeft = drag.current.left - dx
-    }
-  }
-
-  const stopDrag = () => {
-    drag.current.tracking = false
-    setGrabbing(false)
-  }
-
-  const preventClickAfterDrag = (e: React.MouseEvent) => {
-    if (!drag.current.moved) return
-    e.preventDefault()
-    e.stopPropagation()
-  }
+  const { ref, grabbing, onPointerDown, onPointerMove, onPointerUp, onPointerCancel, onDragStart, onClickCapture } =
+    useDragScroll()
 
   return (
     <div
       ref={ref}
-      className={`drag-scroll flex gap-3 overflow-x-auto scroll-smooth pb-3 select-none ${
+      className={`drag-scroll flex gap-3 overflow-x-auto pb-3 select-none touch-pan-y [-webkit-tap-highlight-color:transparent] ${
         grabbing ? 'cursor-grabbing' : 'cursor-grab'
       }`}
-      onMouseDown={onMouseDown}
-      onMouseMove={onMouseMove}
-      onMouseUp={stopDrag}
-      onMouseLeave={stopDrag}
-      onClickCapture={preventClickAfterDrag}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
+      onDragStart={onDragStart}
+      onClickCapture={onClickCapture}
     >
       {organizers.length > 0 ? (
         organizers.map((org) => (
