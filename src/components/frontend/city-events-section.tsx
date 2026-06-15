@@ -82,6 +82,17 @@ export function CityEventsSection({ events, city, totalDocs }: Props) {
 
   // Client-side sort (server already filtered by city + date + category + price)
   const sorted = [...events].sort((a, b) => {
+    if (sort === 'recommended') {
+      const leftTime = new Date(a.startDate).getTime()
+      const rightTime = new Date(b.startDate).getTime()
+
+      if (leftTime !== rightTime) {
+        return leftTime - rightTime
+      }
+
+      return (b.interestedCount ?? 0) - (a.interestedCount ?? 0)
+    }
+
     if (sort === 'popular') return (b.interestedCount ?? 0) - (a.interestedCount ?? 0)
     if (sort === 'date') return new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
     return 0

@@ -142,34 +142,49 @@ export default async function CityEventsPage({ params, searchParams }: Props) {
       ).docs
     : []
 
-  const organizerMap = new Map<
-    number,
-    Pick<User, 'id' | 'name' | 'avatar' | 'followersCount'> & { upcomingEvents: number }
-  >()
+  const organizerEventCounts = new Map<number, number>()
 
   for (const event of cityEventsForOrganizers as Event[]) {
     if (!event.organizer || typeof event.organizer !== 'object') continue
     const organizer = event.organizer as User
     if (!organizer.id || !organizer.name) continue
 
-    const existing = organizerMap.get(Number(organizer.id))
-    organizerMap.set(Number(organizer.id), {
-      id: organizer.id,
-      name: organizer.name,
-      avatar: organizer.avatar,
-      followersCount: organizer.followersCount ?? 0,
-      upcomingEvents: (existing?.upcomingEvents ?? 0) + 1,
-    })
+    organizerEventCounts.set(
+      Number(organizer.id),
+      (organizerEventCounts.get(Number(organizer.id)) ?? 0) + 1,
+    )
   }
 
-  const organizerSuggestions = Array.from(organizerMap.values())
-    .sort((left, right) => {
-      if (right.upcomingEvents !== left.upcomingEvents) {
-        return right.upcomingEvents - left.upcomingEvents
-      }
-      return (right.followersCount ?? 0) - (left.followersCount ?? 0)
-    })
-    .slice(0, 6)
+  const organizerSuggestions = organizerEventCounts.size
+    ? (
+        await payload.find({
+          collection: 'users',
+          where: {
+            id: {
+              in: Array.from(organizerEventCounts.keys()),
+            },
+          },
+          depth: 1,
+          limit: 20,
+          sort: '-followersCount',
+        })
+      ).docs
+        .map((organizer) => ({
+          id: organizer.id,
+          name: organizer.name,
+          avatar: organizer.avatar,
+          followersCount: organizer.followersCount ?? 0,
+          upcomingEvents: organizerEventCounts.get(Number(organizer.id)) ?? 0,
+        }))
+        .sort((left, right) => {
+          if (right.upcomingEvents !== left.upcomingEvents) {
+            return right.upcomingEvents - left.upcomingEvents
+          }
+
+          return (right.followersCount ?? 0) - (left.followersCount ?? 0)
+        })
+        .slice(0, 6)
+    : []
 
   const rawEvents = locationId
     ? (
