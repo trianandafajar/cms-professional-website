@@ -9,6 +9,10 @@ type DragState = {
   startY: number
   startLeft: number
   moved: boolean
+  captured: boolean
+  startedOnLink: boolean
+  startedOnButton: boolean
+  startedOnFormField: boolean
   lastX: number
   lastTime: number
   velocityX: number
@@ -21,12 +25,17 @@ type UseDragScrollOptions = {
 export function useDragScroll(options: UseDragScrollOptions = {}) {
   const { threshold = 6 } = options
   const ref = useRef<HTMLDivElement>(null)
+  const suppressClick = useRef(false)
   const drag = useRef<DragState>({
     pointerId: null,
     startX: 0,
     startY: 0,
     startLeft: 0,
     moved: false,
+    captured: false,
+    startedOnLink: false,
+    startedOnButton: false,
+    startedOnFormField: false,
     lastX: 0,
     lastTime: 0,
     velocityX: 0,
@@ -103,6 +112,10 @@ export function useDragScroll(options: UseDragScrollOptions = {}) {
     if (!el) return
 
     stopMomentum()
+    const target = event.target as HTMLElement | null
+    const startedOnButton = Boolean(target?.closest('button, summary, [role="button"]'))
+    const startedOnFormField = Boolean(target?.closest('input, select, textarea'))
+    const startedOnLink = Boolean(target?.closest('a'))
 
     drag.current = {
       pointerId: event.pointerId,
@@ -110,12 +123,15 @@ export function useDragScroll(options: UseDragScrollOptions = {}) {
       startY: event.clientY,
       startLeft: el.scrollLeft,
       moved: false,
+      captured: false,
+      startedOnLink,
+      startedOnButton,
+      startedOnFormField,
       lastX: event.clientX,
       lastTime: performance.now(),
       velocityX: 0,
     }
 
-    el.setPointerCapture(event.pointerId)
     el.style.scrollBehavior = 'auto'
   }
 
@@ -125,11 +141,22 @@ export function useDragScroll(options: UseDragScrollOptions = {}) {
 
     const dx = event.clientX - drag.current.startX
     const dy = event.clientY - drag.current.startY
+    const effectiveThreshold = drag.current.startedOnFormField
+      ? Number.POSITIVE_INFINITY
+      : drag.current.startedOnButton
+        ? Math.max(threshold, 14)
+      : drag.current.startedOnLink
+        ? Math.max(threshold, 12)
+        : threshold
 
     if (!drag.current.moved && Math.abs(dx) <= Math.abs(dy)) return
 
-    if (!drag.current.moved && Math.abs(dx) > threshold) {
+    if (!drag.current.moved && Math.abs(dx) > effectiveThreshold) {
       drag.current.moved = true
+      if (!drag.current.captured) {
+        el.setPointerCapture(event.pointerId)
+        drag.current.captured = true
+      }
       lockSelection()
       window.getSelection()?.removeAllRanges()
       setGrabbing(true)
@@ -148,18 +175,20 @@ export function useDragScroll(options: UseDragScrollOptions = {}) {
   }
 
   const onPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (ref.current?.hasPointerCapture(event.pointerId)) {
+    if (drag.current.captured && ref.current?.hasPointerCapture(event.pointerId)) {
       ref.current.releasePointerCapture(event.pointerId)
     }
     const momentumVelocity = drag.current.moved ? drag.current.velocityX : 0
+    suppressClick.current = drag.current.moved
     stopDrag()
     startMomentum(momentumVelocity)
   }
 
   const onPointerCancel = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (ref.current?.hasPointerCapture(event.pointerId)) {
+    if (drag.current.captured && ref.current?.hasPointerCapture(event.pointerId)) {
       ref.current.releasePointerCapture(event.pointerId)
     }
+    suppressClick.current = false
     stopDrag()
   }
 
@@ -168,10 +197,11 @@ export function useDragScroll(options: UseDragScrollOptions = {}) {
   }
 
   const onClickCapture = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!drag.current.moved) return
+    if (!suppressClick.current) return
 
     event.preventDefault()
     event.stopPropagation()
+    suppressClick.current = false
   }
 
   return {
