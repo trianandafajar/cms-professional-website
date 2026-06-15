@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { Suspense, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
@@ -11,7 +11,7 @@ import { AuthShell } from '@/components/frontend/auth-shell'
 import { apiClient } from '@/lib/apiClient'
 import { resetPasswordSchema, type ResetPasswordInput } from '@/schemas/auth'
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const token = useMemo(() => searchParams.get('token') ?? '', [searchParams])
@@ -147,5 +147,26 @@ export default function ResetPasswordPage() {
         </Link>
       </p>
     </AuthShell>
+  )
+}
+
+function ResetPasswordFallback() {
+  return (
+    <AuthShell
+      title="Set a new password"
+      subtitle="Choose a new password for your Eventbro account."
+    >
+      <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-500">
+        Loading reset link…
+      </div>
+    </AuthShell>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<ResetPasswordFallback />}>
+      <ResetPasswordForm />
+    </Suspense>
   )
 }
