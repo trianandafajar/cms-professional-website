@@ -17,8 +17,12 @@ type OrganizerSuggestionItem = Pick<User, 'id' | 'name' | 'avatar' | 'followersC
 }
 
 function getAvatarUrl(avatar: unknown): string | null {
+  if (typeof avatar === 'string') return avatar || null
   if (avatar && typeof avatar === 'object' && 'url' in avatar) {
     return (avatar as Media).url ?? null
+  }
+  if (avatar && typeof avatar === 'object' && 'src' in avatar) {
+    return (avatar as { src?: string | null }).src ?? null
   }
   return null
 }

@@ -92,6 +92,7 @@ function sortUpcomingEvents(events: ResolvedEvent[]) {
 
 export function EventsSection({ allEvents, forYouEvents, isLoggedIn, activeCity }: Props) {
   const MAX_VISIBLE_EVENTS = 40
+  const DESKTOP_GRID_COLUMNS = 4
   const cityFilteredAllEvents = useMemo(
     () =>
       allEvents.filter((event) => {
@@ -168,7 +169,12 @@ export function EventsSection({ allEvents, forYouEvents, isLoggedIn, activeCity 
         )
     }
   })()
-  const visibleEvents = filteredEvents.slice(0, MAX_VISIBLE_EVENTS)
+  const cappedEvents = filteredEvents.slice(0, MAX_VISIBLE_EVENTS)
+  const completeRowCount = Math.floor(cappedEvents.length / DESKTOP_GRID_COLUMNS) * DESKTOP_GRID_COLUMNS
+  const visibleEvents =
+    cappedEvents.length <= DESKTOP_GRID_COLUMNS
+      ? cappedEvents
+      : cappedEvents.slice(0, completeRowCount)
 
   return (
     <>

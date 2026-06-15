@@ -298,6 +298,7 @@ export default async function EventDetailPage({ params }: Props) {
     number | string,
     Pick<User, 'id' | 'name' | 'avatar' | 'followersCount'> & { upcomingEvents: number }
   >()
+  const relatedOrganizerEventCounts = new Map<number, number>()
   let organizerEventCount = 0
 
   try {
@@ -326,17 +327,40 @@ export default async function EventDetailPage({ params }: Props) {
 
       for (const eventDoc of docs as Event[]) {
         const organizer = eventDoc.organizer
-        if (!organizer || typeof organizer !== 'object' || !organizer.id || !organizer.name) {
-          continue
-        }
+        const organizerId =
+          organizer && typeof organizer === 'object'
+            ? Number((organizer as User).id)
+            : Number(organizer)
 
-        const existing = relatedOrganizers.get(organizer.id)
+        if (Number.isFinite(organizerId)) {
+          relatedOrganizerEventCounts.set(
+            organizerId,
+            (relatedOrganizerEventCounts.get(organizerId) ?? 0) + 1,
+          )
+        }
+      }
+    }
+
+    if (relatedOrganizerEventCounts.size > 0) {
+      const { docs } = await payload.find({
+        collection: 'users',
+        where: {
+          id: {
+            in: Array.from(relatedOrganizerEventCounts.keys()),
+          },
+        },
+        depth: 1,
+        limit: 50,
+        sort: '-followersCount',
+      })
+
+      for (const organizer of docs as User[]) {
         relatedOrganizers.set(organizer.id, {
           id: organizer.id,
           name: organizer.name,
           avatar: organizer.avatar,
           followersCount: organizer.followersCount ?? 0,
-          upcomingEvents: (existing?.upcomingEvents ?? 0) + 1,
+          upcomingEvents: relatedOrganizerEventCounts.get(Number(organizer.id)) ?? 0,
         })
       }
     }
