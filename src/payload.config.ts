@@ -26,6 +26,7 @@ import { EmailTemplateDefaults } from './collections/EmailTemplateDefaults'
 import { OrganizationEmailTemplates } from './collections/OrganizationEmailTemplates'
 import { Posts } from './collections/Posts'
 import { Comments } from './collections/Comments'
+import { EventReports } from './collections/EventReports'
 import { checkinValidateEndpoint } from './endpoints/checkin-validate'
 import { checkinConfirmEndpoint } from './endpoints/checkin-confirm'
 import { checkinStatsEndpoint } from './endpoints/checkin-stats'
@@ -57,6 +58,7 @@ import {
 } from './endpoints/organizer-follow'
 import { likeEndpoint } from './endpoints/likes'
 import { financeConnectStripeReturnEndpoint } from './endpoints/finance-stripe-return'
+import { eventReportCreateEndpoint } from './endpoints/event-reports'
 import { isUserOnboarded, onboardingRequiredResponse } from './lib/onboarding'
 
 const filename = fileURLToPath(import.meta.url)
@@ -166,6 +168,7 @@ export default buildConfig({
     OrganizationEmailTemplates, 
     Posts,
     Comments,
+    EventReports,
   ],
   editor: lexicalEditor(),
   email: resendAdapter({
@@ -225,6 +228,7 @@ export default buildConfig({
     financeConnectStripeRefreshEndpoint,
     financeConnectStripeReturnEndpoint,
     financeWebhookEndpoint,
+    eventReportCreateEndpoint,
     organizerFollowEndpoint,
     organizerFollowToggleEndpoint,
     likeEndpoint,

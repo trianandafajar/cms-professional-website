@@ -2,6 +2,11 @@ import type { CollectionConfig } from 'payload'
 
 import { sendTemplateEmail } from '@/lib/email/send-template-email'
 import { ensureOrganizerEmailTemplates } from '@/lib/marketing/email-template-sync'
+import { normalizeUrlString } from '@/lib/normalize-url'
+
+function getFrontendBaseURL() {
+  return normalizeUrlString(process.env.NEXT_PUBLIC_SERVER_URL) || 'http://localhost:3000'
+}
 
 export const Users: CollectionConfig = {
   slug: 'users',
@@ -17,7 +22,38 @@ export const Users: CollectionConfig = {
       icon: 'Users',
     },
   },
-  auth: true,
+  auth: {
+    forgotPassword: {
+      generateEmailHTML: (args) => {
+        const token = args?.token
+        const user = args?.user
+        const resetUrl = `${getFrontendBaseURL()}/auth/reset-password?token=${encodeURIComponent(
+          String(token ?? ''),
+        )}`
+        const recipientName =
+          user && typeof user === 'object' && 'name' in user && user.name
+            ? String(user.name)
+            : 'there'
+
+        return `
+          <div style="font-family:Arial,sans-serif;line-height:1.6;color:#18181b">
+            <h2 style="margin:0 0 12px">Reset your password</h2>
+            <p style="margin:0 0 12px">Hi ${recipientName},</p>
+            <p style="margin:0 0 16px">We received a request to reset your Eventbro password.</p>
+            <p style="margin:0 0 20px">
+              <a href="${resetUrl}" style="display:inline-block;background:#5151eb;color:#fff;text-decoration:none;padding:12px 18px;border-radius:12px;font-weight:600">
+                Reset password
+              </a>
+            </p>
+            <p style="margin:0 0 8px">If the button does not work, open this link:</p>
+            <p style="margin:0 0 12px;word-break:break-all">${resetUrl}</p>
+            <p style="margin:0;color:#71717a">If you did not request this, you can safely ignore this email.</p>
+          </div>
+        `
+      },
+      generateEmailSubject: () => 'Reset your Eventbro password',
+    },
+  },
   access: {
     create: () => true,
     admin: ({ req }) => {

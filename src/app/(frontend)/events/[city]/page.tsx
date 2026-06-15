@@ -445,7 +445,7 @@ export default async function CityEventsPage({ params, searchParams }: Props) {
         </div>
       </main>
 
-      <FrontendFooter className="mt-16" />
+      <FrontendFooter className="mt-16" full />
     </div>
   )
 }

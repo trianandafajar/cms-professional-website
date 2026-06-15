@@ -11,7 +11,6 @@ import {
   CheckCircle2,
   AlertCircle,
   ExternalLink,
-  Flag,
 } from 'lucide-react'
 
 import { FrontendFooter } from '@/components/frontend/footer'
@@ -22,6 +21,7 @@ import { EventDetailDescription } from '@/components/frontend/event-detail-descr
 import { EventGallery } from '@/components/frontend/event-gallery'
 import { EventInterestStats } from '@/components/frontend/event-interest-stats'
 import { OrganizerFollowSummary } from '@/components/frontend/organizer-follow-summary'
+import { ReportEventDrawer } from '@/components/frontend/report-event-drawer'
 import { getFallbackEventImageUrl, getSeedEventImageUrl } from '@/lib/eventImages'
 import config from '@/payload.config'
 import type { Event, Media, User, Location, Category } from '@/payload-types'
@@ -653,13 +653,14 @@ export default async function EventDetailPage({ params }: Props) {
 
             {/* Report */}
             <div className="flex items-center justify-center pb-4">
-              <button
-                type="button"
-                className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-600 transition"
-              >
-                <Flag className="size-3.5" />
-                Report this event
-              </button>
+              <ReportEventDrawer
+                eventId={Number(ev.id)}
+                eventTitle={ev.title}
+                organizerId={org.id}
+                initialName={currentUser?.name ?? null}
+                initialEmail={currentUser?.email ?? null}
+                sourcePath={`/events/${city}/${ev.slug}`}
+              />
             </div>
           </div>
 
@@ -692,7 +693,7 @@ export default async function EventDetailPage({ params }: Props) {
         </div>
       </div>
 
-      <FrontendFooter className="mt-8" />
+      <FrontendFooter className="mt-8" full />
     </div>
   )
 }

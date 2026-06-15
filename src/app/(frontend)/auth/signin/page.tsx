@@ -18,6 +18,7 @@ export default function SignInPage() {
   const router = useRouter()
   const [formError, setFormError] = useState<string | null>(null)
   const [wasRegistered, setWasRegistered] = useState(false)
+  const [wasReset, setWasReset] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
   const {
@@ -34,6 +35,7 @@ export default function SignInPage() {
       setValue('email', email)
     }
     setWasRegistered(params.get('registered') === '1')
+    setWasReset(params.get('reset') === '1')
   }, [setValue])
 
   const handleSignedInUser = async (email: string, password: string) => {
@@ -95,6 +97,11 @@ export default function SignInPage() {
             Account created. Please sign in with the email and password you just made.
           </div>
         )}
+        {wasReset && (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+            Password updated. Please sign in with your new password.
+          </div>
+        )}
 
         <div className="space-y-1.5">
           <label
@@ -125,7 +132,10 @@ export default function SignInPage() {
             >
               Password
             </label>
-            <Link href="#" className="text-xs font-medium text-[#5151eb] hover:text-[#3d3dcc]">
+            <Link
+              href="/auth/forgot-password"
+              className="text-xs font-medium text-[#5151eb] hover:text-[#3d3dcc]"
+            >
               Forgot password?
             </Link>
           </div>

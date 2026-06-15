@@ -273,7 +273,7 @@ export default async function OrganizersPage() {
         </div>
       </main>
 
-      <FrontendFooter className="mt-16" />
+      <FrontendFooter className="mt-16" full />
     </div>
   )
 }

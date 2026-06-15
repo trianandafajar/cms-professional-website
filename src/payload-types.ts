@@ -84,6 +84,7 @@ export interface Config {
     'organization-email-templates': OrganizationEmailTemplate;
     posts: Post;
     comments: Comment;
+    'event-reports': EventReport;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -108,6 +109,7 @@ export interface Config {
     'organization-email-templates': OrganizationEmailTemplatesSelect<false> | OrganizationEmailTemplatesSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
     comments: CommentsSelect<false> | CommentsSelect<true>;
+    'event-reports': EventReportsSelect<false> | EventReportsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -778,6 +780,25 @@ export interface Comment {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "event-reports".
+ */
+export interface EventReport {
+  id: number;
+  event: number | Event;
+  organizer?: (number | null) | User;
+  reporter?: (number | null) | User;
+  reporterName: string;
+  reporterEmail: string;
+  reason: 'spam' | 'fraud' | 'harassment' | 'unsafe' | 'wrong_info' | 'other';
+  details: string;
+  sourcePath?: string | null;
+  userAgent?: string | null;
+  status?: ('open' | 'reviewing' | 'resolved' | 'dismissed') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -867,6 +888,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'comments';
         value: number | Comment;
+      } | null)
+    | ({
+        relationTo: 'event-reports';
+        value: number | EventReport;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -1318,6 +1343,24 @@ export interface CommentsSelect<T extends boolean = true> {
         user?: T;
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "event-reports_select".
+ */
+export interface EventReportsSelect<T extends boolean = true> {
+  event?: T;
+  organizer?: T;
+  reporter?: T;
+  reporterName?: T;
+  reporterEmail?: T;
+  reason?: T;
+  details?: T;
+  sourcePath?: T;
+  userAgent?: T;
+  status?: T;
   updatedAt?: T;
   createdAt?: T;
 }

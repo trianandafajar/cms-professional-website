@@ -470,7 +470,7 @@ export default async function EventTicketsPage({ params }: Props) {
         </div>
       </div>
 
-      <FrontendFooter className="mt-12" />
+      <FrontendFooter className="mt-12" full />
     </div>
   )
 }

@@ -104,7 +104,7 @@ export default async function FooterInfoPage({ params }: Props) {
         </section>
       </main>
 
-      <FrontendFooter />
+      <FrontendFooter full />
     </div>
   )
 }

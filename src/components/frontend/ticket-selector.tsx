@@ -388,56 +388,12 @@ function CheckoutForm({
     const paypalOrderId = searchParams.get('paypal_order_id') ?? searchParams.get('token')
     const checkoutOrderId = searchParams.get('order_id')
 
-    if (checkoutStatus === 'cancelled' && checkoutProvider === 'paypal' && checkoutOrderId) {
-      let cancelled = false
-
-      async function cancelPayPalOrder() {
-        try {
-          await apiClient.post('/api/finance/checkout/cancel', {
-            provider: 'paypal',
-            orderId: checkoutOrderId,
-          })
-        } catch {
-          // ignore cancel sync errors
-        } finally {
-          if (!cancelled) {
-            setCheckoutNotice('PayPal checkout was cancelled.')
-          }
-        }
-      }
-
-      cancelPayPalOrder()
-
-      return () => {
-        cancelled = true
-      }
-    }
-
-    if (checkoutStatus === 'cancelled' && sessionId) {
-      let cancelled = false
-
-      async function cancelSession() {
-        try {
-          await apiClient.post('/api/finance/checkout/cancel', {
-            sessionId,
-          })
-        } catch {
-          // ignore cancel sync errors; the user already cancelled in Stripe
-        } finally {
-          if (!cancelled) {
-            setCheckoutNotice('Checkout was cancelled.')
-          }
-        }
-      }
-
-      cancelSession()
-
-      return () => {
-        cancelled = true
-      }
-    }
-
-    if (checkoutStatus === 'success' && checkoutProvider === 'paypal' && paypalOrderId && checkoutOrderId) {
+    if (
+      checkoutProvider === 'paypal' &&
+      checkoutOrderId &&
+      paypalOrderId &&
+      (checkoutStatus === 'success' || checkoutStatus === 'cancelled')
+    ) {
       let cancelled = false
 
       async function finalizePayPalOrder() {
@@ -462,6 +418,21 @@ function CheckoutForm({
           onSuccess(response.orderId, response.buyerEmail ?? currentUser?.email ?? '')
         } catch (err: any) {
           if (cancelled) return
+
+          if (checkoutStatus === 'cancelled') {
+            try {
+              await apiClient.post('/api/finance/checkout/cancel', {
+                provider: 'paypal',
+                orderId: checkoutOrderId,
+              })
+            } catch {
+              // ignore cancel sync errors
+            }
+
+            setCheckoutNotice('PayPal checkout was cancelled.')
+            return
+          }
+
           setCheckoutNotice(err.message || 'Payment completed, but we could not finalize the order.')
         } finally {
           if (!cancelled) {
@@ -471,6 +442,30 @@ function CheckoutForm({
       }
 
       finalizePayPalOrder()
+
+      return () => {
+        cancelled = true
+      }
+    }
+
+    if (checkoutStatus === 'cancelled' && sessionId) {
+      let cancelled = false
+
+      async function cancelSession() {
+        try {
+          await apiClient.post('/api/finance/checkout/cancel', {
+            sessionId,
+          })
+        } catch {
+          // ignore cancel sync errors; the user already cancelled in Stripe
+        } finally {
+          if (!cancelled) {
+            setCheckoutNotice('Checkout was cancelled.')
+          }
+        }
+      }
+
+      cancelSession()
 
       return () => {
         cancelled = true
@@ -908,6 +903,78 @@ export function TicketSelector({
     const searchParams = new URLSearchParams(window.location.search)
     const checkoutStatus = searchParams.get('checkout')
     const sessionId = searchParams.get('session_id')
+    const checkoutProvider = searchParams.get('provider') ?? 'stripe'
+    const paypalOrderId = searchParams.get('paypal_order_id') ?? searchParams.get('token')
+    const checkoutOrderId = searchParams.get('order_id')
+
+    if (
+      checkoutProvider === 'paypal' &&
+      checkoutOrderId &&
+      paypalOrderId &&
+      (checkoutStatus === 'success' || checkoutStatus === 'cancelled')
+    ) {
+      const finalizeKey = `paypal:${paypalOrderId}:${checkoutOrderId}:${checkoutStatus ?? ''}`
+
+      if (finalizedSessionRef.current === finalizeKey) {
+        return
+      }
+
+      finalizedSessionRef.current = finalizeKey
+
+      let cancelled = false
+
+      async function finalizePayPalSession() {
+        setRestoringSession(true)
+
+        try {
+          const response = await apiClient.post<{
+            success: boolean
+            orderId: string
+            buyerEmail?: string
+            tickets?: Array<{ id: number; order: string; status: string }>
+          }>('/api/finance/checkout/complete', {
+            provider: 'paypal',
+            paypalOrderId,
+            orderId: checkoutOrderId,
+          })
+
+          if (cancelled) return
+
+          setCheckoutEmail(response.buyerEmail ?? currentUser?.email ?? '')
+          setCheckoutOrderId(response.orderId)
+          setCheckoutNotice(null)
+          setStep('success')
+        } catch (err: any) {
+          if (cancelled) return
+
+          if (checkoutStatus === 'cancelled') {
+            try {
+              await apiClient.post('/api/finance/checkout/cancel', {
+                provider: 'paypal',
+                orderId: checkoutOrderId,
+              })
+            } catch {
+              // ignore cancel sync errors
+            }
+
+            setCheckoutNotice('PayPal checkout was cancelled.')
+            return
+          }
+
+          setCheckoutNotice(err.message || 'Payment completed, but we could not finalize the order.')
+        } finally {
+          if (!cancelled) {
+            setRestoringSession(false)
+          }
+        }
+      }
+
+      finalizePayPalSession()
+
+      return () => {
+        cancelled = true
+      }
+    }
 
     if (checkoutStatus === 'cancelled' && sessionId) {
       let cancelled = false

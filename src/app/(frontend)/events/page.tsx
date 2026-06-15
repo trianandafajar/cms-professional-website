@@ -343,7 +343,7 @@ export default async function EventsPage({ searchParams }: Props) {
         </div>
       </main>
 
-      <FrontendFooter className="mt-16" />
+      <FrontendFooter className="mt-16" full />
     </div>
   )
 }

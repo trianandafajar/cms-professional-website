@@ -407,7 +407,7 @@ function DummyOrganizerPage({
         <div className="pb-16" />
       </div>
 
-      <FrontendFooter />
+      <FrontendFooter full />
     </div>
   )
 }
@@ -664,7 +664,7 @@ export default async function OrganizerProfilePage({ params, searchParams }: Pro
         </div>
       </div>
 
-      <FrontendFooter />
+      <FrontendFooter full />
     </div>
   )
 }
