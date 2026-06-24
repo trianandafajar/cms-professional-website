@@ -301,7 +301,7 @@ export function HeroSlider() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
 
-                <div className="absolute inset-0 flex flex-col justify-center px-6 md:px-12">
+                <div className="absolute inset-0 flex flex-col justify-center px-14 md:px-16">
                   <h2 className="max-w-xl text-2xl font-bold text-white md:text-4xl">
                     {slide.title}
                   </h2>
