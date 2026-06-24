@@ -291,7 +291,7 @@ export function HeroSlider() {
         >
           {slides.map((slide, index) => (
             <div key={slide.title} className="relative min-w-full">
-              <div className="relative aspect-[2.5/1] w-full overflow-hidden">
+              <div className="relative aspect-[1.6/1] min-h-[180px] w-full overflow-hidden sm:aspect-[2/1] md:aspect-[2.5/1] md:min-h-0">
                 <img
                   src={slide.image}
                   alt={slide.title}
@@ -301,17 +301,17 @@ export function HeroSlider() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
 
-                <div className="absolute inset-0 flex flex-col justify-center px-14 md:px-16">
-                  <h2 className="max-w-xl text-2xl font-bold text-white md:text-4xl">
+                <div className="absolute inset-0 flex flex-col justify-center px-12 py-6 sm:px-14 md:px-16">
+                  <h2 className="max-w-[12rem] text-xl leading-tight font-bold text-white sm:max-w-xs sm:text-2xl md:max-w-xl md:text-4xl">
                     {slide.title}
                   </h2>
-                  <p className="mt-2 max-w-md text-white/80 md:text-base">
+                  <p className="mt-2 max-w-[11rem] text-sm leading-snug text-white/80 sm:max-w-xs sm:text-sm md:max-w-md md:text-base">
                     {slide.subtitle}
                   </p>
                   <a
                     href="/events"
                     draggable={false}
-                    className="mt-6 inline-flex w-fit cursor-pointer rounded-lg bg-white px-6 py-2 text-sm font-semibold text-[#12192f] transition hover:bg-zinc-100 disabled:cursor-not-allowed"
+                    className="mt-4 inline-flex w-fit cursor-pointer rounded-lg bg-white px-4 py-2 text-xs font-semibold text-[#12192f] transition hover:bg-zinc-100 disabled:cursor-not-allowed sm:mt-5 sm:px-5 sm:text-sm md:mt-6 md:px-6"
                   >
                     {slide.cta}
                   </a>
@@ -323,7 +323,7 @@ export function HeroSlider() {
 
         <button
           onClick={prev}
-          className="absolute left-4 top-1/2 flex size-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/80 text-zinc-700 backdrop-blur transition hover:bg-white disabled:cursor-not-allowed"
+          className="absolute left-3 top-1/2 flex size-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/80 text-zinc-700 backdrop-blur transition hover:bg-white disabled:cursor-not-allowed sm:left-4 sm:size-10"
           type="button"
           aria-label="Previous slide"
         >
@@ -332,14 +332,14 @@ export function HeroSlider() {
 
         <button
           onClick={next}
-          className="absolute right-4 top-1/2 flex size-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/80 text-zinc-700 backdrop-blur transition hover:bg-white disabled:cursor-not-allowed"
+          className="absolute right-3 top-1/2 flex size-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/80 text-zinc-700 backdrop-blur transition hover:bg-white disabled:cursor-not-allowed sm:right-4 sm:size-10"
           type="button"
           aria-label="Next slide"
         >
           <ChevronRight className="size-5" />
         </button>
 
-        <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2">
+        <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-2 sm:bottom-4">
           {slides.map((_, index) => (
             <button
               key={index}
