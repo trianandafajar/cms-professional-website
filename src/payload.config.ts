@@ -30,6 +30,7 @@ import { EventReports } from './collections/EventReports'
 import { checkinValidateEndpoint } from './endpoints/checkin-validate'
 import { checkinConfirmEndpoint } from './endpoints/checkin-confirm'
 import { checkinStatsEndpoint } from './endpoints/checkin-stats'
+import { healthEndpoint } from './endpoints/health'
 import { meEndpoint } from './endpoints/me'
 import { notificationsBootstrapEndpoint } from './endpoints/notifications-bootstrap'
 import { navbarSearchSuggestionsEndpoint } from './endpoints/navbar-search-suggestions'
@@ -210,6 +211,7 @@ export default buildConfig({
     checkinValidateEndpoint,
     checkinConfirmEndpoint,
     checkinStatsEndpoint,
+    healthEndpoint,
     meEndpoint,
     notificationsBootstrapEndpoint,
     emailTemplatesWorkspaceEndpoint,
