@@ -2,7 +2,8 @@ FROM node:22-alpine
 
 # Pin pnpm globally (not via corepack): engines allow only 9-11, corepack resolves "latest" (12),
 # and a corepack pin made as root is not visible to the non-root runtime user.
-RUN apk add --no-cache libc6-compat && npm install -g pnpm@11.1.3
+# fontconfig + ttf-liberation (Arial-compatible): sharp/librsvg segfaults rendering SVG text without fonts.
+RUN apk add --no-cache libc6-compat fontconfig ttf-liberation && npm install -g pnpm@11.1.3
 WORKDIR /app
 
 # Layer cache: dependencies only reinstall when the manifests change.
