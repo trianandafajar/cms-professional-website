@@ -17,6 +17,7 @@ services:
       # and the app reaches the WS server over loopback.
       PORT: 3030
       NOTIFICATION_WS_PORT: 3031
+      NOTIFICATION_WS_SERVER_URL: http://127.0.0.1:3031
       DATABASE_URL: postgres://eventbro:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/eventbro
     volumes:
       - media:/app/media
