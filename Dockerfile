@@ -1,6 +1,7 @@
 FROM node:22-alpine
 
-RUN apk add --no-cache libc6-compat && corepack enable pnpm
+# Pin pnpm: package.json engines allow only 9-11, and corepack's "latest" is 12.
+RUN apk add --no-cache libc6-compat && corepack enable && corepack prepare pnpm@11.1.3 --activate
 WORKDIR /app
 
 # Layer cache: dependencies only reinstall when the manifests change.
