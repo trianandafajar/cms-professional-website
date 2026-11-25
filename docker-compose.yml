@@ -1,43 +1,45 @@
-version: '3'
-
 services:
-  payload:
-    image: node:20-alpine
+  eventbro:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_SERVER_URL: ${NEXT_PUBLIC_SERVER_URL}
+        NEXT_PUBLIC_NOTIFICATION_WS_URL: ${NEXT_PUBLIC_NOTIFICATION_WS_URL}
+    restart: unless-stopped
     ports:
-      - '3000:3000'
-    volumes:
-      - .:/home/node/app
-      - node_modules:/home/node/app/node_modules
-    working_dir: /home/node/app/
-    command: sh -c "corepack enable && corepack prepare pnpm@latest --activate && pnpm install && pnpm dev"
-    depends_on:
-      - mongo
-      # - postgres
+      - '3030:3030'
+      - '3031:3031'
     env_file:
       - .env
-
-  # Ensure your DATABASE_URL uses 'mongo' as the hostname ie. mongodb://mongo/my-db-name
-  mongo:
-    image: mongo:latest
-    ports:
-      - '27017:27017'
-    command:
-      - --storageEngine=wiredTiger
+    environment:
+      # Override .env: ports are fixed by this setup, DB is the postgres service below,
+      # and the app reaches the WS server over loopback.
+      PORT: 3030
+      NOTIFICATION_WS_PORT: 3031
+      DATABASE_URL: postgres://eventbro:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/eventbro
     volumes:
-      - data:/data/db
-    logging:
-      driver: none
+      - media:/app/media
+    depends_on:
+      postgres:
+        condition: service_healthy
 
-  # Uncomment the following to use postgres
-  # postgres:
-  #   restart: always
-  #   image: postgres:latest
-  #   volumes:
-  #     - pgdata:/var/lib/postgresql/data
-  #   ports:
-  #     - "5432:5432"
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: eventbro
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: eventbro
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U eventbro -d eventbro']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # No published port: only the app container reaches the DB.
 
 volumes:
-  data:
-  # pgdata:
-  node_modules:
+  pgdata:
+  media:
